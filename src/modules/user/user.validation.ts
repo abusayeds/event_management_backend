@@ -1,0 +1,84 @@
+// User status enum
+enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  BANNED = 'BANNED',
+}
+import { z } from 'zod';
+
+const idParamSchema = z.object({
+  id: z.string().min(1, 'User id is required'),
+});
+
+const createUser = z.object({
+  body: z.object({
+    fullName: z.string().min(1, 'Full name is required').max(120, 'Full name is too long'),
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    roleId: z.string().min(1, 'Role id is required'),
+  }),
+});
+
+const getAllUsers = z.object({
+  body: z.object({}).optional(),
+  params: z.object({}).optional(),
+  query: z.object({
+    fullName: z.string().optional(),
+    email: z.string().optional(),
+    status: z.enum(Object.values(UserStatus) as [string, ...string[]]).optional(),
+    roleId: z.string().optional(),
+    createdById: z.string().optional(),
+    search: z.string().optional(),
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+  }),
+  cookies: z.object({}).optional(),
+});
+
+const getUserById = z.object({
+  body: z.object({}).optional(),
+  params: idParamSchema,
+  query: z.object({}).optional(),
+  cookies: z.object({}).optional(),
+});
+
+const updateUser = z.object({
+  body: z
+    .object({
+      fullName: z.string().min(1, 'Full name cannot be empty').max(120).optional(),
+      email: z.string().email('Invalid email address').optional(),
+    })
+    .refine((value: any) => Object.keys(value).length > 0, {
+      message: 'At least one field is required to update user',
+    }),
+  params: idParamSchema,
+  query: z.object({}).optional(),
+  cookies: z.object({}).optional(),
+});
+
+const updateUserStatus = z.object({
+  body: z.object({
+    status: z.enum(Object.values(UserStatus) as [string, ...string[]]),
+  }),
+  params: idParamSchema,
+  query: z.object({}).optional(),
+  cookies: z.object({}).optional(),
+});
+
+const deleteUser = z.object({
+  body: z.object({}).optional(),
+  params: idParamSchema,
+  query: z.object({}).optional(),
+  cookies: z.object({}).optional(),
+});
+
+export const UserValidation = {
+  createUser,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  updateUserStatus,
+  deleteUser,
+};
