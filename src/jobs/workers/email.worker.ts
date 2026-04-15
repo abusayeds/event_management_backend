@@ -1,17 +1,18 @@
-import { Job } from 'bullmq';
-import { EmailJobData } from '../queues/email.queue';
-import { sendEmailProcessor } from '../processors/email.processor';
+import { Worker } from 'bullmq';
+import { redisConnection } from '../../config/redis';
+import logger from '../../config/logger';
+import colors from 'colors';
+import { processEmail } from '../processors/email.processor';
 
-export const emailWorker = async (job: Job<EmailJobData>) => {
-  const { data } = job;  
-  try {
-    console.log(`Processing email job ${job.id}: ${data.subject}`);
-    
-    await sendEmailProcessor(data);
-    
-    console.log(`Email job ${job.id} completed successfully`);
-  } catch (error) {
-    console.error(`Email job ${job.id} failed:`, error);
-    throw error;
-  }
-};
+export const emailWorker = new Worker('email', processEmail, {
+  connection: redisConnection,
+  concurrency: 5,
+});
+
+emailWorker.on('completed', job => {
+  logger.info(colors.green(`Email job ${job.id} completed successfully.`));
+});
+
+emailWorker.on('failed', (job, err) => {
+  logger.error(colors.red(`Failed to process email job ${err.message}:`), err);
+});

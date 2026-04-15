@@ -11,11 +11,6 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from '../../utils/generateToken';
-import {
-  sendResetPasswordEmail,
-  sendVerificationEmail,
-  sendWelcomeEmail,
-} from '../../utils/sendEmail';
 import { UserService } from '../user/user.service';
 import {
   generateOtp,
@@ -24,6 +19,7 @@ import {
   hashOtp,
   normalizeEmail,
   securityLogger,
+  validateUserStatus,
 } from './auth.helpers';
 import {
   ILoginPayload,
@@ -32,6 +28,7 @@ import {
   IPendingEmailVerification,
   IRegisterPayload,
 } from './auth.interface';
+import { emailTemplates } from '../email/email.templates';
 
 const failLoginAttempt = async (email: string): Promise<never> => {
   const attemptsKey = CACHE_KEYS.AUTH.ATTEMPTS(email);
@@ -88,7 +85,7 @@ const register = async (payload: IRegisterPayload) => {
 
   try {
     // In a real implementation, you would want to handle email sending failures more gracefully,
-    await sendVerificationEmail(normalizedEmail, otp);
+    await emailTemplates.sendVerificationEmail(normalizedEmail, otp);
   } catch (error) {
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(payload.email));
     throw error;
@@ -113,12 +110,8 @@ const login = async (payload: ILoginPayload) => {
   }
   const existingUser = user!;
 
-  if (existingUser.status === 'BANNED') {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned.');
-  }
-  if (existingUser.status === 'DELETED') {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been deleted.');
-  }
+  // ✅ Validate user account status
+  validateUserStatus(existingUser.status);
 
   const isPasswordValid = await bcrypt.compare(payload.password, existingUser.password);
   if (!isPasswordValid) {
@@ -210,10 +203,11 @@ const verifyEmail = async (email: string, otp: string) => {
   await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
   await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
 
-  void sendWelcomeEmail(
+  // Send welcome email
+  await emailTemplates.sendWelcomeEmail(
     createdUser.email,
-    `${createdUser.firstName} (${createdUser.lastName})`
-  ).catch(() => undefined);
+    `${createdUser.firstName} ${createdUser.lastName}`
+  );
 };
 
 const resendVerificationOtp = async (email: string) => {
@@ -245,7 +239,8 @@ const resendVerificationOtp = async (email: string) => {
   );
 
   try {
-    await sendVerificationEmail(normalizedEmail, otp);
+    // In a real implementation, you would want to handle email sending failures more gracefully,
+    await emailTemplates.sendVerificationEmail(normalizedEmail, otp);
   } catch (error) {
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
     throw error;
@@ -263,13 +258,10 @@ const refresh = async (refreshToken: string) => {
   const user = await UserService.getUserById(decoded.userId);
   if (!user) throw new ApiError(StatusCodes.UNAUTHORIZED, 'User not found.');
 
-  if (user.status === 'DELETED') {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been deleted.');
-  }
-  if (user.status === 'BANNED') {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned.');
-  }
+  // ✅ Validate user account status
+  validateUserStatus(user.status);
 
+  // Generate new tokens in parallel
   const [newAccessToken, newRefreshToken] = await Promise.all([
     generateAccessToken(user.id, user.email, user.role),
     generateRefreshToken(user.id, user.email, user.role),
@@ -290,17 +282,12 @@ const refresh = async (refreshToken: string) => {
 const forgotPassword = async (email: string) => {
   const normalizedEmail = normalizeEmail(email);
   const user = await UserService.getUserByEmail(normalizedEmail);
-
   if (!user) {
     return;
   }
 
-  if (user.status === 'DELETED') {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been deleted  .');
-  }
-  if (user.status === 'BANNED') {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned.');
-  }
+  // ✅ Validate user account status
+  validateUserStatus(user.status);
 
   const otp = generateOtp();
   const resetChallenge: IPasswordResetChallenge = {
@@ -318,7 +305,8 @@ const forgotPassword = async (email: string) => {
   );
 
   try {
-    await sendResetPasswordEmail(user.email, otp);
+    // In a real implementation, you would want to handle email sending failures more gracefully,
+    await emailTemplates.sendResetPasswordEmail(user.email, otp);
   } catch (error) {
     await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET(normalizedEmail));
     throw error;

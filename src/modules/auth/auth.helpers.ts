@@ -53,3 +53,13 @@ export const handleOtpAttempt = async (
 
   throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired OTP.');
 };
+
+// Validate user status
+export const validateUserStatus = (status: string): void => {
+  if (status === 'DELETED') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been deleted.');
+  }
+  if (status === 'BANNED') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned.');
+  }
+};

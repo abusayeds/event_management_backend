@@ -7,6 +7,7 @@ import { closeDB, connectDB } from './config/database';
 import { verifyEmailConnection } from './config/email';
 import logger from './config/logger';
 import { closeRedis, connectRedis } from './config/redis';
+import { initializeWorkers, shutdownWorkers } from './jobs';
 import { initializeSocket } from './socket';
 
 type TrackedSocket = {
@@ -22,6 +23,7 @@ let isShuttingDown = false;
 let server: http.Server | null = null;
 let io: SocketIOServer | null = null;
 let activeConnections = new Set<TrackedSocket>();
+let workers: any[] = [];
 
 // ==========================================
 // UNCAUGHT EXCEPTION HANDLER
@@ -169,9 +171,18 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
       io = null;
     }
 
+    // Close BullMQ workers
+    if (workers.length > 0) {
+      if (!isDevelopmentRestart) {
+        logger.info(colors.cyan('👷 [2.2/5] Closing Job Workers...'));
+      }
+      await shutdownWorkers();
+      workers = [];
+    }
+
     if (server) {
       if (!isDevelopmentRestart) {
-        logger.info(colors.cyan('🌐 [2.2/5] Closing HTTP server...'));
+        logger.info(colors.cyan('🌐 [2.3/5] Closing HTTP server...'));
       }
 
       // Force destroy all connections FIRST to unblock server.close()
@@ -249,6 +260,11 @@ async function main() {
     logger.info(colors.cyan('📦 [2/5] Connecting to Redis...'));
     await connectRedis();
     logger.info(colors.green('   ✅ Local Redis connected'));
+
+    // Step 2.5: Initialize BullMQ Workers
+    logger.info(colors.cyan('👷 [2.5/5] Initializing Job Workers...'));
+    workers = initializeWorkers();
+    logger.info(colors.green('   ✅ BullMQ Workers initialized'));
 
     // Step 3: Verify Email Service (optional)
     if (config.email.username && config.email.password) {
