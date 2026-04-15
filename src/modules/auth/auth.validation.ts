@@ -1,9 +1,25 @@
 import { z } from 'zod';
 
-// Constants
-const PASSWORD_MIN_LENGTH = 8;
-const USER_FULL_NAME_MAX_LENGTH = 120;
-const OTP_LENGTH = 6;
+// Password Validation Schema
+const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .refine(
+    password => /[A-Z]/.test(password),
+    'Password must contain at least one uppercase letter'
+  )
+  .refine(
+    password => /[a-z]/.test(password),
+    'Password must contain at least one lowercase letter'
+  )
+  .refine(
+    password => /[0-9]/.test(password),
+    'Password must contain at least one number'
+  )
+  .refine(
+    password => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+    'Password must contain at least one special character'
+  );
 
 const login = z.object({
   body: z.object({
@@ -17,9 +33,9 @@ const login = z.object({
 
 const register = z.object({
   body: z.object({
-    fullName: z.string().min(1, 'Full name is required').max(USER_FULL_NAME_MAX_LENGTH, 'Full name is too long'),
+    fullName: z.string().min(1, 'Full name is required').max(120, 'Full name is too long'),
     email: z.string().email('Invalid email address'),
-    password: z.string().min(PASSWORD_MIN_LENGTH, 'Password must be at least 8 characters'),
+    password: passwordSchema,
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
@@ -85,7 +101,7 @@ const resetPassword = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
     otp: z.string().length(6, 'OTP must be 6 digits'),
-    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    newPassword: passwordSchema,
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
@@ -95,7 +111,7 @@ const resetPassword = z.object({
 const changePassword = z.object({
   body: z.object({
     currentPassword: z.string().min(1, 'Current password is required'),
-    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    newPassword: passwordSchema,
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),

@@ -27,9 +27,7 @@ export const connectRedis = async (): Promise<void> => {
     if (redisConnection.status === 'wait' || redisConnection.status === 'end') {
       await redisConnection.connect();
     }
-
     await redisConnection.ping();
-    console.log(colors.green(' Local Redis connected'));
   } catch (error) {
     console.error(colors.red(' Local Redis connection failed:'), error);
     throw error;

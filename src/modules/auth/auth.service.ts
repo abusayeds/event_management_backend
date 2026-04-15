@@ -11,6 +11,7 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from '../../utils/generateToken';
+import { emailTemplates } from '../email/email.templates';
 import { UserService } from '../user/user.service';
 import {
   generateOtp,
@@ -19,7 +20,7 @@ import {
   hashOtp,
   normalizeEmail,
   securityLogger,
-  validateUserStatus,
+  validateUserStatus
 } from './auth.helpers';
 import {
   ILoginPayload,
@@ -28,7 +29,6 @@ import {
   IPendingEmailVerification,
   IRegisterPayload,
 } from './auth.interface';
-import { emailTemplates } from '../email/email.templates';
 
 const failLoginAttempt = async (email: string): Promise<never> => {
   const attemptsKey = CACHE_KEYS.AUTH.ATTEMPTS(email);
@@ -315,6 +315,7 @@ const forgotPassword = async (email: string) => {
 
 const resetPassword = async (email: string, otp: string, newPassword: string) => {
   const normalizedEmail = normalizeEmail(email);
+
   const challenge = await cacheService.get<IPasswordResetChallenge>(
     CACHE_KEYS.AUTH.PASSWORD_RESET(normalizedEmail)
   );
