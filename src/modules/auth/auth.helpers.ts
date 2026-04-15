@@ -6,14 +6,20 @@ import { cacheService } from '../../cache/cache.service';
 import logger from '../../config/logger';
 import ApiError from '../../utils/apiError';
 
-
 // Email Utilities
 export const normalizeEmail = (email: string): string => email.toLowerCase().trim();
 
 export const maskEmail = (email: string): string => {
   const [name, domain] = email.split('@');
-  const maskedName = name.charAt(0) + '*'.repeat(Math.max(1, name.length - 2)) + (name.length > 1 ? name.charAt(name.length - 1) : '');
+  const maskedName =
+    name.charAt(0) +
+    '*'.repeat(Math.max(1, name.length - 2)) +
+    (name.length > 1 ? name.charAt(name.length - 1) : '');
   return `${maskedName}@${domain}`;
+};
+
+export const generateOpaqueToken = (prefix: string): string => {
+  return `${prefix}_${crypto.randomBytes(24).toString('base64url')}`;
 };
 
 //OTP Utilities
@@ -33,7 +39,7 @@ export const securityLogger = {
   loginAttempt: (email: string, ip: string, success: boolean): void => {
     logger.warn('Login attempt', {
       type: 'AUTHENTICATION',
-      email: maskEmail(email),  // ✅ Masked for security
+      email: maskEmail(email), // ✅ Masked for security
       ip: ip || 'unknown',
       success,
       timestamp: new Date().toISOString(),

@@ -34,7 +34,7 @@ export interface IPendingEmailVerification {
   state: string;
   city: string;
   email: string;
-  passwordHash: string;
+  password: string;
   otpHash: string;
   attempts: number;
   createdAt: string;
@@ -62,9 +62,23 @@ export interface IForgotPasswordPayload {
   email: string;
 }
 
-export interface IResetPasswordPayload {
-  email: string;
+export interface IVerifyForgotPasswordOtpPayload {
+  sessionId: string;
   otp: string;
+}
+
+export interface IResendForgotPasswordOtpPayload {
+  sessionId: string;
+}
+
+export interface IPasswordResetGrant {
+  userId: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface IResetPasswordPayload {
+  resetToken: string;
   newPassword: string;
 }
 

@@ -77,10 +77,22 @@ const forgotPassword = z.object({
   }),
 });
 
+const verifyForgotPasswordOtp = z.object({
+  body: z.object({
+    sessionId: z.string().min(1, 'sessionId is required'),
+    otp: z.string().length(6, 'OTP must be 6 digits'),
+  }),
+});
+
+const resendForgotPasswordOtp = z.object({
+  body: z.object({
+    sessionId: z.string().min(1, 'sessionId is required'),
+  }),
+});
+
 const resetPassword = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
-    otp: z.string().length(6, 'OTP must be 6 digits'),
+    resetToken: z.string().min(1, 'resetToken is required'),
     newPassword: passwordSchema,
   }),
 });
@@ -100,6 +112,8 @@ export const AuthValidation = {
   refresh,
   logout,
   forgotPassword,
+  verifyForgotPasswordOtp,
+  resendForgotPasswordOtp,
   resetPassword,
   changePassword,
 };

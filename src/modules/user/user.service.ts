@@ -19,10 +19,8 @@ const createUser = async (payload: ICreateUserPayload, actorId?: string) => {
   }
 
   // Hash password (skip if already hashed - prevents double hashing)
-  const hashedPassword = payload.isPasswordAlreadyHashed
-    ? preparedPayload.password
-    : await bcrypt.hash(preparedPayload.password, 12);
-  
+  const hashedPassword = await bcrypt.hash(preparedPayload.password, 12);
+
   // create user
   const user = await UserRepository.createUser({
     ...preparedPayload,

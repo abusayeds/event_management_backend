@@ -14,6 +14,7 @@ import {
 import { emailTemplates } from '../email/email.templates';
 import { UserService } from '../user/user.service';
 import {
+  generateOpaqueToken,
   generateOtp,
   getPasswordHash,
   handleOtpAttempt,
@@ -26,6 +27,7 @@ import {
   ILoginPayload,
   ILogoutPayload,
   IPasswordResetChallenge,
+  IPasswordResetGrant,
   IPendingEmailVerification,
   IRegisterPayload,
 } from './auth.interface';
@@ -62,15 +64,12 @@ const register = async (payload: IRegisterPayload): Promise<{ sessionId: string 
     throw new ApiError(StatusCodes.CONFLICT, 'Email is already registered. Please login instead.');
   }
 
-  // Hash password and generate OTP + sessionId
-  const passwordHash = await bcrypt.hash(payload?.password, 12);
   const otp = generateOtp();
-  const sessionId = crypto.randomUUID();
+  const sessionId = generateOpaqueToken('sess');
 
   // Store registration challenge in cache
   const pendingEmailVerification: IPendingEmailVerification = {
     ...payload,
-    passwordHash,
     otpHash: hashOtp('registration', normalizedEmail, otp),
     attempts: 0,
     createdAt: new Date().toISOString(),
@@ -155,9 +154,8 @@ const verifyEmail = async (sessionId: string, otp: string) => {
     state: pendingEmailVerificationData.state,
     city: pendingEmailVerificationData.city,
     email: pendingEmailVerificationData.email,
-    password: pendingEmailVerificationData.passwordHash,
-    username: pendingEmailVerificationData.username,
-    isPasswordAlreadyHashed: true,  // ✅ Prevent double hashing
+    password: pendingEmailVerificationData.password,
+    username: pendingEmailVerificationData.username
   });
 
   // Cleanup - remove from both caches
@@ -211,7 +209,6 @@ const login = async (payload: ILoginPayload) => {
   }
 
   const user = await UserService.getUserByEmail(normalizedEmail);
-  console.log('User', user);
   if (!user) {
     await failLoginAttempt(normalizedEmail);
     securityLogger.loginAttempt(normalizedEmail, 'unknown', false);
@@ -330,11 +327,14 @@ const refresh = async (refreshToken: string) => {
   };
 };
 
-const forgotPassword = async (email: string) => {
+const forgotPassword = async (email: string): Promise<{ sessionId: string }> => {
   const normalizedEmail = normalizeEmail(email);
   const user = await UserService.getUserByEmail(normalizedEmail);
+  const sessionId = generateOpaqueToken('fp_sess');
+
   if (!user) {
-    return;
+    // Don't reveal if email exists (security best practice)
+    return { sessionId };
   }
 
   // ✅ Validate user account status
@@ -350,51 +350,115 @@ const forgotPassword = async (email: string) => {
   };
 
   await cacheService.set(
-    CACHE_KEYS.AUTH.PASSWORD_RESET(normalizedEmail),
+    CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId),
     resetChallenge,
     CACHE_KEYS.TTL.MEDIUM
   );
 
   try {
-    // In a real implementation, you would want to handle email sending failures more gracefully,
     await emailTemplates.sendResetPasswordEmail(user.email, otp);
   } catch (error) {
-    await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET(normalizedEmail));
+    await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId));
     throw error;
   }
+
+  return { sessionId };
 };
 
-const resetPassword = async (email: string, otp: string, newPassword: string) => {
-  const normalizedEmail = normalizeEmail(email);
-
+const verifyForgotPasswordOtp = async (
+  sessionId: string,
+  otp: string
+): Promise<{ resetToken: string }> => {
   const challenge = await cacheService.get<IPasswordResetChallenge>(
-    CACHE_KEYS.AUTH.PASSWORD_RESET(normalizedEmail)
+    CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId)
   );
 
   if (!challenge) {
-    throw new ApiError(StatusCodes.GONE, 'Reset code has expired. Please request a new one.');
+    throw new ApiError(StatusCodes.GONE, 'Verification code has expired. Please try again.');
   }
+
+  const normalizedEmail = normalizeEmail(challenge.email);
 
   if (challenge.otpHash !== hashOtp('reset-password', normalizedEmail, otp)) {
     await handleOtpAttempt(
-      CACHE_KEYS.AUTH.PASSWORD_RESET(normalizedEmail),
+      CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId),
       CACHE_KEYS.AUTH.PASSWORD_RESET_ATTEMPTS(normalizedEmail),
       config.auth.otpMaxAttempts
     );
   }
 
-  const user = await UserService.getUserById(challenge.userId);
+  const resetToken = generateOpaqueToken('fp_rst');
+  const grant: IPasswordResetGrant = {
+    userId: challenge.userId,
+    email: challenge.email,
+    createdAt: new Date().toISOString(),
+  };
+
+  await cacheService.set(CACHE_KEYS.AUTH.PASSWORD_RESET_TOKEN(resetToken), grant, CACHE_KEYS.TTL.MEDIUM);
+
+  await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId));
+  await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_ATTEMPTS(normalizedEmail));
+
+  return { resetToken };
+};
+
+const resendForgotPasswordOtp = async (sessionId: string) => {
+  const challenge = await cacheService.get<IPasswordResetChallenge>(
+    CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId)
+  );
+
+  if (!challenge) {
+    throw new ApiError(StatusCodes.GONE, 'Verification session expired. Please try again.');
+  }
+
+  const normalizedEmail = normalizeEmail(challenge.email);
+  const otp = generateOtp();
+  const updatedChallenge: IPasswordResetChallenge = {
+    ...challenge,
+    otpHash: hashOtp('reset-password', normalizedEmail, otp),
+    attempts: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  await cacheService.set(
+    CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId),
+    updatedChallenge,
+    CACHE_KEYS.TTL.MEDIUM
+  );
+
+  await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_ATTEMPTS(normalizedEmail));
+
+  try {
+    await emailTemplates.sendResetPasswordEmail(challenge.email, otp);
+  } catch (error) {
+    await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId));
+    throw error;
+  }
+};
+
+const resetPassword = async (resetToken: string, newPassword: string) => {
+  if (!resetToken) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'resetToken is required.');
+  }
+
+  const grant = await cacheService.get<IPasswordResetGrant>(
+    CACHE_KEYS.AUTH.PASSWORD_RESET_TOKEN(resetToken)
+  );
+
+  if (!grant) {
+    throw new ApiError(StatusCodes.GONE, 'Reset token has expired. Please verify OTP again.');
+  }
+
+  const user = await UserService.getUserById(grant.userId);
   if (!user) {
-    await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET(normalizedEmail));
-    await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_ATTEMPTS(normalizedEmail));
+    await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_TOKEN(resetToken));
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
 
   const hashedPassword = await getPasswordHash(newPassword);
   await UserService.updateUserPassword(user.id, hashedPassword);
 
-  await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET(normalizedEmail));
-  await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_ATTEMPTS(normalizedEmail));
+  await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_TOKEN(resetToken));
 
   await cacheService.del(CACHE_KEYS.AUTH.REFRESH_TOKEN(user.id));
   await cacheService.del(CACHE_KEYS.AUTH.PERMISSIONS(user.id));
@@ -438,6 +502,8 @@ export const AuthService = {
   refresh,
   logout,
   forgotPassword,
+  verifyForgotPasswordOtp,
+  resendForgotPasswordOtp,
   resetPassword,
   changePassword,
 };

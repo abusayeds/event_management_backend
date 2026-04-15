@@ -33,18 +33,24 @@ router.post(
   validateRequest(AuthValidation.login),
   AuthController.login
 );
-router.post(
-  '/refresh',
-  rateLimiters.refreshTokenRateLimiter,
-  validateRequest(AuthValidation.refresh),
-  AuthController.refresh
-);
-router.post('/logout', auth(), validateRequest(AuthValidation.logout), AuthController.logout);
+
 router.post(
   '/forgot-password',
   rateLimiters.forgotPasswordRateLimiter,
   validateRequest(AuthValidation.forgotPassword),
   AuthController.forgotPassword
+);
+router.post(
+  '/verify-forgot-password-otp',
+  rateLimiters.verifyOtpRateLimiter,
+  validateRequest(AuthValidation.verifyForgotPasswordOtp),
+  AuthController.verifyForgotPasswordOtp
+);
+router.post(
+  '/resend-forgot-password-otp',
+  rateLimiters.resendOtpRateLimiter,
+  validateRequest(AuthValidation.resendForgotPasswordOtp),
+  AuthController.resendForgotPasswordOtp
 );
 router.post(
   '/reset-password',
@@ -54,9 +60,22 @@ router.post(
 );
 router.post(
   '/change-password',
-  auth(),
+  auth('ADMIN', 'USER'),
   validateRequest(AuthValidation.changePassword),
   AuthController.changePassword
+);
+
+router.post(
+  '/refresh',
+  rateLimiters.refreshTokenRateLimiter,
+  validateRequest(AuthValidation.refresh),
+  AuthController.refresh
+);
+router.post(
+  '/logout',
+  auth('ADMIN', 'USER'),
+  validateRequest(AuthValidation.logout),
+  AuthController.logout
 );
 
 export const AuthRoutes: Router = router;
