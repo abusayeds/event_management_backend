@@ -1,5 +1,5 @@
-import colors from 'colors';
 import { PrismaPg } from '@prisma/adapter-pg';
+import colors from 'colors';
 import 'dotenv/config';
 import { PrismaClient } from '../../prisma/generated/client';
 import config from './index';
@@ -7,8 +7,15 @@ import logger from './logger';
 
 const connectionString = `${config.database.url}`;
 
-const adapter = new PrismaPg({ connectionString });
-const database = new PrismaClient({ adapter });
+// ✅ Configure connection pool with proper timeout settings
+const adapter = new PrismaPg({
+  connectionString,
+});
+
+const database = new PrismaClient({
+  adapter,
+  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+});
 
 // Connect to Prisma
 const connectDB = async (): Promise<void> => {

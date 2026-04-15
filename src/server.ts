@@ -6,7 +6,7 @@ import config from './config';
 import { closeDB, connectDB } from './config/database';
 import { verifyEmailConnection } from './config/email';
 import logger from './config/logger';
-import { closeRedis } from './config/redis';
+import { closeRedis, connectRedis } from './config/redis';
 import { initializeSocket } from './socket';
 
 type TrackedSocket = {
@@ -45,6 +45,11 @@ const startServer = async (): Promise<void> => {
       logger.info(colors.green('═══════════════════════════════════════════════════════════'));
       logger.info(colors.green('                 🚀 SERVER STARTED SUCCESSFULLY!            '));
       logger.info(colors.green('═══════════════════════════════════════════════════════════'));
+
+      // ✅ Configure timeout settings to prevent request timeouts
+      server!.requestTimeout = 300000; // 5 minutes
+      server!.keepAliveTimeout = 65000; // 65 seconds
+      server!.headersTimeout = 60000; // 60 seconds
       logger.info(colors.cyan(`📌 Environment      : ${colors.bold(config.env.toUpperCase())}`));
       logger.info(colors.cyan(`🌐 Server URL       : ${colors.bold(config.backend.baseUrl)}`));
       logger.info(colors.cyan(`📍 IP Address       : ${colors.bold(config.backend.ip)}`));
@@ -241,9 +246,9 @@ async function main() {
     await connectDB();
 
     // Step 2: Connect to Redis
-    // logger.info(colors.cyan('📦 [2/5] Connecting to Redis...'));
-    // await connectRedis();
-    // logger.info(colors.green('   ✅ Local Redis connected'));
+    logger.info(colors.cyan('📦 [2/5] Connecting to Redis...'));
+    await connectRedis();
+    logger.info(colors.green('   ✅ Local Redis connected'));
 
     // Step 3: Verify Email Service (optional)
     if (config.email.username && config.email.password) {
