@@ -12,6 +12,7 @@ import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.int
 // User full select
 const userFullSelect = {
   id: true,
+  accountId: true,
   firstName: true,
   lastName: true,
   username: true,
@@ -37,18 +38,34 @@ const userFullSelect = {
 // User list select
 const userListSelect = {
   id: true,
-  fullName: true,
+  accountId: true,
+  firstName: true,
+  lastName: true,
+  username: true,
   email: true,
   status: true,
   createdAt: true,
-  createdById: true,
+  createdByOwner: true,
   role: true,
 };
 
 // Create User
 const createUser = async (userData: ICreateUserPayload) => {
+  const { createdById, accountId, username, ...rest } = userData;
+  if (!accountId) {
+    throw new Error('accountId is required while creating user.');
+  }
+  if (!username) {
+    throw new Error('username is required while creating user.');
+  }
+
   return database.user.create({
-    data: userData,
+    data: {
+      ...rest,
+      accountId,
+      username,
+      createdByOwner: createdById,
+    },
     select: userListSelect,
   });
 };
@@ -96,25 +113,41 @@ const getAllUsers = async (
   // Search filter
   if (filters.search) {
     where.OR = [
-      { fullName: { contains: filters.search, mode: 'insensitive' } },
+      { firstName: { contains: filters.search, mode: 'insensitive' } },
+      { lastName: { contains: filters.search, mode: 'insensitive' } },
+      { username: { contains: filters.search, mode: 'insensitive' } },
+      { accountId: { contains: filters.search, mode: 'insensitive' } },
       { email: { contains: filters.search, mode: 'insensitive' } },
     ];
   }
 
   if (filters.fullName) {
-    where.fullName = { contains: filters.fullName, mode: 'insensitive' };
+    where.OR = [
+      ...(where.OR || []),
+      { firstName: { contains: filters.fullName, mode: 'insensitive' } },
+      { lastName: { contains: filters.fullName, mode: 'insensitive' } },
+    ];
   }
   if (filters.email) {
     where.email = { contains: filters.email, mode: 'insensitive' };
   }
+  if (filters.username) {
+    where.username = { contains: filters.username, mode: 'insensitive' };
+  }
   if (filters.status) {
     where.status = filters.status;
   }
+  if (filters.role) {
+    where.role = filters.role;
+  }
   if (filters.roleId) {
-    where.roleId = filters.roleId;
+    where.role = filters.roleId;
+  }
+  if (filters.createdByOwner) {
+    where.createdByOwner = filters.createdByOwner;
   }
   if (filters.createdById) {
-    where.createdById = filters.createdById;
+    where.createdByOwner = filters.createdById;
   }
 
   const [users, total] = await Promise.all([
@@ -156,7 +189,8 @@ const updateUserPasswordById = async (id: string, hashedPassword: string) => {
     select: {
       id: true,
       email: true,
-      fullName: true,
+      firstName: true,
+      lastName: true,
     },
   });
 };
@@ -180,6 +214,27 @@ const isEmailExists = async (email: string, excludeUserId?: string): Promise<boo
   return !!user;
 };
 
+const isUsernameExists = async (username: string, excludeUserId?: string): Promise<boolean> => {
+  const user = await database.user.findFirst({
+    where: {
+      username,
+      ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+    },
+    select: { id: true },
+  });
+
+  return !!user;
+};
+
+const isAccountIdExists = async (accountId: string): Promise<boolean> => {
+  const user = await database.user.findFirst({
+    where: { accountId },
+    select: { id: true },
+  });
+
+  return !!user;
+};
+
 // User Exists Check
 const isUserExists = async (id: string): Promise<boolean> => {
   const user = await database.user.findUnique({
@@ -200,5 +255,7 @@ export const UserRepository = {
   updateUserPasswordById,
   deleteUserById,
   isEmailExists,
+  isUsernameExists,
+  isAccountIdExists,
   isUserExists,
 };

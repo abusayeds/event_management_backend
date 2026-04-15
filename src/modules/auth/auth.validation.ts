@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { UserGender } from '../../../prisma/generated/enums';
 
 // Password Validation Schema
 const passwordSchema = z
@@ -18,7 +19,15 @@ const login = z.object({
 
 const register = z.object({
   body: z.object({
-    fullName: z.string().min(1, 'Full name is required').max(120, 'Full name is too long'),
+    username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30).optional(),
+    firstName: z.string().trim().min(1, 'firstName is required').max(60, 'firstName is too long'),
+    lastName: z.string().trim().min(1, 'lastName is required').max(60, 'lastName is too long'),
+    gender: z.enum(Object.values(UserGender) as [string, ...string[]]),
+    birthdate: z.string().min(1, 'birthdate is required'),
+    location: z.string().trim().min(1, 'location is required'),
+    country: z.string().trim().min(1, 'country is required'),
+    state: z.string().trim().min(1, 'state is required'),
+    city: z.string().trim().min(1, 'city is required'),
     email: z.string().email('Invalid email address'),
     password: passwordSchema,
   }),
@@ -44,8 +53,6 @@ const refresh = z
         refreshToken: z.string().min(1, 'Refresh token is required').optional(),
       })
       .optional(),
-    params: z.object({}).optional(),
-    query: z.object({}).optional(),
     cookies: z
       .object({
         refreshToken: z.string().min(1, 'Refresh token is required').optional(),

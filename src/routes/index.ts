@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { AuthRoutes } from '../modules/auth/auth.routes';
-import { NotificationRoutes } from '../modules/notification/notification.routes';
 import { UserRoutes } from '../modules/user/user.routes';
 
 const router: Router = Router();
@@ -17,6 +16,5 @@ router.get('/health', (req, res) => {
 // API routes
 router.use('/auth', AuthRoutes);
 router.use('/users', UserRoutes);
-router.use('/notifications', NotificationRoutes);
 
 export default router;

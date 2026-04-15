@@ -77,7 +77,7 @@ const register = async (payload: IRegisterPayload) => {
 
   // Send verification email
   await cacheService.set(
-    CACHE_KEYS.AUTH.REGISTRATION(payload.email),
+    CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail),
     pendingEmailVerification,
     CACHE_KEYS.TTL.MEDIUM
   );
@@ -86,7 +86,7 @@ const register = async (payload: IRegisterPayload) => {
     // In a real implementation, you would want to handle email sending failures more gracefully,
     await emailTemplates.sendVerificationEmail(normalizedEmail, otp);
   } catch (error) {
-    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(payload.email));
+    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
     throw error;
   }
 };
@@ -150,7 +150,7 @@ const verifyEmail = async (email: string, otp: string) => {
   await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
 
   // Send welcome email
-  await emailTemplates.sendWelcomeEmail(createdUser.email, `${createdUser.fullName}`);
+  await emailTemplates.sendWelcomeEmail(createdUser.email, `${createdUser.firstName} ${createdUser.lastName}`);
 };
 
 const login = async (payload: ILoginPayload) => {

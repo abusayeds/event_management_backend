@@ -1,7 +1,7 @@
 import { UserGender } from '../../../prisma/generated/enums';
 
 export interface IRegisterPayload {
-  username: string;
+  username?: string;
   firstName: string;
   lastName: string;
   gender: UserGender;
@@ -24,7 +24,7 @@ export interface IResendVerificationOtpPayload {
 }
 
 export interface IPendingEmailVerification {
-  username: string;
+  username?: string;
   firstName: string;
   lastName: string;
   gender: UserGender;

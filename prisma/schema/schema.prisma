@@ -26,14 +26,15 @@ enum UserGender {
 }
 
 
+
 // Models
 model User {
-    id                String         @id @default(uuid())
-    accountId         String         @unique @default(cuid())
+    id                String     @id @default(uuid())
+    accountId         String     @unique
     firstName         String
     lastName          String
-    username          String         @unique
-    email             String         @unique
+    username          String     @unique
+    email             String     @unique
     password          String
     phoneNumber       String?
     gender            UserGender
@@ -45,14 +46,14 @@ model User {
     city              String
     skills            String[]
     relationShip      String?
-    role              UserRole       @default(USER)
-    status            UserStatus     @default(ACTIVE)
-    isIndependent     Boolean        @default(false)
-    isEmailVerified   Boolean        @default(false)
+    role              UserRole   @default(USER)
+    status            UserStatus @default(ACTIVE)
+    isIndependent     Boolean    @default(false)
+    isEmailVerified   Boolean    @default(false)
     createdByOwner    String?
-    contributionScore Int            @default(0)
-    createdAt         DateTime       @default(now())
-    updatedAt         DateTime       @updatedAt
+    contributionScore Int        @default(0)
+    createdAt         DateTime   @default(now())
+    updatedAt         DateTime   @updatedAt
 
     @@map("users")
 }

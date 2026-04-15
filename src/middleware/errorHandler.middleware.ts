@@ -2,6 +2,7 @@ import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { ZodError } from 'zod';
 import ApiError from '../utils/apiError';
+import { buildCombinedMessage, formatZodField, formatZodMessage } from '../utils/zodErrorFormatter';
 
 const globalErrorHandler: ErrorRequestHandler = (
   error,
@@ -16,11 +17,14 @@ const globalErrorHandler: ErrorRequestHandler = (
   // Handle Zod validation errors
   if (error instanceof ZodError) {
     statusCode = StatusCodes.BAD_REQUEST;
-    message = 'Validation failed';
-    errorDetails = error.issues.map((err: any) => ({
-      field: err.path.join('.'),
-      message: err.message,
-    }));
+    errorDetails = error.issues.map(issue => {
+      const field = formatZodField(issue.path);
+      return {
+        field,
+        message: formatZodMessage(issue, field),
+      };
+    });
+    message = buildCombinedMessage(errorDetails.map(detail => detail.message));
   }
   // Handle custom API errors
   else if (error instanceof ApiError) {
@@ -31,8 +35,7 @@ const globalErrorHandler: ErrorRequestHandler = (
   else if (error.name === 'JsonWebTokenError') {
     statusCode = StatusCodes.UNAUTHORIZED;
     message = 'Invalid token';
-  }
-  else if (error.name === 'TokenExpiredError') {
+  } else if (error.name === 'TokenExpiredError') {
     statusCode = StatusCodes.UNAUTHORIZED;
     message = 'Token expired';
   }
@@ -40,8 +43,7 @@ const globalErrorHandler: ErrorRequestHandler = (
   else if (error.name === 'PrismaClientKnownRequestError') {
     statusCode = StatusCodes.BAD_REQUEST;
     message = 'Database operation failed';
-  }
-  else if (error.name === 'PrismaClientUnknownRequestError') {
+  } else if (error.name === 'PrismaClientUnknownRequestError') {
     statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
     message = 'Database error occurred';
   }
@@ -67,7 +69,6 @@ const globalErrorHandler: ErrorRequestHandler = (
     statusCode,
     message,
     ...(errorDetails && { errors: errorDetails }),
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
     timestamp: new Date().toISOString(),
   });
 };

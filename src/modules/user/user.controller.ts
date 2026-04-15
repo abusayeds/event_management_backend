@@ -21,9 +21,6 @@ const createUser = asyncHandler(async (req: AuthenticatedRequest, res: Response)
 
 // GET /api/users
 const getAllUsers = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { userId: actorId } = req.user!;
-  const { role: actorRole } = req.user!;
-
   const filters = pick(req.query, [
     'fullName',
     'email',
@@ -34,7 +31,7 @@ const getAllUsers = asyncHandler(async (req: AuthenticatedRequest, res: Response
   ]);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
-  const result = await UserService.getAllUsers(actorId, actorRole, filters, options);
+  const result = await UserService.getAllUsers(filters, options);
 
   apiResponse(res, {
     success: true,

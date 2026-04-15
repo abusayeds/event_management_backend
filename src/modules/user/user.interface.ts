@@ -27,7 +27,8 @@ export interface IUser {
 }
 
 export interface ICreateUserPayload {
-  username: string;
+  accountId?: string;
+  username?: string;
   firstName: string;
   lastName: string;
   gender: UserGender;
@@ -40,7 +41,6 @@ export interface ICreateUserPayload {
   password: string;
   // Optional fields for  Owner create family members
   relationShip?: string;
-  accountId?: string;
   skills?: string[];
   isIndependent?: boolean;
   createdById?: string;
@@ -56,9 +56,12 @@ export interface IUpdateUserPayload {
 
 export interface IUserFilters {
   fullName?: string;
+  username?: string;
   email?: string;
   status?: UserStatus;
   search?: string;
+  role?: string;
   roleId?: string;
+  createdByOwner?: string;
   createdById?: string;
 }
