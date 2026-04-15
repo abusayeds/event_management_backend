@@ -1,4 +1,22 @@
+import path from 'path';
+import config from '../../config';
 import emailQueue from '../../jobs/queues/email.queue';
+
+const APP_NAME = 'Daiwabui';
+const BRAND_COLOR = '#4C7E95';
+const CONTACT_EMAIL = 'support@daiwabui.com';
+const LOGO_CID = 'daiwabui-logo';
+const LOGO_FILE_PATH = path.join(process.cwd(), 'assets', 'logo', 'daiwabuyi.png');
+const OTP_EXPIRY_MINUTES = config.auth.otpExpiryMinutes;
+
+const getLogoAttachment = () => [
+  {
+    filename: 'daiwabuyi.png',
+    path: LOGO_FILE_PATH,
+    cid: LOGO_CID,
+  },
+];
+
 
 const generateProfessionalEmailTemplate = (
   content: string,
@@ -58,7 +76,7 @@ const generateProfessionalEmailTemplate = (
     }
 
     .content h2 {
-      color: #9300D3;
+      color: ${BRAND_COLOR};
       font-size: 20px;
       margin: 0 0 16px 0;
       font-weight: 600;
@@ -75,11 +93,11 @@ const generateProfessionalEmailTemplate = (
       font-size: 28px;
       font-weight: bold;
       letter-spacing: 6px;
-      color: #9300D3;
+      color: ${BRAND_COLOR};
       text-align: center;
       padding: 18px;
       background: #FFFFFF;
-      border: 2px dashed #9300D3;
+      border: 2px dashed ${BRAND_COLOR};
       border-radius: 8px;
       margin: 20px 0;
     }
@@ -148,7 +166,7 @@ const generateProfessionalEmailTemplate = (
     }
 
     .footer a {
-      color: #9300D3;
+      color: ${BRAND_COLOR};
       text-decoration: none;
       font-weight: 500;
     }
@@ -193,7 +211,7 @@ const generateProfessionalEmailTemplate = (
 
     .button {
       display: inline-block;
-      background: linear-gradient(135deg, #9300D3 0%, #7a00b0 100%);
+      background: linear-gradient(135deg, ${BRAND_COLOR} 0%, #3d6678 100%);
       color: #FFFFFF !important;
       padding: 12px 28px;
       text-decoration: none;
@@ -201,13 +219,13 @@ const generateProfessionalEmailTemplate = (
       font-weight: 600;
       font-size: 14px;
       margin: 20px 0;
-      box-shadow: 0 2px 8px rgba(147, 0, 211, 0.3);
+      box-shadow: 0 2px 8px rgba(76, 126, 149, 0.3);
       transition: all 0.3s ease;
     }
 
     .button:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(147, 0, 211, 0.4);
+      box-shadow: 0 4px 12px rgba(76, 126, 149, 0.4);
     }
 
     .status-badge {
@@ -264,7 +282,7 @@ const generateProfessionalEmailTemplate = (
           <!-- Logo -->
           <tr>
             <td class="logo-section">
-              <img src="https://talenzy.s3.us-east-1.amazonaws.com/common/logo.png" alt="Talenzy" />
+              <img src="cid:${LOGO_CID}" alt="${APP_NAME}" />
             </td>
           </tr>
 
@@ -278,26 +296,13 @@ const generateProfessionalEmailTemplate = (
           <!-- Footer -->
           <tr>
             <td class="footer">
-              <p class="footer-logo">Talenzy</p>
+              <p class="footer-logo">${APP_NAME}</p>
               <p style="margin: 8px 0;">
-                <a href="mailto:contact@talenzy.app">contact@talenzy.app</a>
+                <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>
               </p>
-              
-              <!-- Social Media Links -->
-              <div class="social-links">
-                <a href="https://www.facebook.com/profile.php?id=61584142130553" target="_blank" rel="noopener">
-                  <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" />
-                </a>
-                <a href="https://x.com/TalenzyApp" target="_blank" rel="noopener">
-                  <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" alt="Twitter" />
-                </a>
-                 <a href="https://www.youtube.com/@talenzyapp" target="_blank" rel="noopener">
-                    <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube" />
-                 </a>
-              </div>
-              
+
               <p style="margin-top: 16px; color: #a0aec0; font-size: 11px;">
-                © ${new Date().getFullYear()} Talenzy. All rights reserved.
+                © ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -311,7 +316,7 @@ const generateProfessionalEmailTemplate = (
   `;
 };
 
-const generateOTPSection = (otp: string, minutes: number = 30) => `
+const generateOTPSection = (otp: string, minutes: number = OTP_EXPIRY_MINUTES) => `
   <p>Please enter the following verification code to proceed:</p>
   <div class="otp-code">${otp}</div>
   <p style="text-align: center; color: #718096; font-size: 13px;">This code will expire in ${minutes} minutes</p>
@@ -322,35 +327,38 @@ const generateHighlightBox = (html: string) => `
 `;
 
 const sendWelcomeEmail = async (to: string, name: string): Promise<void> => {
-  const subject = 'Welcome to Talenzy!';
+  const subject = `Welcome to ${APP_NAME}!`;
   const content = `
-    <h2>Welcome to Talenzy, ${name}!</h2>
-    <p>We're excited to have you join our community of talented creators and enthusiasts.</p>
+    <h2>Welcome to ${APP_NAME}, ${name}!</h2>
+    <p>Thank you for joining ${APP_NAME}, a public knowledge-style event platform designed for parents and families.</p>
     ${generateHighlightBox(`
-      <p><strong>What you can do on Talenzy:</strong></p>
+      <p><strong>What you can do on ${APP_NAME}:</strong></p>
       <ul style="margin: 10px 0; padding-left: 20px;">
-        <li>Share your photos and videos with the world</li>
-        <li>Discover and connect with talented creators</li>
-        <li>Hire talents for events or projects</li>
-        <li>Send gifts to support your favorite creators</li>
+        <li>Create and publish public events like competitions, concerts, performances, and shows</li>
+        <li>Track repeating events where each repetition is a new session</li>
+        <li>Edit and verify event sessions with transparent public change history</li>
+        <li>Contribute to event quality and grow your contribution score</li>
+        <li>Manage family members and shared family event activity</li>
       </ul>
     `)}
-    <p>Start exploring and showcasing your talent today!</p>
-    <p>If you have any questions, feel free to reach out to us at <a href="mailto:contact@talenzy.app" style="color: #9300D3;">contact@talenzy.app</a></p>
+    <p>All events are public, community-driven, and designed for collective contribution.</p>
+    <p>If you have any questions, reach us at <a href="mailto:${CONTACT_EMAIL}" style="color: ${BRAND_COLOR};">${CONTACT_EMAIL}</a></p>
   `;
 
   const html = generateProfessionalEmailTemplate(content, {
-    title: 'Welcome to Talenzy',
-    preheader: `Welcome ${name}! Start your journey on Talenzy.`,
+    title: `Welcome to ${APP_NAME}`,
+    preheader: `Welcome ${name}! Start exploring public event sessions on ${APP_NAME}.`,
   });
 
-  await emailQueue.add('sendEmail', { to, subject, html }, { priority: 5 });
+  await emailQueue.add('sendEmail', { to, subject, html, attachments: getLogoAttachment() }, { priority: 5 });
 };
 const sendVerificationEmail = async (to: string, otp: string): Promise<void> => {
-  const subject = 'Email Verification - Your OTP Code';
+  const subject = `${APP_NAME} Email Verification - Your OTP Code`;
   const content = `
-    <p>Thank you for signing up! Please use the One-Time Password (OTP) below to verify your email address:</p>
-    ${generateOTPSection(otp, 30)}
+    <h2>Verify Your Email</h2>
+    <p>Use the One-Time Password (OTP) below to verify your ${APP_NAME} account and continue setting up your profile.</p>
+    ${generateOTPSection(otp)}
+    <p style="font-size: 13px; color: #718096;">If you did not request this, you can safely ignore this email.</p>
   `;
 
   const html = generateProfessionalEmailTemplate(content, {
@@ -359,14 +367,16 @@ const sendVerificationEmail = async (to: string, otp: string): Promise<void> => 
   });
 
   // High priority for OTP emails
-  await emailQueue.add('sendEmail', { to, subject, html }, { priority: 1 });
+  await emailQueue.add('sendEmail', { to, subject, html, attachments: getLogoAttachment() }, { priority: 1 });
 };
 
 const sendResetPasswordEmail = async (to: string, otp: string): Promise<void> => {
-  const subject = 'Password Reset Request - Your OTP Code';
+  const subject = `${APP_NAME} Password Reset - Your OTP Code`;
   const content = `
-    <p>You requested to reset your password. Please use the One-Time Password (OTP) below to proceed:</p>
-    ${generateOTPSection(otp, 30)}
+    <h2>Reset Your Password</h2>
+    <p>Use the One-Time Password (OTP) below to continue your password reset request.</p>
+    ${generateOTPSection(otp)}
+    <p style="font-size: 13px; color: #718096;">For security, only continue if you initiated this request.</p>
   `;
 
   const html = generateProfessionalEmailTemplate(content, {
@@ -375,7 +385,7 @@ const sendResetPasswordEmail = async (to: string, otp: string): Promise<void> =>
   });
 
   // High priority for password reset emails
-  await emailQueue.add('sendEmail', { to, subject, html }, { priority: 1 });
+  await emailQueue.add('sendEmail', { to, subject, html, attachments: getLogoAttachment() }, { priority: 1 });
 };
 
 

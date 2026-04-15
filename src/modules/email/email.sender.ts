@@ -11,6 +11,7 @@ const sendEmail = async (options: IEmailOptions): Promise<void> => {
     subject: options.subject,
     html: options.html,
     text: options.text,
+    attachments: options.attachments,
   };
 
   await transporter.sendMail(mailOptions);
