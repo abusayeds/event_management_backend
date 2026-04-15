@@ -157,6 +157,7 @@ const verifyEmail = async (sessionId: string, otp: string) => {
     email: pendingEmailVerificationData.email,
     password: pendingEmailVerificationData.passwordHash,
     username: pendingEmailVerificationData.username,
+    isPasswordAlreadyHashed: true,  // ✅ Prevent double hashing
   });
 
   // Cleanup - remove from both caches
@@ -210,6 +211,7 @@ const login = async (payload: ILoginPayload) => {
   }
 
   const user = await UserService.getUserByEmail(normalizedEmail);
+  console.log('User', user);
   if (!user) {
     await failLoginAttempt(normalizedEmail);
     securityLogger.loginAttempt(normalizedEmail, 'unknown', false);

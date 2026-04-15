@@ -44,6 +44,7 @@ export interface ICreateUserPayload {
   skills?: string[];
   isIndependent?: boolean;
   createdById?: string;
+  isPasswordAlreadyHashed?: boolean;
 }
 
 export interface IUpdateUserPayload {

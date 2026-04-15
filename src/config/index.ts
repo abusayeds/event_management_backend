@@ -62,7 +62,7 @@ const config = {
     maxLoginAttempts: parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5', 10),
     otpMaxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '5', 10),
     otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || '30', 10),
-    lockTime: parseInt(process.env.LOCK_TIME || '2', 10), //2 minutes
+    lockTime: parseInt(process.env.LOCK_TIME || '1', 10), //1 minute lock after max attempts
   },
   // Bcrypt
   bcrypt: {

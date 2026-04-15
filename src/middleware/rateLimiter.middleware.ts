@@ -61,7 +61,7 @@ export const rateLimiters = {
 
   emailLoginRateLimiter: createRateLimiter({
     windowMs: 60 * 60 * 1000, // 1 hour
-    maxRequests: 3,
+    maxRequests: 500,
     message: 'Too many login attempts for this email, please try again after 1 hour.',
     keyGenerator: (req: Request) => `email:${req.body?.email || 'unknown'}`,
   }),
