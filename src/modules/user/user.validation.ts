@@ -78,10 +78,17 @@ const deleteUser = z.object({
   params: idParamSchema,
 });
 
+const checkUsernameExists = z.object({
+  query: z.object({
+    username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30),
+  }),
+});
+
 export const UserValidation = {
   createUser,
   getAllUsers,
   getUserById,
+  checkUsernameExists,
   updateUser,
   updateUserStatus,
   deleteUser,

@@ -9,8 +9,7 @@ import { UserService } from './user.service';
 // POST /api/users
 const createUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId: actorId } = req.user!;
-  const { role: actorRole } = req.user!;
-  const user = await UserService.createUser(req.body, actorId, actorRole);
+  const user = await UserService.createUser(req.body, actorId);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
@@ -94,10 +93,30 @@ const deleteUser = asyncHandler(async (req: AuthenticatedRequest, res: Response)
   });
 });
 
+// checkUsernameExists
+const checkUsernameExists = asyncHandler(async (req: Request, res: Response) => {
+  const { username } = req.query;
+  if (typeof username !== 'string') {
+    return apiResponse(res, {
+      success: false,
+      statusCode: StatusCodes.BAD_REQUEST,
+      message: 'Username query parameter is required and must be a string.',
+    });
+  }
+  const exists = await UserService.checkUsernameExists(username);
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Username existence checked successfully.',
+    data: { exists },
+  });
+});
+
 export const UserController = {
   createUser,
   getAllUsers,
   getUserById,
+  checkUsernameExists,
   updateUser,
   updateUserStatus,
   deleteUser,

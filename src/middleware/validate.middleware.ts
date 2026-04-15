@@ -6,9 +6,9 @@ const validateRequest =
     try {
       const parsed = (await schema.parseAsync({
         body: req.body ?? {},
-        params: req.params,
-        query: req.query,
-        cookies: req.cookies,
+        params: req.params ?? {},
+        query: req.query ?? {},
+        cookies: req.cookies ?? {},
       })) as {
         body?: unknown;
         params?: unknown;
@@ -16,9 +16,21 @@ const validateRequest =
         cookies?: unknown;
       };
 
-      req.body = parsed.body;
-      req.params = (parsed.params ?? req.params) as Request['params'];
-      req.query = (parsed.query ?? req.query) as Request['query'];
+      if (parsed.body && typeof parsed.body === 'object') {
+        req.body = parsed.body as Request['body'];
+      }
+
+      if (parsed.params && typeof parsed.params === 'object') {
+        Object.assign(req.params, parsed.params);
+      }
+
+      if (parsed.query && typeof parsed.query === 'object') {
+        Object.assign(req.query, parsed.query);
+      }
+
+      if (parsed.cookies && typeof parsed.cookies === 'object') {
+        Object.assign(req.cookies, parsed.cookies);
+      }
 
       next();
     } catch (error) {

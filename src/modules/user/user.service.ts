@@ -1,94 +1,14 @@
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import { UserStatus } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces/pagination.interface';
 import ApiError from '../../utils/apiError';
+import { normalizeUsername, prepareCreateUserPayload } from './user.helpers';
 import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
 import { UserRepository } from './user.repository';
 
-const normalizeUsername = (value: string): string =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/[^a-z0-9._]/g, '');
-
-const createUsernameBase = (payload: ICreateUserPayload): string => {
-  const firstName = payload.firstName?.trim().toLowerCase() || '';
-  const lastName = payload.lastName?.trim().toLowerCase() || '';
-  const emailPrefix = payload.email?.split('@')[0]?.toLowerCase() || 'user';
-  const base = normalizeUsername(`${firstName}${lastName}`) || normalizeUsername(emailPrefix);
-
-  return base || 'user';
-};
-
-const randomDigits = (length: number): string => {
-  let output = '';
-  for (let i = 0; i < length; i += 1) {
-    output += crypto.randomInt(0, 10).toString();
-  }
-  return output;
-};
-
-const createUniqueAccountId = async (): Promise<string> => {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const length = crypto.randomInt(8, 13);
-    const candidate = randomDigits(length);
-    const exists = await UserRepository.isAccountIdExists(candidate);
-    if (!exists) {
-      return candidate;
-    }
-  }
-  throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Unable to generate unique account id.');
-};
-
-const resolveUsername = async (payload: ICreateUserPayload): Promise<string> => {
-  const providedUsername = payload.username ? normalizeUsername(payload.username) : '';
-
-  if (payload.username && !providedUsername) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'username format is invalid.');
-  }
-
-  if (providedUsername) {
-    const exists = await UserRepository.isUsernameExists(providedUsername);
-    if (exists) {
-      throw new ApiError(StatusCodes.CONFLICT, 'username already in use.');
-    }
-    return providedUsername;
-  }
-
-  const base = createUsernameBase(payload);
-
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const suffix = attempt === 0 ? '' : randomDigits(crypto.randomInt(3, 6));
-    const candidate = `${base}${suffix}`;
-    const exists = await UserRepository.isUsernameExists(candidate);
-    if (!exists) {
-      return candidate;
-    }
-  }
-
-  throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Unable to generate unique username.');
-};
-
-const prepareCreateUserPayload = async (
-  payload: ICreateUserPayload
-): Promise<ICreateUserPayload> => {
-  const normalizedEmail = payload.email.trim().toLowerCase();
-  const username = await resolveUsername({ ...payload, email: normalizedEmail });
-  const accountId = await createUniqueAccountId();
-
-  return {
-    ...payload,
-    email: normalizedEmail,
-    username,
-    accountId,
-  };
-};
-
 // Create User
-const createUser = async (payload: ICreateUserPayload, actorId?: string, _actorRole?: string) => {
+const createUser = async (payload: ICreateUserPayload, actorId?: string) => {
   const preparedPayload = await prepareCreateUserPayload(payload);
   const createdByOwner = actorId ?? payload.createdById;
 
@@ -211,6 +131,14 @@ const updateUserPassword = async (userId: string, hashedPassword: string) => {
   return UserRepository.updateUserPasswordById(userId, hashedPassword);
 };
 
+const checkUsernameExists = async (username: string, excludeUserId?: string): Promise<boolean> => {
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'username format is invalid.');
+  }
+  return UserRepository.isUsernameExists(normalizedUsername, excludeUserId);
+};
+
 export const UserService = {
   createUser,
   getUserById,
@@ -223,4 +151,5 @@ export const UserService = {
   getUserByIdForAuth,
   createUserFromAuth,
   updateUserPassword,
+  checkUsernameExists,
 };

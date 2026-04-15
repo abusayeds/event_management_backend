@@ -6,6 +6,14 @@ import { UserValidation } from './user.validation';
 import { UserRole } from '../../../prisma/generated/enums';
 
 const router = Router();
+
+// check username exists
+router.get(
+  '/check-username',
+  validateRequest(UserValidation.checkUsernameExists),
+  UserController.checkUsernameExists
+);
+
 // GET  /api/users
 router
   .route('/')
