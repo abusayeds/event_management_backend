@@ -20,7 +20,7 @@ import {
   hashOtp,
   normalizeEmail,
   securityLogger,
-  validateUserStatus
+  validateUserStatus,
 } from './auth.helpers';
 import {
   ILoginPayload,
@@ -68,8 +68,7 @@ const register = async (payload: IRegisterPayload) => {
 
   // Store registration challenge in cache
   const pendingEmailVerification: IPendingEmailVerification = {
-    fullName: payload.fullName.trim(),
-    email: normalizedEmail,
+    ...payload,
     passwordHash,
     otpHash: hashOtp('registration', normalizedEmail, otp),
     attempts: 0,
@@ -90,6 +89,68 @@ const register = async (payload: IRegisterPayload) => {
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(payload.email));
     throw error;
   }
+};
+
+const verifyEmail = async (email: string, otp: string) => {
+  const normalizedEmail = normalizeEmail(email);
+  const pendingEmailVerificationData = await cacheService.get<IPendingEmailVerification>(
+    CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail)
+  );
+
+  if (!pendingEmailVerificationData) {
+    throw new ApiError(StatusCodes.GONE, 'Verification code has expired. Please register again.');
+  }
+
+  if (
+    pendingEmailVerificationData.otpHash !==
+    crypto.createHash('sha256').update(`registration:${normalizedEmail}:${otp}`).digest('hex')
+  ) {
+    const attempts = await cacheService.increment(
+      CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail)
+    );
+    if (attempts === 1) {
+      await cacheService.setTTL(
+        CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail),
+        CACHE_KEYS.TTL.MEDIUM
+      );
+    }
+    if (attempts >= 5) {
+      await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
+      await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
+      throw new ApiError(
+        StatusCodes.TOO_MANY_REQUESTS,
+        'Too many invalid OTP attempts. Request a new code.'
+      );
+    }
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired OTP.');
+  }
+
+  const existingUser = await UserService.getUserByEmail(normalizedEmail);
+  if (existingUser) {
+    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
+    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
+    throw new ApiError(StatusCodes.CONFLICT, 'Email already in use.');
+  }
+
+  const createdUser = await UserService.createUser({
+    firstName: pendingEmailVerificationData.firstName,
+    lastName: pendingEmailVerificationData.lastName,
+    gender: pendingEmailVerificationData.gender,
+    birthdate: pendingEmailVerificationData.birthdate,
+    location: pendingEmailVerificationData.location,
+    country: pendingEmailVerificationData.country,
+    state: pendingEmailVerificationData.state,
+    city: pendingEmailVerificationData.city,
+    email: pendingEmailVerificationData.email,
+    password: pendingEmailVerificationData.passwordHash,
+    username: pendingEmailVerificationData.username,
+  });
+
+  await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
+  await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
+
+  // Send welcome email
+  await emailTemplates.sendWelcomeEmail(createdUser.email, `${createdUser.fullName}`);
 };
 
 const login = async (payload: ILoginPayload) => {
@@ -138,7 +199,8 @@ const login = async (payload: ILoginPayload) => {
   return {
     user: {
       id: existingUser.id,
-      fullName: existingUser.fullName,
+      firstName: existingUser.firstName,
+      lastName: existingUser.lastName,
       email: existingUser.email,
       role: existingUser.role,
     },
@@ -147,67 +209,6 @@ const login = async (payload: ILoginPayload) => {
       refreshToken,
     },
   };
-};
-
-const verifyEmail = async (email: string, otp: string) => {
-  const normalizedEmail = normalizeEmail(email);
-  const challenge = await cacheService.get<IPendingEmailVerification>(
-    CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail)
-  );
-
-  if (!challenge) {
-    throw new ApiError(StatusCodes.GONE, 'Verification code has expired. Please register again.');
-  }
-
-  if (
-    challenge.otpHash !==
-    crypto.createHash('sha256').update(`registration:${normalizedEmail}:${otp}`).digest('hex')
-  ) {
-    const attempts = await cacheService.increment(
-      CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail)
-    );
-    if (attempts === 1) {
-      await cacheService.setTTL(
-        CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail),
-        CACHE_KEYS.TTL.MEDIUM
-      );
-    }
-    if (attempts >= 5) {
-      await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
-      await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
-      throw new ApiError(
-        StatusCodes.TOO_MANY_REQUESTS,
-        'Too many invalid OTP attempts. Request a new code.'
-      );
-    }
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired OTP.');
-  }
-
-  const existingUser = await UserService.getUserByEmail(normalizedEmail);
-  if (existingUser) {
-    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
-    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
-    throw new ApiError(StatusCodes.CONFLICT, 'Email already in use.');
-  }
-
-  const createdUser = await UserService.createUser(
-    {
-      fullName: challenge.fullName,
-      email: challenge.email,
-      password: challenge.passwordHash,
-    },
-    'system',
-    'system'
-  );
-
-  await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
-  await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
-
-  // Send welcome email
-  await emailTemplates.sendWelcomeEmail(
-    createdUser.email,
-    `${createdUser.firstName} ${createdUser.lastName}`
-  );
 };
 
 const resendVerificationOtp = async (email: string) => {

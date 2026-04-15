@@ -7,18 +7,6 @@ const passwordSchema = z
   .refine(
     password => /[A-Z]/.test(password),
     'Password must contain at least one uppercase letter'
-  )
-  .refine(
-    password => /[a-z]/.test(password),
-    'Password must contain at least one lowercase letter'
-  )
-  .refine(
-    password => /[0-9]/.test(password),
-    'Password must contain at least one number'
-  )
-  .refine(
-    password => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
-    'Password must contain at least one special character'
   );
 
 const login = z.object({
@@ -26,9 +14,6 @@ const login = z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(1, 'Password is required'),
   }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const register = z.object({
@@ -37,9 +22,6 @@ const register = z.object({
     email: z.string().email('Invalid email address'),
     password: passwordSchema,
   }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const verifyEmail = z.object({
@@ -47,18 +29,12 @@ const verifyEmail = z.object({
     email: z.string().email('Invalid email address'),
     otp: z.string().length(6, 'OTP must be 6 digits'),
   }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const resendVerificationOtp = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
   }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const refresh = z
@@ -92,9 +68,6 @@ const forgotPassword = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
   }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const resetPassword = z.object({
@@ -103,9 +76,6 @@ const resetPassword = z.object({
     otp: z.string().length(6, 'OTP must be 6 digits'),
     newPassword: passwordSchema,
   }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const changePassword = z.object({
@@ -113,9 +83,6 @@ const changePassword = z.object({
     currentPassword: z.string().min(1, 'Current password is required'),
     newPassword: passwordSchema,
   }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 export const AuthValidation = {

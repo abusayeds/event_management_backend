@@ -271,7 +271,6 @@ const allowedOrigins = getAllowedOrigins();
 const corsOptions = getCorsOptions(allowedOrigins);
 
 app.use(cors(corsOptions));
-// app.options('(.*)', cors(corsOptions));
 
 // Static file serving with security headers
 app.use(
@@ -309,7 +308,7 @@ app.use(getSecurityLoggingMiddleware());
 app.use(rateLimiters.generalRateLimiter);
 
 // Main API routes
-app.use('/api', routes);
+app.use('/api/v1/', routes);
 
 // Health check endpoints
 app.get('/test', (req: Request, res: Response) => {

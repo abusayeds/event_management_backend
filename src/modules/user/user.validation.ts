@@ -1,10 +1,5 @@
-// User status enum
-enum UserStatus {
-  ACTIVE = 'ACTIVE',
-  SUSPENDED = 'SUSPENDED',
-  BANNED = 'BANNED',
-}
 import { z } from 'zod';
+import { UserStatus } from '../../../prisma/generated/enums';
 
 const idParamSchema = z.object({
   id: z.string().min(1, 'User id is required'),
@@ -20,8 +15,6 @@ const createUser = z.object({
 });
 
 const getAllUsers = z.object({
-  body: z.object({}).optional(),
-  params: z.object({}).optional(),
   query: z.object({
     fullName: z.string().optional(),
     email: z.string().optional(),
@@ -34,14 +27,10 @@ const getAllUsers = z.object({
     sortBy: z.string().optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
   }),
-  cookies: z.object({}).optional(),
 });
 
 const getUserById = z.object({
-  body: z.object({}).optional(),
   params: idParamSchema,
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const updateUser = z.object({
@@ -54,8 +43,6 @@ const updateUser = z.object({
       message: 'At least one field is required to update user',
     }),
   params: idParamSchema,
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const updateUserStatus = z.object({
@@ -63,15 +50,10 @@ const updateUserStatus = z.object({
     status: z.enum(Object.values(UserStatus) as [string, ...string[]]),
   }),
   params: idParamSchema,
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 const deleteUser = z.object({
-  body: z.object({}).optional(),
   params: idParamSchema,
-  query: z.object({}).optional(),
-  cookies: z.object({}).optional(),
 });
 
 export const UserValidation = {

@@ -2,17 +2,12 @@ import bcrypt from 'bcryptjs';
 import { StatusCodes } from 'http-status-codes';
 import { PaginationOptions } from '../../interfaces/pagination.interface';
 import ApiError from '../../utils/apiError';
-import { ICreateUserPayload, IUpdateUserPayload, IUserFilters, UserStatus } from './user.interface';
+import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
 import { UserRepository } from './user.repository';
-
-// User error messages
-const USER_ERROR_MESSAGES = {
-  CANNOT_CHANGE_OWN_STATUS: 'You cannot change your own status.',
-  CANNOT_DELETE_SELF: 'You cannot delete your own account.',
-};
+import { UserStatus } from '../../../prisma/generated/enums';
 
 // Create User
-const createUser = async (payload: ICreateUserPayload, actorId: string, actorRole: string) => {
+const createUser = async (payload: ICreateUserPayload) => {
   // check email already exists
   const emailExists = await UserRepository.isEmailExists(payload.email);
   if (emailExists) {
@@ -26,7 +21,6 @@ const createUser = async (payload: ICreateUserPayload, actorId: string, actorRol
   const user = await UserRepository.createUser({
     ...payload,
     password: hashedPassword,
-    createdById: actorId,
   });
 
   return user;
@@ -85,7 +79,7 @@ const updateUserStatus = async (id: string, status: UserStatus, actorId: string)
 
   // Self user status change check
   if (id === actorId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, USER_ERROR_MESSAGES.CANNOT_CHANGE_OWN_STATUS);
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot change your own status.');
   }
   const updated = await UserRepository.updateUserStatus(id, status);
   return updated;

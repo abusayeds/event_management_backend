@@ -19,12 +19,12 @@ enum UserStatus {
     DELETED
 }
 
-enum NotificationType {
-    INFO
-    SUCCESS
-    WARNING
-    ERROR
+enum UserGender {
+    MALE
+    FEMALE
+    OTHER
 }
+
 
 // Models
 model User {
@@ -36,39 +36,23 @@ model User {
     email             String         @unique
     password          String
     phoneNumber       String?
-    gender            String?
-    birthdate         DateTime?
+    gender            UserGender
+    birthdate         DateTime
     profilePicture    String?
-    country           String?
-    state             String?
-    city              String?
+    location          String
+    country           String
+    state             String
+    city              String
     skills            String[]
     relationShip      String?
     role              UserRole       @default(USER)
     status            UserStatus     @default(ACTIVE)
     isIndependent     Boolean        @default(false)
     isEmailVerified   Boolean        @default(false)
-    createdByOwner    String? // For tracking who created the user (if applicable)
-    contributionScore Int            @default(0) // For tracking user contributions
+    createdByOwner    String?
+    contributionScore Int            @default(0)
     createdAt         DateTime       @default(now())
     updatedAt         DateTime       @updatedAt
-    notifications     Notification[]
 
     @@map("users")
-}
-
-model Notification {
-    id        String           @id @default(uuid())
-    title     String
-    message   String
-    type      NotificationType
-    read      Boolean          @default(false)
-    createdAt DateTime         @default(now())
-    updatedAt DateTime         @updatedAt
-    userId    String
-
-    // Relations
-    user User @relation(fields: [userId], references: [id])
-
-    @@map("notifications")
 }

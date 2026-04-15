@@ -1,29 +1,56 @@
-// User status enum
-export enum UserStatus {
-  ACTIVE = 'ACTIVE',
-  SUSPENDED = 'SUSPENDED',
-  BANNED = 'BANNED',
-}
+import { UserGender, UserStatus } from '../../../prisma/generated/enums';
 
 export interface IUser {
   id: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
+  username: string;
   email: string;
-  password?: string;
+  password: string;
+  gender: UserGender;
+  birthdate: string;
+  profilePicture: string;
+  location: string;
+  country: string;
+  state: string;
+  city: string;
+  skills: string[];
+  relationShip: string;
+  role: string;
   status: UserStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  isIndependent: boolean;
+  isEmailVerified: boolean;
+  createdByOwner: boolean;
+  contributionScore: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ICreateUserPayload {
-  fullName: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  gender: UserGender;
+  birthdate: string;
+  location: string;
+  country: string;
+  state: string;
+  city: string;
   email: string;
   password: string;
+  // Optional fields for  Owner create family members
+  relationShip?: string;
+  accountId?: string;
+  skills?: string[];
+  isIndependent?: boolean;
   createdById?: string;
 }
 
 export interface IUpdateUserPayload {
-  fullName?: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  gender?: UserGender;
   email?: string;
 }
 

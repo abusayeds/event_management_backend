@@ -1,3 +1,4 @@
+import { UserStatus } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import {
   createPaginationQuery,
@@ -6,33 +7,31 @@ import {
   PaginationResult,
   parsePaginationOptions,
 } from '../../utils/paginate';
-import { ICreateUserPayload, IUpdateUserPayload, IUserFilters, UserStatus } from './user.interface';
+import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
 
 // User full select
 const userFullSelect = {
   id: true,
-  fullName: true,
+  firstName: true,
+  lastName: true,
+  username: true,
   email: true,
-  status: true,
-  createdAt: true,
-  updatedAt: true,
-  createdById: true,
+  password: true,
+  gender: true,
+  birthdate: true,
+  profilePicture: true,
+  location: true,
+  country: true,
+  state: true,
+  city: true,
+  skills: true,
+  relationShip: true,
   role: true,
-  userPermissions: {
-    where: { isRevoked: false },
-    select: {
-      id: true,
-      isRevoked: true,
-      permission: {
-        select: {
-          id: true,
-          atom: true,
-          description: true,
-          module: true,
-        },
-      },
-    },
-  },
+  status: true,
+  isIndependent: true,
+  isEmailVerified: true,
+  createdByOwner: true,
+  contributionScore: true,
 };
 
 // User list select
@@ -49,11 +48,7 @@ const userListSelect = {
 // Create User
 const createUser = async (userData: ICreateUserPayload) => {
   return database.user.create({
-    data: {
-      fullName: userData.fullName,
-      email: userData.email,
-      password: userData.password,
-    },
+    data: userData,
     select: userListSelect,
   });
 };

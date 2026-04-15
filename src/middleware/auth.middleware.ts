@@ -5,13 +5,7 @@ import { AuthenticatedRequest } from '../interfaces/request.interface';
 import { IDecodedToken } from '../interfaces/token.interface';
 import ApiError from '../utils/apiError';
 import { verifyAccessToken } from '../utils/generateToken';
-
-// User role enum
-enum UserRole {
-  ADMIN = 'ADMIN',
-  MANAGER = 'MANAGER',
-  USER = 'USER',
-}
+import { UserRole } from '../../prisma/generated/enums';
 
 /**
  * Authentication middleware with role-based access control

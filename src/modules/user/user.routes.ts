@@ -3,24 +3,13 @@ import { auth } from '../../middleware/auth.middleware';
 import validateRequest from '../../middleware/validate.middleware';
 import { UserController } from './user.controller';
 import { UserValidation } from './user.validation';
-
-// User role enum
-enum UserRole {
-  ADMIN = 'ADMIN',
-  MANAGER = 'MANAGER',
-  USER = 'USER',
-}
+import { UserRole } from '../../../prisma/generated/enums';
 
 const router = Router();
-
 // GET  /api/users
 router
   .route('/')
-  .post(
-    auth(UserRole.ADMIN),
-    validateRequest(UserValidation.createUser),
-    UserController.createUser
-  )
+  .post(auth(UserRole.ADMIN), validateRequest(UserValidation.createUser), UserController.createUser)
   .get(
     auth(UserRole.ADMIN),
     validateRequest(UserValidation.getAllUsers),
