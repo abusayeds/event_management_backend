@@ -53,7 +53,7 @@ const failLoginAttempt = async (email: string): Promise<never> => {
   throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid credentials.');
 };
 
-const register = async (payload: IRegisterPayload) => {
+const register = async (payload: IRegisterPayload): Promise<{ sessionId: string }> => {
   const normalizedEmail = normalizeEmail(payload.email);
 
   // Check if email is already registered or pending verification
@@ -62,9 +62,10 @@ const register = async (payload: IRegisterPayload) => {
     throw new ApiError(StatusCodes.CONFLICT, 'Email is already registered. Please login instead.');
   }
 
-  // Hash password and generate OTP
+  // Hash password and generate OTP + sessionId
   const passwordHash = await bcrypt.hash(payload?.password, 12);
   const otp = generateOtp();
+  const sessionId = crypto.randomUUID();
 
   // Store registration challenge in cache
   const pendingEmailVerification: IPendingEmailVerification = {
@@ -75,31 +76,41 @@ const register = async (payload: IRegisterPayload) => {
     createdAt: new Date().toISOString(),
   };
 
-  // Send verification email
+  // Store by both email and sessionId for flexibility
   await cacheService.set(
     CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail),
     pendingEmailVerification,
     CACHE_KEYS.TTL.MEDIUM
   );
 
+  await cacheService.set(
+    CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId),
+    pendingEmailVerification,
+    CACHE_KEYS.TTL.MEDIUM
+  );
+
   try {
-    // In a real implementation, you would want to handle email sending failures more gracefully,
     await emailTemplates.sendVerificationEmail(normalizedEmail, otp);
   } catch (error) {
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
+    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
     throw error;
   }
+
+  return { sessionId };
 };
 
-const verifyEmail = async (email: string, otp: string) => {
-  const normalizedEmail = normalizeEmail(email);
+const verifyEmail = async (sessionId: string, otp: string) => {
+  // Fetch pending registration by sessionId (secure - no email in body)
   const pendingEmailVerificationData = await cacheService.get<IPendingEmailVerification>(
-    CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail)
+    CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId)
   );
 
   if (!pendingEmailVerificationData) {
     throw new ApiError(StatusCodes.GONE, 'Verification code has expired. Please register again.');
   }
+
+  const normalizedEmail = normalizeEmail(pendingEmailVerificationData.email);
 
   if (
     pendingEmailVerificationData.otpHash !==
@@ -116,6 +127,7 @@ const verifyEmail = async (email: string, otp: string) => {
     }
     if (attempts >= 5) {
       await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
+      await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
       await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
       throw new ApiError(
         StatusCodes.TOO_MANY_REQUESTS,
@@ -128,6 +140,7 @@ const verifyEmail = async (email: string, otp: string) => {
   const existingUser = await UserService.getUserByEmail(normalizedEmail);
   if (existingUser) {
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
+    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
     throw new ApiError(StatusCodes.CONFLICT, 'Email already in use.');
   }
@@ -136,7 +149,7 @@ const verifyEmail = async (email: string, otp: string) => {
     firstName: pendingEmailVerificationData.firstName,
     lastName: pendingEmailVerificationData.lastName,
     gender: pendingEmailVerificationData.gender,
-    birthdate: pendingEmailVerificationData.birthdate,
+    birthDate: pendingEmailVerificationData.birthDate,
     location: pendingEmailVerificationData.location,
     country: pendingEmailVerificationData.country,
     state: pendingEmailVerificationData.state,
@@ -146,11 +159,43 @@ const verifyEmail = async (email: string, otp: string) => {
     username: pendingEmailVerificationData.username,
   });
 
+  // Cleanup - remove from both caches
   await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
+  await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
   await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
 
   // Send welcome email
-  await emailTemplates.sendWelcomeEmail(createdUser.email, `${createdUser.firstName} ${createdUser.lastName}`);
+  await emailTemplates.sendWelcomeEmail(
+    createdUser.email,
+    `${createdUser.firstName} ${createdUser.lastName}`
+  );
+
+  // Generate tokens in parallel and auto-login
+  const [accessToken, refreshToken] = await Promise.all([
+    generateAccessToken(createdUser.id, createdUser.email, createdUser.role),
+    generateRefreshToken(createdUser.id, createdUser.email, createdUser.role),
+  ]);
+
+  // Store refresh token in cache with expiration
+  await cacheService.set(
+    CACHE_KEYS.AUTH.REFRESH_TOKEN(createdUser.id),
+    refreshToken,
+    CACHE_KEYS.TTL.WEEK
+  );
+
+  return {
+    user: {
+      id: createdUser.id,
+      firstName: createdUser.firstName,
+      lastName: createdUser.lastName,
+      email: createdUser.email,
+      role: createdUser.role,
+    },
+    tokens: {
+      accessToken,
+      refreshToken,
+    },
+  };
 };
 
 const login = async (payload: ILoginPayload) => {
@@ -211,20 +256,16 @@ const login = async (payload: ILoginPayload) => {
   };
 };
 
-const resendVerificationOtp = async (email: string) => {
-  const normalizedEmail = normalizeEmail(email);
+const resendVerificationOtp = async (sessionId: string) => {
   const challenge = await cacheService.get<IPendingEmailVerification>(
-    CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail)
+    CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId)
   );
 
   if (!challenge) {
-    const existingUser = await UserService.getUserByEmail(normalizedEmail);
-    if (existingUser) {
-      throw new ApiError(StatusCodes.CONFLICT, 'Email is already verified.');
-    }
     throw new ApiError(StatusCodes.GONE, 'Verification session expired. Please register again.');
   }
 
+  const normalizedEmail = normalizeEmail(challenge.email);
   const otp = generateOtp();
   const updatedChallenge: IPendingEmailVerification = {
     ...challenge,
@@ -233,17 +274,24 @@ const resendVerificationOtp = async (email: string) => {
     createdAt: new Date().toISOString(),
   };
 
+  // Update both email and sessionId cache entries
   await cacheService.set(
     CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail),
     updatedChallenge,
     CACHE_KEYS.TTL.MEDIUM
   );
 
+  await cacheService.set(
+    CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId),
+    updatedChallenge,
+    CACHE_KEYS.TTL.MEDIUM
+  );
+
   try {
-    // In a real implementation, you would want to handle email sending failures more gracefully,
     await emailTemplates.sendVerificationEmail(normalizedEmail, otp);
   } catch (error) {
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
+    await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
     throw error;
   }
 };

@@ -5,7 +5,7 @@ export interface IRegisterPayload {
   firstName: string;
   lastName: string;
   gender: UserGender;
-  birthdate: string;
+  birthDate: string;
   location: string;
   country: string;
   state: string;
@@ -15,12 +15,12 @@ export interface IRegisterPayload {
 }
 
 export interface IVerifyEmailPayload {
-  email: string;
   otp: string;
+  sessionId: string;
 }
 
 export interface IResendVerificationOtpPayload {
-  email: string;
+  sessionId: string;
 }
 
 export interface IPendingEmailVerification {
@@ -28,7 +28,7 @@ export interface IPendingEmailVerification {
   firstName: string;
   lastName: string;
   gender: UserGender;
-  birthdate: string;
+  birthDate: string;
   location: string;
   country: string;
   state: string;

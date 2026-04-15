@@ -23,7 +23,7 @@ const register = z.object({
     firstName: z.string().trim().min(1, 'firstName is required').max(60, 'firstName is too long'),
     lastName: z.string().trim().min(1, 'lastName is required').max(60, 'lastName is too long'),
     gender: z.enum(Object.values(UserGender) as [string, ...string[]]),
-    birthdate: z.string().min(1, 'birthdate is required'),
+    birthDate: z.string().min(1, 'birthDate is required'),
     location: z.string().trim().min(1, 'location is required'),
     country: z.string().trim().min(1, 'country is required'),
     state: z.string().trim().min(1, 'state is required'),
@@ -35,14 +35,14 @@ const register = z.object({
 
 const verifyEmail = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
     otp: z.string().length(6, 'OTP must be 6 digits'),
+    sessionId: z.string().min(1, 'sessionId is required'),
   }),
 });
 
 const resendVerificationOtp = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
+    sessionId: z.string().min(1, 'sessionId is required'),
   }),
 });
 

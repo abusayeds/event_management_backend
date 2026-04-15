@@ -19,7 +19,7 @@ const userFullSelect = {
   email: true,
   password: true,
   gender: true,
-  birthdate: true,
+  birthDate: true,
   profilePicture: true,
   location: true,
   country: true,
@@ -51,7 +51,7 @@ const userListSelect = {
 
 // Create User
 const createUser = async (userData: ICreateUserPayload) => {
-  const { createdById, accountId, username, ...rest } = userData;
+  const { createdById, accountId, username, birthDate, ...rest } = userData;
   if (!accountId) {
     throw new Error('accountId is required while creating user.');
   }
@@ -64,6 +64,7 @@ const createUser = async (userData: ICreateUserPayload) => {
       ...rest,
       accountId,
       username,
+      birthDate: new Date(birthDate),
       createdByOwner: createdById,
     },
     select: userListSelect,

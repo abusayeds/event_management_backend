@@ -16,44 +16,47 @@ import {
 } from './auth.interface';
 import { AuthService } from './auth.service';
 
-const REFRESH_COOKIE_NAME = 'refreshToken';
-const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 const getCookieOptions = () => ({
   httpOnly: true,
   secure: config.env === 'production',
   sameSite: 'strict' as const,
-  maxAge: REFRESH_COOKIE_MAX_AGE,
+  maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
   path: '/',
 });
 
 // POST /api/v1/auth/register
 const register = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IRegisterPayload;
-  await AuthService.register(payload);
+  const { sessionId } = await AuthService.register(payload);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
     message: 'Registration started. Please verify the OTP sent to your email.',
+    data: { sessionId },
   });
 });
 
 // POST /api/v1/auth/verify-email
 const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IVerifyEmailPayload;
-  await AuthService.verifyEmail(payload.email, payload.otp);
+  const result = await AuthService.verifyEmail(payload.sessionId, payload.otp);
+
+  // Set refresh token cookie
+  res.cookie("refreshToken", result.tokens.refreshToken, getCookieOptions());
 
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Email verified successfully. Your account is now active.',
+    data: result,
   });
 });
 
 // POST /api/v1/auth/resend-verification-otp
 const resendVerificationOtp = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IResendVerificationOtpPayload;
-  await AuthService.resendVerificationOtp(payload.email);
+  await AuthService.resendVerificationOtp(payload.sessionId);
 
   apiResponse(res, {
     success: true,
@@ -67,9 +70,9 @@ const login = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as ILoginPayload;
   const result = await AuthService.login(payload);
 
-  res.cookie(REFRESH_COOKIE_NAME, result.tokens.refreshToken, getCookieOptions());
+  res.cookie("refreshToken", result.tokens.refreshToken, getCookieOptions());
 
-  apiResponse(res, {
+  apiResponse(res, {  
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Login successful.',
@@ -103,7 +106,7 @@ const resetPassword = asyncHandler(async (req: Request, res: Response) => {
 // POST /api/v1/auth/refresh
 const refresh = asyncHandler(async (req: Request, res: Response) => {
   const refreshToken =
-    (req.cookies?.[REFRESH_COOKIE_NAME] as string) || (req.body?.refreshToken as string);
+    (req.cookies?.["refreshToken"] as string) || (req.body?.refreshToken as string);
 
   if (!refreshToken) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Refresh token is missing.');
@@ -111,7 +114,7 @@ const refresh = asyncHandler(async (req: Request, res: Response) => {
 
   const result = await AuthService.refresh(refreshToken);
 
-  res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getCookieOptions());
+  res.cookie("refreshToken", result.refreshToken, getCookieOptions());
 
   apiResponse(res, {
     success: true,
@@ -157,7 +160,7 @@ const logout = asyncHandler(async (req: AuthenticatedRequest, res: Response) => 
     accessToken,
   });
 
-  res.clearCookie(REFRESH_COOKIE_NAME, {
+  res.clearCookie("refreshToken"    , {
     httpOnly: true,
     secure: config.env === 'production',
     sameSite: 'strict',

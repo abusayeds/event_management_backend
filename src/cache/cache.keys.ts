@@ -5,6 +5,7 @@ export const CACHE_KEYS = {
     ATTEMPTS: (email: string) => `auth:attempts:${email.toLowerCase()}`,
     LOCK: (email: string) => `auth:lock:${email.toLowerCase()}`,
     REGISTRATION: (email: string) => `auth:registration:${email.toLowerCase()}`,
+    REGISTRATION_SESSION: (sessionId: string) => `auth:registration:session:${sessionId}`,
     REGISTRATION_ATTEMPTS: (email: string) => `auth:registration:attempts:${email.toLowerCase()}`,
     PASSWORD_RESET: (email: string) => `auth:password-reset:${email.toLowerCase()}`,
     PASSWORD_RESET_ATTEMPTS: (email: string) => `auth:password-reset:attempts:${email.toLowerCase()}`,

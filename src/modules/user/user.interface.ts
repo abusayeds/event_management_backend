@@ -8,7 +8,7 @@ export interface IUser {
   email: string;
   password: string;
   gender: UserGender;
-  birthdate: string;
+  birthDate: string;
   profilePicture: string;
   location: string;
   country: string;
@@ -32,7 +32,7 @@ export interface ICreateUserPayload {
   firstName: string;
   lastName: string;
   gender: UserGender;
-  birthdate: string;
+  birthDate: string;
   location: string;
   country: string;
   state: string;

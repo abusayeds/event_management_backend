@@ -11,7 +11,7 @@ const createUser = z.object({
     firstName: z.string().trim().min(1, 'firstName is required').max(60, 'firstName is too long'),
     lastName: z.string().trim().min(1, 'lastName is required').max(60, 'lastName is too long'),
     gender: z.enum(Object.values(UserGender) as [string, ...string[]]),
-    birthdate: z.string().min(1, 'birthdate is required'),
+    birthDate: z.string().min(1, 'birthDate is required'),
     location: z.string().trim().min(1, 'location is required'),
     country: z.string().trim().min(1, 'country is required'),
     state: z.string().trim().min(1, 'state is required'),
