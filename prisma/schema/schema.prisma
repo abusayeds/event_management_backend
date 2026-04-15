@@ -10,14 +10,13 @@ datasource db {
 // Enums
 enum UserRole {
     ADMIN
-    MANAGER
     USER
 }
 
 enum UserStatus {
     ACTIVE
-    SUSPENDED
     BANNED
+    DELETED
 }
 
 enum NotificationType {
@@ -29,17 +28,31 @@ enum NotificationType {
 
 // Models
 model User {
-    id        String     @id @default(uuid())
-    fullName  String
-    email     String     @unique
-    password  String
-    status    UserStatus @default(ACTIVE)
-    role      UserRole   @default(USER)
-    createdAt DateTime   @default(now())
-    updatedAt DateTime   @updatedAt
-
-    // Relations
-    notifications Notification[]
+    id                String         @id @default(uuid())
+    accountId         String         @unique @default(cuid())
+    firstName         String
+    lastName          String
+    username          String         @unique
+    email             String         @unique
+    password          String
+    phoneNumber       String?
+    gender            String?
+    birthdate         DateTime?
+    profilePicture    String?
+    country           String?
+    state             String?
+    city              String?
+    skills            String[]
+    relationShip      String?
+    role              UserRole       @default(USER)
+    status            UserStatus     @default(ACTIVE)
+    isIndependent     Boolean        @default(false)
+    isEmailVerified   Boolean        @default(false)
+    createdByOwner    String? // For tracking who created the user (if applicable)
+    contributionScore Int            @default(0) // For tracking user contributions
+    createdAt         DateTime       @default(now())
+    updatedAt         DateTime       @updatedAt
+    notifications     Notification[]
 
     @@map("users")
 }

@@ -13,7 +13,7 @@ export interface IResendVerificationOtpPayload {
   email: string;
 }
 
-export interface IRegistrationChallenge {
+export interface IPendingEmailVerification {
   fullName: string;
   email: string;
   passwordHash: string;

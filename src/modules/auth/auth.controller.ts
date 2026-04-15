@@ -6,13 +6,13 @@ import apiResponse from '../../utils/apiResponse';
 import config from '../../config';
 import { AuthenticatedRequest } from '../../interfaces/request.interface';
 import {
-    IChangePasswordPayload,
-    IForgotPasswordPayload,
-    ILoginPayload,
-    IRegisterPayload,
-    IResendVerificationOtpPayload,
-    IResetPasswordPayload,
-    IVerifyEmailPayload,
+  IChangePasswordPayload,
+  IForgotPasswordPayload,
+  ILoginPayload,
+  IRegisterPayload,
+  IResendVerificationOtpPayload,
+  IResetPasswordPayload,
+  IVerifyEmailPayload,
 } from './auth.interface';
 import { AuthService } from './auth.service';
 
@@ -31,7 +31,6 @@ const getCookieOptions = () => ({
 const register = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IRegisterPayload;
   await AuthService.register(payload);
-
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
@@ -78,27 +77,6 @@ const login = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// POST /api/v1/auth/refresh
-const refresh = asyncHandler(async (req: Request, res: Response) => {
-  const refreshToken =
-    (req.cookies?.[REFRESH_COOKIE_NAME] as string) || (req.body?.refreshToken as string);
-
-  if (!refreshToken) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Refresh token is missing.');
-  }
-
-  const result = await AuthService.refresh(refreshToken);
-
-  res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getCookieOptions());
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Access token refreshed successfully.',
-    data: result,
-  });
-});
-
 // POST /api/v1/auth/forgot-password
 const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IForgotPasswordPayload;
@@ -120,6 +98,26 @@ const resetPassword = asyncHandler(async (req: Request, res: Response) => {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Password has been reset successfully.',
+  });
+});
+// POST /api/v1/auth/refresh
+const refresh = asyncHandler(async (req: Request, res: Response) => {
+  const refreshToken =
+    (req.cookies?.[REFRESH_COOKIE_NAME] as string) || (req.body?.refreshToken as string);
+
+  if (!refreshToken) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Refresh token is missing.');
+  }
+
+  const result = await AuthService.refresh(refreshToken);
+
+  res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getCookieOptions());
+
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Access token refreshed successfully.',
+    data: result,
   });
 });
 

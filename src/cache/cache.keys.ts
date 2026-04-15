@@ -10,6 +10,7 @@ export const CACHE_KEYS = {
     PASSWORD_RESET_ATTEMPTS: (email: string) => `auth:password-reset:attempts:${email.toLowerCase()}`,
     TOKEN_BLACKLIST: (token: string) => `blacklist:${token}`,
     REFRESH_TOKEN: (userId: string) => `refresh-token:${userId}`,
+    PERMISSIONS: (userId: string) => `auth:permissions:${userId}`,
   },
 
   // User keys
