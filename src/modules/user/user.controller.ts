@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import { AuthenticatedRequest } from '../../interfaces/request.interface';
+import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
-import apiResponse from '../../utils/apiResponse';
-import { AuthenticatedRequest } from '../../interfaces/request.interface';
 import { UserService } from './user.service';
 
 // POST /api/users

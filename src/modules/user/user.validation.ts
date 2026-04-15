@@ -8,10 +8,6 @@ const idParamSchema = z.object({
 const createUser = z.object({
   body: z.object({
     username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30).optional(),
-    accountId: z
-      .string()
-      .regex(/^\d{8,12}$/, 'accountId must be 8 to 12 digits')
-      .optional(),
     firstName: z.string().trim().min(1, 'firstName is required').max(60, 'firstName is too long'),
     lastName: z.string().trim().min(1, 'lastName is required').max(60, 'lastName is too long'),
     gender: z.enum(Object.values(UserGender) as [string, ...string[]]),

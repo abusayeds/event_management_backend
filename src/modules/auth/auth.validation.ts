@@ -19,7 +19,7 @@ const login = z.object({
 
 const register = z.object({
   body: z.object({
-    username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30).optional(),
+    username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30),
     firstName: z.string().trim().min(1, 'firstName is required').max(60, 'firstName is too long'),
     lastName: z.string().trim().min(1, 'lastName is required').max(60, 'lastName is too long'),
     gender: z.enum(Object.values(UserGender) as [string, ...string[]]),

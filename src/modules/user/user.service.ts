@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import { UserStatus } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces/pagination.interface';
@@ -25,14 +26,14 @@ const createUsernameBase = (payload: ICreateUserPayload): string => {
 const randomDigits = (length: number): string => {
   let output = '';
   for (let i = 0; i < length; i += 1) {
-    output += Math.floor(Math.random() * 10).toString();
+    output += crypto.randomInt(0, 10).toString();
   }
   return output;
 };
 
 const createUniqueAccountId = async (): Promise<string> => {
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const length = 8 + Math.floor(Math.random() * 5);
+    const length = crypto.randomInt(8, 13);
     const candidate = randomDigits(length);
     const exists = await UserRepository.isAccountIdExists(candidate);
     if (!exists) {
@@ -60,7 +61,7 @@ const resolveUsername = async (payload: ICreateUserPayload): Promise<string> => 
   const base = createUsernameBase(payload);
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const suffix = attempt === 0 ? '' : randomDigits(3 + Math.floor(Math.random() * 3));
+    const suffix = attempt === 0 ? '' : randomDigits(crypto.randomInt(3, 6));
     const candidate = `${base}${suffix}`;
     const exists = await UserRepository.isUsernameExists(candidate);
     if (!exists) {
@@ -87,8 +88,9 @@ const prepareCreateUserPayload = async (
 };
 
 // Create User
-const createUser = async (payload: ICreateUserPayload, _actorId?: string, _actorRole?: string) => {
+const createUser = async (payload: ICreateUserPayload, actorId?: string, _actorRole?: string) => {
   const preparedPayload = await prepareCreateUserPayload(payload);
+  const createdByOwner = actorId ?? payload.createdById;
 
   // check email already exists
   const emailExists = await UserRepository.isEmailExists(preparedPayload.email);
@@ -101,6 +103,7 @@ const createUser = async (payload: ICreateUserPayload, _actorId?: string, _actor
   // create user
   const user = await UserRepository.createUser({
     ...preparedPayload,
+    createdById: createdByOwner,
     password: hashedPassword,
   });
 
@@ -108,16 +111,7 @@ const createUser = async (payload: ICreateUserPayload, _actorId?: string, _actor
 };
 
 // Get All Users
-const getAllUsers = async (
-  actorId: string,
-  actorRole: string,
-  filters: IUserFilters,
-  options: PaginationOptions
-) => {
-  if (actorRole !== 'ADMIN') {
-    filters.createdById = actorId;
-  }
-
+const getAllUsers = async (filters: IUserFilters, options: PaginationOptions) => {
   return UserRepository.getAllUsers(filters, options);
 };
 
