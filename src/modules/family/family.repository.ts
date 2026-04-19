@@ -1,6 +1,6 @@
 import { database } from '../../config/database';
 import { PaginationOptions } from '../../interfaces';
-import { createPaginationQuery, parsePaginationOptions } from '../../utils';
+import { createPaginationQuery, createPaginationResult, parsePaginationOptions } from '../../utils';
 import { ICreateFamilyPayload, IFamilyFilters } from './family.interface';
 
 const createFamily = async (payload: ICreateFamilyPayload) => {
@@ -27,38 +27,45 @@ const getMyFamilies = async (
 ) => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
+
   const where: any = {
-    userId,
+    isDeleted: false,
+    familyMembers: {
+      some: {
+        userId,
+      },
+    },
   };
 
   if (filters.searchTerm) {
-    where.family = {
-      name: { contains: filters.searchTerm, mode: 'insensitive' },
+    where.name = {
+      contains: filters.searchTerm,
+      mode: 'insensitive',
     };
   }
 
   const [families, total] = await Promise.all([
-    database.familyMember.findMany({
+    database.family.findMany({
       where,
       skip,
       take,
       orderBy,
       include: {
-        family: true,
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            profilePicture: true,
+          },
+        },
       },
     }),
-    database.familyMember.count({ where }),
+    database.family.count({ where }),
   ]);
 
-  return {
-    data: families,
-    meta: {
-      page: pagination.page,
-      limit: pagination.limit,
-      total,
-      totalPages: Math.ceil(total / pagination.limit),
-    },
-  };
+  return createPaginationResult(families, total, pagination);
 };
 
 const getFamily = async (familyId: string) => {

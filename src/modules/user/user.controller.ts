@@ -36,7 +36,8 @@ const getAllUsers = asyncHandler(async (req: AuthenticatedRequest, res: Response
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Users fetched successfully.',
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 

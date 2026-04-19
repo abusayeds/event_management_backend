@@ -25,7 +25,8 @@ const getMyFamilies = asyncHandler(async (req: AuthenticatedRequest, res: Respon
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Families fetched successfully.',
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 const getFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
