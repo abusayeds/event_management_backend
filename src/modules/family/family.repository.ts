@@ -1,7 +1,7 @@
 import { database } from '../../config/database';
-import { ICreateFamilyPayload, IFamilyFilters } from './family.interface';
 import { PaginationOptions } from '../../interfaces';
 import { createPaginationQuery, parsePaginationOptions } from '../../utils';
+import { ICreateFamilyPayload, IFamilyFilters } from './family.interface';
 
 const createFamily = async (payload: ICreateFamilyPayload) => {
   const family = await database.family.create({
@@ -32,7 +32,9 @@ const getMyFamilies = async (
   };
 
   if (filters.searchTerm) {
-    where.OR = [{ family: { name: { contains: filters.searchTerm, mode: 'insensitive' } } }];
+    where.family = {
+      name: { contains: filters.searchTerm, mode: 'insensitive' },
+    };
   }
 
   const [families, total] = await Promise.all([
@@ -45,7 +47,7 @@ const getMyFamilies = async (
         family: true,
       },
     }),
-    database.family.count({ where }),
+    database.familyMember.count({ where }),
   ]);
 
   return {

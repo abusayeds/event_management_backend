@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthRoutes } from '../modules/auth/auth.routes';
+import { FamilyRoutes } from '../modules/family/family.routes';
 import { UserRoutes } from '../modules/user/user.routes';
 
 const router: Router = Router();
@@ -16,5 +17,6 @@ router.get('/health', (req, res) => {
 // API routes
 router.use('/auth', AuthRoutes);
 router.use('/users', UserRoutes);
+router.use('/families', FamilyRoutes);
 
 export default router;

@@ -1,10 +1,10 @@
-import { StatusCodes } from 'http-status-codes';
-import asyncHandler from '../../utils/asyncHandler';
-import apiResponse from '../../utils/apiResponse';
-import { FamilyService } from './family.services';
-import { AuthenticatedRequest } from '../../interfaces';
 import { Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import { AuthenticatedRequest } from '../../interfaces';
+import apiResponse from '../../utils/apiResponse';
+import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
+import { FamilyService } from './family.services';
 
 const createFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId } = req.user!;
@@ -29,8 +29,8 @@ const getMyFamilies = asyncHandler(async (req: AuthenticatedRequest, res: Respon
   });
 });
 const getFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { id: familyId } = req.params;
-  const result = await FamilyService.getFamily(familyId as string);
+  const familyId = req.params.id as string;
+  const result = await FamilyService.getFamily(familyId);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -39,8 +39,8 @@ const getFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
   });
 });
 const updateFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { id: familyId } = req.params;
-  const result = await FamilyService.updateFamily(familyId as string, req.body);
+  const familyId = req.params.id as string;
+  const result = await FamilyService.updateFamily(familyId, req.body);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -49,8 +49,8 @@ const updateFamily = asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 });
 const deleteFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { id: familyId } = req.params;
-  const result = await FamilyService.deleteFamily(familyId as string);
+  const familyId = req.params.id as string;
+  const result = await FamilyService.deleteFamily(familyId);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
