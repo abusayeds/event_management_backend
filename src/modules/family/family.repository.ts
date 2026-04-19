@@ -75,8 +75,17 @@ const getFamily = async (familyId: string) => {
   });
   return family;
 };
+const getFamilyByName = async (name: string) => {
+  const family = await database.family.findFirst({
+    where: {
+      name,
+      isDeleted: false,
+    },
+  });
+  return family;
+};
 
-const editFamily = async (familyId: string, payload: Partial<ICreateFamilyPayload>) => {
+const updateFamily = async (familyId: string, payload: Partial<ICreateFamilyPayload>) => {
   const family = await database.family.update({
     where: {
       id: familyId,
@@ -105,6 +114,7 @@ export const FamilyRepository = {
   createFamily,
   getMyFamilies,
   getFamily,
-  editFamily,
+  updateFamily,
   deleteFamily,
+  getFamilyByName,
 };
