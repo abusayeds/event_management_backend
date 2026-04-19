@@ -25,35 +25,118 @@ enum UserGender {
     OTHER
 }
 
+enum InvitationStatus {
+    PENDING
+    ACCEPTED
+    DECLINED
+    EXPIRED
+}
 
+enum FamilyRole {
+    OWNER
+    MEMBER
+}
 
 // Models
 model User {
-    id                String     @id @default(uuid())
-    accountId         String     @unique
-    firstName         String
-    lastName          String
-    username          String     @unique
-    email             String     @unique
-    password          String
-    phoneNumber       String?
-    gender            UserGender
-    birthDate         DateTime
-    profilePicture    String?
-    location          String
-    country           String
-    state             String
-    city              String
-    skills            String[]
-    relationShip      String?
-    role              UserRole   @default(USER)
-    status            UserStatus @default(ACTIVE)
-    isIndependent     Boolean    @default(false)
-    isEmailVerified   Boolean    @default(false)
-    createdByOwner    String?
-    contributionScore Int        @default(0)
-    createdAt         DateTime   @default(now())
-    updatedAt         DateTime   @updatedAt
+    id                 String              @id @default(uuid())
+    accountId          String              @unique
+    firstName          String
+    lastName           String
+    username           String              @unique
+    email              String              @unique
+    password           String
+    phoneNumber        String?
+    gender             UserGender
+    birthDate          DateTime
+    profilePicture     String?
+    location           String
+    country            String
+    state              String
+    city               String
+    skills             String[]
+    relationShip       String?
+    role               UserRole            @default(USER)
+    status             UserStatus          @default(ACTIVE)
+    isIndependent      Boolean             @default(false)
+    isEmailVerified    Boolean             @default(false)
+    createdByOwner     String?
+    owner              User?               @relation("OwnerCreatedUsers", fields: [createdByOwner], references: [id], onDelete: SetNull)
+    createdUsers       User[]              @relation("OwnerCreatedUsers")
+    contributionScore  Int                 @default(0)
+    createdAt          DateTime            @default(now())
+    updatedAt          DateTime            @updatedAt
+    families           Family[]            @relation("FamilyCreator")
+    familyMembers      FamilyMember[]
+    familyInvitations  FamilyInvitation[]  @relation("FamilyInvitedBy")
+    familyJoinRequests FamilyJoinRequest[] @relation("FamilyJoinRequest")
 
+    @@index([createdByOwner])
     @@map("users")
+}
+
+model Family {
+    id                 String              @id @default(uuid())
+    name               String
+    description        String?
+    createdBy          String
+    creator            User                @relation("FamilyCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+    isDeleted          Boolean             @default(false)
+    createdAt          DateTime            @default(now())
+    updatedAt          DateTime            @updatedAt
+    familyMembers      FamilyMember[]
+    familyInvitations  FamilyInvitation[]
+    familyJoinRequests FamilyJoinRequest[]
+
+    @@index([createdBy])
+    @@map("families")
+}
+
+model FamilyMember {
+    id        String     @id @default(uuid())
+    familyId  String
+    userId    String
+    role      FamilyRole @default(MEMBER)
+    family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+    user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
+
+    @@unique([familyId, userId])
+    @@index([familyId])
+    @@index([userId])
+    @@map("family_members")
+}
+
+model FamilyInvitation {
+    id              String           @id @default(uuid())
+    familyId        String
+    invitedByUserId String
+    invitedEmail    String
+    family          Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+    invitedByUser   User             @relation("FamilyInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+    status          InvitationStatus @default(PENDING)
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt
+
+    @@unique([familyId, invitedEmail])
+    @@index([familyId])
+    @@index([invitedByUserId])
+    @@map("family_invitations")
+}
+
+model FamilyJoinRequest {
+    id        String           @id @default(uuid())
+    familyId  String
+    userId    String
+    family    Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+    user      User             @relation("FamilyJoinRequest", fields: [userId], references: [id], onDelete: Cascade)
+    status    InvitationStatus @default(PENDING)
+    createdAt DateTime         @default(now())
+    updatedAt DateTime         @updatedAt
+
+    @@unique([familyId, userId])
+    @@index([familyId])
+    @@index([userId])
+    @@map("family_join_requests")
 }

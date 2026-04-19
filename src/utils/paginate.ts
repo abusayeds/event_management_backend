@@ -8,7 +8,6 @@ export { PaginationMeta, PaginationOptions, PaginationResult };
 
 export const parsePaginationOptions = (options: PaginationOptions): Required<PaginationOptions> => {
   return {
-    search: options.search || '',
     page: options.page || 1,
     limit: options.limit || 10,
     sortBy: options.sortBy || 'createdAt',

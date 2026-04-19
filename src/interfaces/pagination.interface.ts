@@ -3,7 +3,6 @@ export interface PaginationOptions {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-  search?: string;
 }
 
 export interface PaginationMeta {
