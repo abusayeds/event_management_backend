@@ -1,6 +1,5 @@
-import { IFilterOptions, IQueryParams } from './../../interfaces/api.interface';
 import { database } from '../../config/database';
-import { ICreateFamilyPayload, IFamily } from './family.interface';
+import { ICreateFamilyPayload, IFamilyFilters } from './family.interface';
 import { PaginationOptions } from '../../interfaces';
 import { createPaginationQuery, parsePaginationOptions } from '../../utils';
 
@@ -21,30 +20,29 @@ const createFamily = async (payload: ICreateFamilyPayload) => {
   return family;
 };
 
-
 const getMyFamilies = async (
   userId: string,
-  filters: IFilterOptions,
+  filters: IFamilyFilters,
   options: PaginationOptions
 ) => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
   const where: any = {
-    createdBy: userId,
-    isDeleted: false,
+    userId,
   };
+
+  if (filters.searchTerm) {
+    where.OR = [{ family: { name: { contains: filters.searchTerm, mode: 'insensitive' } } }];
+  }
+
   const [families, total] = await Promise.all([
-    database.family.findMany({
+    database.familyMember.findMany({
       where,
       skip,
       take,
       orderBy,
       include: {
-        familyMembers: {
-          where: {
-            userId,
-          },
-        },
+        family: true,
       },
     }),
     database.family.count({ where }),
@@ -59,4 +57,54 @@ const getMyFamilies = async (
       totalPages: Math.ceil(total / pagination.limit),
     },
   };
+};
+
+const getFamily = async (familyId: string) => {
+  const family = await database.family.findUnique({
+    where: {
+      id: familyId,
+      isDeleted: false,
+    },
+    include: {
+      familyMembers: {
+        include: {
+          user: true,
+        },
+      },
+    },
+  });
+  return family;
+};
+
+const editFamily = async (familyId: string, payload: Partial<ICreateFamilyPayload>) => {
+  const family = await database.family.update({
+    where: {
+      id: familyId,
+    },
+    data: {
+      name: payload.name,
+      description: payload.description,
+    },
+  });
+  return family;
+};
+
+const deleteFamily = async (familyId: string) => {
+  const family = await database.family.update({
+    where: {
+      id: familyId,
+    },
+    data: {
+      isDeleted: true,
+    },
+  });
+  return family;
+};
+
+export const FamilyRepository = {
+  createFamily,
+  getMyFamilies,
+  getFamily,
+  editFamily,
+  deleteFamily,
 };

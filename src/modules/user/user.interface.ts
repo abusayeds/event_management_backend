@@ -59,7 +59,7 @@ export interface IUserFilters {
   username?: string;
   email?: string;
   status?: UserStatus;
-  search?: string;
+  searchTerm?: string;
   role?: string;
   roleId?: string;
   createdByOwner?: string;

@@ -79,6 +79,7 @@ model Family {
     id                 String              @id @default(uuid())
     name               String
     description        String?
+    imageUrl           String?
     createdBy          String
     creator            User                @relation("FamilyCreator", fields: [createdBy], references: [id], onDelete: Restrict)
     isDeleted          Boolean             @default(false)

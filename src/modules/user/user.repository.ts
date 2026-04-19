@@ -112,13 +112,13 @@ const getAllUsers = async (
   const where: any = {};
 
   // Search filter
-  if (filters.search) {
+  if (filters.searchTerm) {
     where.OR = [
-      { firstName: { contains: filters.search, mode: 'insensitive' } },
-      { lastName: { contains: filters.search, mode: 'insensitive' } },
-      { username: { contains: filters.search, mode: 'insensitive' } },
-      { accountId: { contains: filters.search, mode: 'insensitive' } },
-      { email: { contains: filters.search, mode: 'insensitive' } },
+      { firstName: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { lastName: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { username: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { accountId: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { email: { contains: filters.searchTerm, mode: 'insensitive' } },
     ];
   }
 

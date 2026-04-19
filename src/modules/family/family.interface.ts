@@ -19,3 +19,7 @@ export interface ICreateFamilyPayload {
     role: FamilyRole;
   };
 }
+
+export interface IFamilyFilters {
+  searchTerm?: string;
+}
