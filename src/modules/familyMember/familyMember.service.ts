@@ -6,9 +6,9 @@ import { FamilyRepository } from '../family/family.repository';
 import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import {
-    IAddFamilyMemberWithUserPayload,
-    IAddFamilyOwnerPayload,
-    IFamilyMemberFilters,
+  IAddFamilyMemberWithUserPayload,
+  IAddFamilyOwnerPayload,
+  IFamilyMemberFilters,
 } from './familyMember.interface';
 import { FamilyMemberRepository } from './familyMember.repository';
 
@@ -163,6 +163,7 @@ const addFamilyOwner = async (actorId: string, payload: IAddFamilyOwnerPayload) 
 const updateOwnerIndependentStatus = async (
   actorId: string,
   familyId: string,
+  targetUserId: string,
   isIndependent: boolean
 ) => {
   // Step 1: Ensure family exists
@@ -181,7 +182,7 @@ const updateOwnerIndependentStatus = async (
   }
 
   // Step 3: Update owner independence
-  return UserService.updateUserIndependentStatus(actorId, isIndependent, actorId);
+  return UserService.updateUserIndependentStatus(targetUserId, isIndependent, actorId);
 };
 
 export const FamilyMemberService = {

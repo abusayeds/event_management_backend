@@ -18,27 +18,29 @@ const addFamilyMember = asyncHandler(async (req: AuthenticatedRequest, res: Resp
   });
 });
 
-const getFamilyMembersByFamilyId = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const actorId = req.user!.userId;
-  const familyId = req.params.familyId as string;
-  const filters = pick(req.query, ['role']);
-  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+const getFamilyMembersByFamilyId = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const actorId = req.user!.userId;
+    const familyId = req.params.familyId as string;
+    const filters = pick(req.query, ['role']);
+    const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
-  const result = await FamilyMemberService.getFamilyMembersByFamilyId(
-    actorId,
-    familyId,
-    filters,
-    options
-  );
+    const result = await FamilyMemberService.getFamilyMembersByFamilyId(
+      actorId,
+      familyId,
+      filters,
+      options
+    );
 
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Family members fetched successfully.',
-    data: result.data,
-    meta: result.meta,
-  });
-});
+    apiResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: 'Family members fetched successfully.',
+      data: result.data,
+      meta: result.meta,
+    });
+  }
+);
 
 const removeFamilyMember = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const actorId = req.user!.userId;
@@ -71,11 +73,12 @@ const updateOwnerIndependentStatus = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const actorId = req.user!.userId;
     const familyId = req.params.familyId as string;
-    const { isIndependent } = req.body;
+    const { targetUserId, isIndependent } = req.body;
 
     const result = await FamilyMemberService.updateOwnerIndependentStatus(
       actorId,
       familyId,
+      targetUserId,
       isIndependent
     );
 
