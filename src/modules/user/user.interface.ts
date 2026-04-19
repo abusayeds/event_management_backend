@@ -15,7 +15,6 @@ export interface IUser {
   state: string;
   city: string;
   skills: string[];
-  relationShip: string;
   role: string;
   status: UserStatus;
   isIndependent: boolean;
@@ -40,7 +39,6 @@ export interface ICreateUserPayload {
   email: string;
   password: string;
   // Optional fields for  Owner create family members
-  relationShip?: string;
   skills?: string[];
   isIndependent?: boolean;
   createdById?: string;
@@ -51,7 +49,15 @@ export interface IUpdateUserPayload {
   firstName?: string;
   lastName?: string;
   gender?: UserGender;
+  birthDate?: string;
+  location?: string;
+  country?: string;
+  state?: string;
+  city?: string;
   email?: string;
+  skills?: string[];
+  isIndependent?: boolean;
+  profilePicture?: string;
 }
 
 export interface IUserFilters {

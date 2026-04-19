@@ -13,7 +13,7 @@ import {
 import { FamilyMemberRepository } from './familyMember.repository';
 
 const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUserPayload) => {
-  const { familyId, role, ...userPayload } = payload;
+  const { familyId, role, relationShip, ...userPayload } = payload;
 
   // Step 1: Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
@@ -51,6 +51,7 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
     familyId,
     userId: createdUser.id,
     role: role ?? FamilyRole.MEMBER,
+    relationShip,
   });
 
   return {

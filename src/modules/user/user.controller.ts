@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../../interfaces/request.interface';
 import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
+import { uploadImageToS3 } from '../../utils/s3Upload';
 import { UserService } from './user.service';
 
 // POST /api/users
@@ -53,11 +54,43 @@ const getUserById = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+const getMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { userId } = req.user!;
+  const user = await UserService.getUserById(userId);
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User fetched successfully.',
+    data: user,
+  });
+});
+
 // PATCH /api/users/:id
 const updateUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id: userId } = req.params;
-  const { userId: actorId } = req.user!;
-  const user = await UserService.updateUser(userId as string, req.body, actorId);
+  const { userId: actorId, role: actorRole } = req.user!;
+
+  let profilePictureUrl: string | undefined;
+  if (req.file) {
+    const uploaded = await uploadImageToS3(
+      req.file.buffer,
+      req.file.mimetype,
+      req.file.originalname,
+      'profiles'
+    );
+    profilePictureUrl = uploaded.url;
+  }
+
+  const payload = {
+    ...req.body,
+    ...(profilePictureUrl
+      ? {
+          profilePicture: profilePictureUrl,
+        }
+      : {}),
+  };
+
+  const user = await UserService.updateUser(userId as string, payload, actorId, actorRole);
 
   apiResponse(res, {
     success: true,
@@ -94,6 +127,21 @@ const deleteUser = asyncHandler(async (req: AuthenticatedRequest, res: Response)
   });
 });
 
+// METHOD 2: Get Presigned URL (Future - for direct S3 upload)
+// const getProfilePicturePresignedUrl = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+//   const { id: userId } = req.params;
+//   const { fileName, mimeType } = req.body;
+//
+//   const presignedData = await UserService.getProfilePicturePresignedUrl(userId as string, fileName, mimeType);
+//
+//   apiResponse(res, {
+//     success: true,
+//     statusCode: StatusCodes.OK,
+//     message: 'Presigned URL generated successfully.',
+//     data: presignedData,
+//   });
+// });
+
 // checkUsernameExists
 const checkUsernameExists = asyncHandler(async (req: Request, res: Response) => {
   const { username } = req.query;
@@ -116,6 +164,7 @@ const checkUsernameExists = asyncHandler(async (req: Request, res: Response) => 
 export const UserController = {
   createUser,
   getAllUsers,
+  getMyProfile,
   getUserById,
   checkUsernameExists,
   updateUser,

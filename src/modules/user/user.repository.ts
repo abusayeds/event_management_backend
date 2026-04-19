@@ -26,7 +26,6 @@ export const userFullSelect = {
   state: true,
   city: true,
   skills: true,
-  relationShip: true,
   role: true,
   status: true,
   isIndependent: true,
@@ -167,9 +166,14 @@ const getAllUsers = async (
 
 // Update User by ID
 const updateUserById = async (id: string, data: IUpdateUserPayload) => {
+  const { birthDate, ...rest } = data;
+
   return database.user.update({
     where: { id },
-    data,
+    data: {
+      ...rest,
+      ...(birthDate ? { birthDate: new Date(birthDate) } : {}),
+    },
     select: userListSelect,
   });
 };

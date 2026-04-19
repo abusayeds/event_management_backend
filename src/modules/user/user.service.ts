@@ -1,11 +1,18 @@
 import bcrypt from 'bcryptjs';
 import { StatusCodes } from 'http-status-codes';
-import { UserStatus } from '../../../prisma/generated/enums';
+import { UserRole, UserStatus } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces/pagination.interface';
 import ApiError from '../../utils/apiError';
 import { normalizeUsername, prepareCreateUserPayload } from './user.helpers';
 import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
 import { UserRepository } from './user.repository';
+import { generatePresignedUrl } from '../../utils/s3Upload';
+
+const normalizeSkills = (skills: string[]) => {
+  const cleanedSkills = skills.map(skill => skill.trim()).filter(skill => skill.length > 0);
+
+  return Array.from(new Set(cleanedSkills));
+};
 
 // Create User
 const createUser = async (payload: ICreateUserPayload, actorId?: string) => {
@@ -46,7 +53,20 @@ const getUserById = async (id: string) => {
 };
 
 // Update User
-const updateUser = async (id: string, payload: IUpdateUserPayload, _actorId: string) => {
+const updateUser = async (
+  id: string,
+  payload: IUpdateUserPayload,
+  actorId: string,
+  actorRole: string
+) => {
+  // Only admin can update any user. Regular user can update own profile only.
+  if (actorRole !== UserRole.ADMIN && actorId !== id) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'You are not authorized to update this user profile.'
+    );
+  }
+
   // User existence check
   const existing = await UserRepository.isUserExists(id);
   if (!existing) {
@@ -77,6 +97,14 @@ const updateUser = async (id: string, payload: IUpdateUserPayload, _actorId: str
     }
 
     payload.username = normalizedUsername;
+  }
+
+  if (payload.skills) {
+    payload.skills = normalizeSkills(payload.skills);
+  }
+
+  if (Object.keys(payload).length === 0) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update user.');
   }
 
   const updated = await UserRepository.updateUserById(id, payload);
@@ -159,6 +187,29 @@ const checkUsernameExists = async (username: string, excludeUserId?: string): Pr
   return UserRepository.isUsernameExists(normalizedUsername, excludeUserId);
 };
 
+// METHOD 2: Presigned URL (Future)
+const getProfilePicturePresignedUrl = async (
+  userId: string,
+  fileName: string,
+  mimeType: string
+) => {
+  // User existence check
+  const existing = await UserRepository.isUserExists(userId);
+  if (!existing) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+
+  // Validate mime type
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowedTypes.includes(mimeType)) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Invalid file type. Only JPG, PNG, and WEBP are allowed.'
+    );
+  }
+  return generatePresignedUrl(fileName, mimeType, 'profiles');
+};
+
 export const UserService = {
   createUser,
   getUserById,
@@ -173,4 +224,6 @@ export const UserService = {
   createUserFromAuth,
   updateUserPassword,
   checkUsernameExists,
+  // Presigned URL (Future)
+  getProfilePicturePresignedUrl,
 };

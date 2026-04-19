@@ -2,6 +2,7 @@ import colors from 'colors';
 import dotenv from 'dotenv';
 import { StatusCodes } from 'http-status-codes';
 import ApiError from '../utils/apiError';
+import awsConfig from './aws';
 dotenv.config({ quiet: true });
 
 const requiredEnvVars = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
@@ -113,28 +114,7 @@ const config = {
     enableFileLogging: process.env.ENABLE_FILE_LOGGING !== 'false',
   },
   // AWS Configuration
-  aws: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    region: process.env.AWS_REGION || 'us-east-1',
-    bucket: process.env.AWS_S3_BUCKET || '',
-    s3: {
-      endpoint: process.env.AWS_S3_ENDPOINT,
-      forcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === 'true',
-      signedUrlExpiry: parseInt(process.env.AWS_S3_SIGNED_URL_EXPIRY || '3600'), // 1 hour
-      maxFileSize: parseInt(process.env.AWS_MAX_FILE_SIZE || '10485760'), // 10MB
-      allowedMimeTypes: [
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'application/pdf',
-        'text/plain',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      ],
-    },
-  },
+  aws: awsConfig,
 
   // Queue Configuration (BullMQ)
   queue: {

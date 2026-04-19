@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import { UserRole } from '../../../prisma/generated/enums';
 import { auth } from '../../middleware/auth.middleware';
+import { upload } from '../../middleware/upload.middleware';
 import validateRequest from '../../middleware/validate.middleware';
 import { UserController } from './user.controller';
 import { UserValidation } from './user.validation';
-import { UserRole } from '../../../prisma/generated/enums';
 
 const router = Router();
 
@@ -13,6 +14,8 @@ router.get(
   validateRequest(UserValidation.checkUsernameExists),
   UserController.checkUsernameExists
 );
+
+router.get('/me', auth(UserRole.ADMIN, UserRole.USER), UserController.getMyProfile);
 
 // GET  /api/users
 router
@@ -33,7 +36,8 @@ router
     UserController.getUserById
   )
   .patch(
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.USER),
+    upload.single('profilePicture'),
     validateRequest(UserValidation.updateUser),
     UserController.updateUser
   )
@@ -50,5 +54,15 @@ router.patch(
   validateRequest(UserValidation.updateUserStatus),
   UserController.updateUserStatus
 );
+
+// METHOD 2: Presigned URL endpoint (Future - uncomment when ready)
+// GET /api/users/:id/presigned-url
+// Generates a presigned URL for frontend direct S3 upload
+// router.get(
+//   '/:id/presigned-url',
+//   auth(UserRole.ADMIN, UserRole.USER),
+//   validateRequest(UserValidation.getPresignedUrl),
+//   UserController.getProfilePicturePresignedUrl
+// );
 
 export const UserRoutes: Router = router;

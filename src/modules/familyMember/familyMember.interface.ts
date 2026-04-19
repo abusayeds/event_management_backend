@@ -14,11 +14,13 @@ export interface ICreateFamilyMemberPayload {
   familyId: string;
   userId: string;
   role: FamilyRole;
+  relationShip?: string;
 }
 
 export interface IAddFamilyMemberWithUserPayload extends ICreateUserPayload {
   familyId: string;
   role?: FamilyRole;
+  relationShip?: string;
 }
 
 export interface IFamilyMemberFilters {
