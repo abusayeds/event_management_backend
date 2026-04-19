@@ -25,7 +25,7 @@ export interface IFamilyMemberFilters {
   role?: FamilyRole;
 }
 
-export interface IChangeFamilyOwnerPayload {
+export interface IAddFamilyOwnerPayload {
   familyId: string;
   newOwnerUserId: string;
 }

@@ -55,21 +55,43 @@ const removeFamilyMember = asyncHandler(async (req: AuthenticatedRequest, res: R
   });
 });
 
-const updateMemberRole = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const addFamilyOwner = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const actorId = req.user!.userId;
-  const result = await FamilyMemberService.updateMemberRole(actorId, req.body);
+  const result = await FamilyMemberService.addFamilyOwner(actorId, req.body);
 
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Family member role updated successfully.',
+    message: 'Family owner added successfully.',
     data: result,
   });
 });
+
+const updateOwnerIndependentStatus = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const actorId = req.user!.userId;
+    const familyId = req.params.familyId as string;
+    const { isIndependent } = req.body;
+
+    const result = await FamilyMemberService.updateOwnerIndependentStatus(
+      actorId,
+      familyId,
+      isIndependent
+    );
+
+    apiResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: 'Owner independence status updated successfully.',
+      data: result,
+    });
+  }
+);
 
 export const FamilyMemberController = {
   addFamilyMember,
   getFamilyMembersByFamilyId,
   removeFamilyMember,
-  updateMemberRole,
+  addFamilyOwner,
+  updateOwnerIndependentStatus,
 };

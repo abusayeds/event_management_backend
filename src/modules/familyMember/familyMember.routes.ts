@@ -29,9 +29,16 @@ router.delete(
 );
 
 router.patch(
-  '/update-role',
+  '/add-owner',
   auth(UserRole.USER),
-  validateRequest(FamilyMemberValidation.changeFamilyOwner),
-  FamilyMemberController.updateMemberRole
+  validateRequest(FamilyMemberValidation.addFamilyOwner),
+  FamilyMemberController.addFamilyOwner
+);
+
+router.patch(
+  '/family/:familyId/owner-independent',
+  auth(UserRole.USER),
+  validateRequest(FamilyMemberValidation.updateOwnerIndependentStatus),
+  FamilyMemberController.updateOwnerIndependentStatus
 );
 export const FamilyMemberRoutes: Router = router;

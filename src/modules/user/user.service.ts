@@ -99,6 +99,21 @@ const updateUserStatus = async (id: string, status: UserStatus, actorId: string)
   return updated;
 };
 
+const updateUserIndependentStatus = async (id: string, isIndependent: boolean, actorId: string) => {
+  // User existence check
+  const existing = await UserRepository.isUserExists(id);
+  if (!existing) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+
+  // Self-only toggle for owner flow
+  if (id !== actorId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You can only update your own independence status.');
+  }
+
+  return UserRepository.updateUserIndependentStatus(id, isIndependent);
+};
+
 // Delete User
 const deleteUser = async (id: string, actorId: string) => {
   // User existence check
@@ -146,6 +161,7 @@ export const UserService = {
   getAllUsers,
   updateUser,
   updateUserStatus,
+  updateUserIndependentStatus,
   deleteUser,
   // Helper methods for auth
   getUserByEmail,

@@ -47,10 +47,17 @@ const removeFamilyMember = z.object({
   params: familyIdAndUserIdParamSchema,
 });
 
-const changeFamilyOwner = z.object({
+const addFamilyOwner = z.object({
   body: z.object({
     familyId: z.string().min(1, 'familyId is required'),
     newOwnerUserId: z.string().min(1, 'newOwnerUserId is required'),
+  }),
+});
+
+const updateOwnerIndependentStatus = z.object({
+  params: familyIdParamSchema,
+  body: z.object({
+    isIndependent: z.boolean(),
   }),
 });
 
@@ -58,5 +65,6 @@ export const FamilyMemberValidation = {
   addFamilyMember,
   getFamilyMembersByFamilyId,
   removeFamilyMember,
-  changeFamilyOwner,
+  addFamilyOwner,
+  updateOwnerIndependentStatus,
 };

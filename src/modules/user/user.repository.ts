@@ -183,6 +183,22 @@ const updateUserStatus = async (id: string, status: UserStatus) => {
   });
 };
 
+const updateUserIndependentStatus = async (id: string, isIndependent: boolean) => {
+  return database.user.update({
+    where: { id },
+    data: { isIndependent },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      isIndependent: true,
+      status: true,
+      role: true,
+    },
+  });
+};
+
 const updateUserPasswordById = async (id: string, hashedPassword: string) => {
   return database.user.update({
     where: { id },
@@ -253,6 +269,7 @@ export const UserRepository = {
   getAllUsers,
   updateUserById,
   updateUserStatus,
+  updateUserIndependentStatus,
   updateUserPasswordById,
   deleteUserById,
   isEmailExists,

@@ -6,9 +6,9 @@ import { FamilyRepository } from '../family/family.repository';
 import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import {
-  IAddFamilyMemberWithUserPayload,
-  IChangeFamilyOwnerPayload,
-  IFamilyMemberFilters,
+    IAddFamilyMemberWithUserPayload,
+    IAddFamilyOwnerPayload,
+    IFamilyMemberFilters,
 } from './familyMember.interface';
 import { FamilyMemberRepository } from './familyMember.repository';
 
@@ -119,7 +119,7 @@ const removeFamilyMember = async (actorId: string, familyId: string, userId: str
   return FamilyMemberRepository.removeFamilyMember(familyId, userId);
 };
 
-const updateMemberRole = async (actorId: string, payload: IChangeFamilyOwnerPayload) => {
+const addFamilyOwner = async (actorId: string, payload: IAddFamilyOwnerPayload) => {
   const { familyId, newOwnerUserId } = payload;
 
   // Step 1: Ensure family exists
@@ -134,7 +134,7 @@ const updateMemberRole = async (actorId: string, payload: IChangeFamilyOwnerPayl
     actorId
   );
   if (!actorMembership || actorMembership.role !== FamilyRole.OWNER) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Only current owner can change ownership.');
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only current owner can add another owner.');
   }
 
   // Step 3: Prevent no-op transfer
@@ -151,8 +151,7 @@ const updateMemberRole = async (actorId: string, payload: IChangeFamilyOwnerPayl
     throw new ApiError(StatusCodes.NOT_FOUND, 'Target user is not a family member.');
   }
 
-  // Step 5: Swap ownership (old owner -> MEMBER, new owner -> OWNER)
-//   await FamilyMemberRepository.updateMemberRole(familyId, actorId, FamilyRole.MEMBER);
+  // Step 5: Promote the target member to OWNER and keep current owner as OWNER
   await FamilyMemberRepository.updateMemberRole(familyId, newOwnerUserId, FamilyRole.OWNER);
 
   return {
@@ -161,9 +160,34 @@ const updateMemberRole = async (actorId: string, payload: IChangeFamilyOwnerPayl
   };
 };
 
+const updateOwnerIndependentStatus = async (
+  actorId: string,
+  familyId: string,
+  isIndependent: boolean
+) => {
+  // Step 1: Ensure family exists
+  const family = await FamilyRepository.getFamily(familyId);
+  if (!family) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
+  }
+
+  // Step 2: Ensure requester is current owner
+  const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
+    familyId,
+    actorId
+  );
+  if (!actorMembership || actorMembership.role !== FamilyRole.OWNER) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only family owner can update independence status.');
+  }
+
+  // Step 3: Update owner independence
+  return UserService.updateUserIndependentStatus(actorId, isIndependent, actorId);
+};
+
 export const FamilyMemberService = {
   addFamilyMember,
   getFamilyMembersByFamilyId,
   removeFamilyMember,
-  updateMemberRole,
+  addFamilyOwner,
+  updateOwnerIndependentStatus,
 };
