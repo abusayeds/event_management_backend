@@ -10,7 +10,7 @@ import {
 import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
 
 // User full select
-const userFullSelect = {
+export const userFullSelect = {
   id: true,
   accountId: true,
   firstName: true,
@@ -36,7 +36,7 @@ const userFullSelect = {
 };
 
 // User list select
-const userListSelect = {
+export const userListSelect = {
   id: true,
   accountId: true,
   firstName: true,

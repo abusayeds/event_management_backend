@@ -75,9 +75,13 @@ const getFamily = async (familyId: string) => {
       isDeleted: false,
     },
     include: {
-      familyMembers: {
-        include: {
-          user: true,
+      creator: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          profilePicture: true,
         },
       },
     },

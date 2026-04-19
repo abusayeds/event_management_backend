@@ -1,4 +1,5 @@
 import { FamilyRole } from '../../../prisma/generated/enums';
+import { ICreateUserPayload } from '../user/user.interface';
 
 export interface IFamilyMember {
   id: string;
@@ -7,4 +8,24 @@ export interface IFamilyMember {
   role: FamilyRole;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ICreateFamilyMemberPayload {
+  familyId: string;
+  userId: string;
+  role: FamilyRole;
+}
+
+export interface IAddFamilyMemberWithUserPayload extends ICreateUserPayload {
+  familyId: string;
+  role?: FamilyRole;
+}
+
+export interface IFamilyMemberFilters {
+  role?: FamilyRole;
+}
+
+export interface IChangeFamilyOwnerPayload {
+  familyId: string;
+  newOwnerUserId: string;
 }
