@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
+// Family ID parameter validation for routes
 const idParamSchema = z.object({
   id: z.string().min(1, 'Family id is required'),
 });
 
+// Create family validation with optional description and image
 const createFamily = z.object({
   body: z.object({
     name: z.string().trim().min(1, 'Family name is required').max(100, 'Family name is too long'),
@@ -12,6 +14,7 @@ const createFamily = z.object({
   }),
 });
 
+// Get authenticated user's families with filtering and pagination
 const getMyFamilies = z.object({
   query: z.object({
     searchTerm: z.string().optional(),
@@ -22,10 +25,12 @@ const getMyFamilies = z.object({
   }),
 });
 
+// Get family by ID validation
 const getFamily = z.object({
   params: idParamSchema,
 });
 
+// Update family with optional fields validation
 const updateFamily = z.object({
   body: z
     .object({
@@ -39,6 +44,7 @@ const updateFamily = z.object({
   params: idParamSchema,
 });
 
+// Delete family by ID validation
 const deleteFamily = z.object({
   params: idParamSchema,
 });

@@ -6,7 +6,7 @@ import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
 import { UserService } from './user.service';
 
-// POST /api/users
+// Create new user (admin only)
 const createUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId: actorId } = req.user!;
   const user = await UserService.createUser(req.body, actorId);
@@ -18,7 +18,7 @@ const createUser = asyncHandler(async (req: AuthenticatedRequest, res: Response)
   });
 });
 
-// GET /api/users
+// Get all users with filters and pagination
 const getAllUsers = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const filters = pick(req.query, [
     'fullName',
@@ -41,7 +41,7 @@ const getAllUsers = asyncHandler(async (req: AuthenticatedRequest, res: Response
   });
 });
 
-// GET /api/users/:id
+// Get user by ID
 const getUserById = asyncHandler(async (req: Request, res: Response) => {
   const { id: userId } = req.params;
   const user = await UserService.getUserById(userId as string);
@@ -53,6 +53,7 @@ const getUserById = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+// Get authenticated user's own profile
 const getMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId } = req.user!;
   const user = await UserService.getMyProfile(userId);
@@ -64,6 +65,7 @@ const getMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 });
 
+// Update own profile with optional profile picture upload
 const updateMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId } = req.user!;
   const user = await UserService.updateMyProfile(userId, req.body, req.file);
@@ -75,7 +77,7 @@ const updateMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Resp
   });
 });
 
-// PATCH /api/users/:id
+// Update user by ID with authorization checks
 const updateUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id: userId } = req.params;
   const { userId: actorId, role: actorRole } = req.user!;
@@ -90,7 +92,7 @@ const updateUser = asyncHandler(async (req: AuthenticatedRequest, res: Response)
   });
 });
 
-// PATCH /api/users/:id/status
+// Update user status (ACTIVE, BANNED, DELETED)
 const updateUserStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id: userId } = req.params;
   const { userId: actorId } = req.user!;
@@ -105,7 +107,7 @@ const updateUserStatus = asyncHandler(async (req: AuthenticatedRequest, res: Res
   });
 });
 
-// DELETE /api/users/:id
+// Delete user by ID (admin or self)
 const deleteUserById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id: targetUserId } = req.params;
   const { userId: actorId, role: actorRole } = req.user!;
@@ -117,6 +119,7 @@ const deleteUserById = asyncHandler(async (req: AuthenticatedRequest, res: Respo
   });
 });
 
+// Delete authenticated user's own account
 const deleteMyAccount = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId: actorId, role: actorRole } = req.user!;
   await UserService.deleteUser(actorId as string, actorId, actorRole);
@@ -142,7 +145,7 @@ const deleteMyAccount = asyncHandler(async (req: AuthenticatedRequest, res: Resp
 //   });
 // });
 
-// checkUsernameExists
+// Check if username is already taken
 const checkUsernameExists = asyncHandler(async (req: Request, res: Response) => {
   const { username } = req.query;
   if (typeof username !== 'string') {

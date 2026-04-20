@@ -2,10 +2,12 @@ import { z } from 'zod';
 import { UserGender, UserStatus } from '../../../prisma/generated/enums';
 import { strongPasswordSchema } from '../../utils/passwordPolicy';
 
+// User ID parameter validation for routes
 const idParamSchema = z.object({
   id: z.string().min(1, 'User id is required'),
 });
 
+// Parse skills input from various formats (array, JSON, comma-separated)
 const parseSkillsInput = (value: unknown): string[] | undefined => {
   if (value === undefined) {
     return undefined;
@@ -42,6 +44,7 @@ const parseSkillsInput = (value: unknown): string[] | undefined => {
     .filter(item => item.length > 0);
 };
 
+// Reusable update schema for both updateUser and updateMyProfile
 const updateUserBodySchema = z
   .object({
     username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30).optional(),
@@ -65,6 +68,7 @@ const updateUserBodySchema = z
     message: 'At least one field is required to update user',
   });
 
+// Create user validation with profile and authentication fields
 const createUser = z.object({
   body: z.object({
     username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30).optional(),
@@ -84,6 +88,7 @@ const createUser = z.object({
   }),
 });
 
+// Get all users with filtering, pagination, and sorting
 const getAllUsers = z.object({
   query: z.object({
     fullName: z.string().optional(),
@@ -102,18 +107,23 @@ const getAllUsers = z.object({
   }),
 });
 
+// Get user by ID parameter validation
 const getUserById = z.object({
   params: idParamSchema,
 });
 
+// Update user by ID validation
 const updateUser = z.object({
   body: updateUserBodySchema,
   params: idParamSchema,
 });
+
+// Update own profile validation
 const updateMyProfile = z.object({
   body: updateUserBodySchema,
 });
 
+// Update user account status validation
 const updateUserStatus = z.object({
   body: z.object({
     status: z.enum(Object.values(UserStatus) as [string, ...string[]]),
@@ -121,10 +131,12 @@ const updateUserStatus = z.object({
   params: idParamSchema,
 });
 
+// Delete user by ID validation
 const deleteUser = z.object({
   params: idParamSchema,
 });
 
+// Check username availability validation
 const checkUsernameExists = z.object({
   query: z.object({
     username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30),

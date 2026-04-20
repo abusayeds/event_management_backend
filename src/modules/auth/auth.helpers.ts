@@ -6,9 +6,10 @@ import { cacheService } from '../../cache/cache.service';
 import logger from '../../config/logger';
 import ApiError from '../../utils/apiError';
 
-// Email Utilities
+// Normalize email to lowercase and trim whitespace
 export const normalizeEmail = (email: string): string => email.toLowerCase().trim();
 
+// Mask email for security logging (show first and last character)
 export const maskEmail = (email: string): string => {
   const [name, domain] = email.split('@');
   const maskedName =
@@ -18,23 +19,23 @@ export const maskEmail = (email: string): string => {
   return `${maskedName}@${domain}`;
 };
 
+// Generate opaque token with random crypto bytes and prefix
 export const generateOpaqueToken = (prefix: string): string => {
   return `${prefix}_${crypto.randomBytes(24).toString('base64url')}`;
 };
 
-//OTP Utilities
+// Generate 6-digit random OTP for email verification
 export const generateOtp = (): string => Math.floor(100000 + Math.random() * 900000).toString();
 
+// Hash OTP with SHA256 using purpose, email, and OTP
 export const hashOtp = (purpose: string, email: string, otp: string): string =>
   crypto.createHash('sha256').update(`${purpose}:${email}:${otp}`).digest('hex');
 
-// Password Utilities
+// Hash password with bcrypt (12 rounds)
 export const getPasswordHash = async (password: string): Promise<string> =>
   await bcrypt.hash(password, 12);
 
-// ==========================================
-// SECURITY LOGGING
-// ==========================================
+// Security logging utilities for authentication events
 export const securityLogger = {
   loginAttempt: (email: string, ip: string, success: boolean): void => {
     logger.warn('Login attempt', {
@@ -47,7 +48,7 @@ export const securityLogger = {
   },
 } as const;
 
-// Handle OTP verification attempts with rate limiting
+// Handle OTP verification with rate limiting and attempt tracking
 export const handleOtpAttempt = async (
   challengeKey: string,
   attemptKey: string,

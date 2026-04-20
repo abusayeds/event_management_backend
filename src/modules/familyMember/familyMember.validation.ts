@@ -2,15 +2,18 @@ import { z } from 'zod';
 import { FamilyRole, UserGender } from '../../../prisma/generated/enums';
 import { strongPasswordSchema } from '../../utils/passwordPolicy';
 
+// Family ID parameter validation for routes
 const familyIdParamSchema = z.object({
   familyId: z.string().min(1, 'familyId is required'),
 });
 
+// Family ID and User ID parameter validation
 const familyIdAndUserIdParamSchema = z.object({
   familyId: z.string().min(1, 'familyId is required'),
   userId: z.string().min(1, 'userId is required'),
 });
 
+// Add new family member with user account creation
 const addFamilyMember = z.object({
   body: z.object({
     familyId: z.string().min(1, 'familyId is required'),
@@ -31,6 +34,7 @@ const addFamilyMember = z.object({
   }),
 });
 
+// Get family members with filtering and pagination
 const getFamilyMembersByFamilyId = z.object({
   params: familyIdParamSchema,
   query: z.object({
@@ -42,10 +46,12 @@ const getFamilyMembersByFamilyId = z.object({
   }),
 });
 
+// Remove family member from family
 const removeFamilyMember = z.object({
   params: familyIdAndUserIdParamSchema,
 });
 
+// Add new family owner
 const addFamilyOwner = z.object({
   body: z.object({
     familyId: z.string().min(1, 'familyId is required'),
@@ -53,6 +59,7 @@ const addFamilyOwner = z.object({
   }),
 });
 
+// Update family member independence status (owner only)
 const updateOwnerIndependentStatus = z.object({
   params: familyIdParamSchema,
   body: z.object({

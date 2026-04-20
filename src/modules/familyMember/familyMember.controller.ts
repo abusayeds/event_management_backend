@@ -6,6 +6,7 @@ import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
 import { FamilyMemberService } from './familyMember.service';
 
+// Add new family member with user account creation
 const addFamilyMember = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const actorId = req.user!.userId;
   const result = await FamilyMemberService.addFamilyMember(actorId, req.body);
@@ -18,6 +19,7 @@ const addFamilyMember = asyncHandler(async (req: AuthenticatedRequest, res: Resp
   });
 });
 
+// Get family members with filtering and pagination
 const getFamilyMembersByFamilyId = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const actorId = req.user!.userId;
@@ -56,7 +58,7 @@ const removeFamilyMember = asyncHandler(async (req: AuthenticatedRequest, res: R
     data: result,
   });
 });
-
+// Remove family member from family// Add new family owner
 const addFamilyOwner = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const actorId = req.user!.userId;
   const result = await FamilyMemberService.addFamilyOwner(actorId, req.body);
@@ -69,6 +71,7 @@ const addFamilyOwner = asyncHandler(async (req: AuthenticatedRequest, res: Respo
   });
 });
 
+// Update family member independence status (owner only)
 const updateOwnerIndependentStatus = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const actorId = req.user!.userId;

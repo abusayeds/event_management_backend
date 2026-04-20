@@ -18,6 +18,7 @@ import {
 } from './auth.interface';
 import { AuthService } from './auth.service';
 
+// Get secure HTTP-only cookie options for tokens
 const getCookieOptions = () => ({
   httpOnly: true,
   secure: config.env === 'production',
@@ -26,7 +27,7 @@ const getCookieOptions = () => ({
   path: '/',
 });
 
-// POST /api/v1/auth/register
+// Register user with email verification OTP
 const register = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IRegisterPayload;
   const { sessionId } = await AuthService.register(payload);
@@ -38,7 +39,7 @@ const register = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// POST /api/v1/auth/verify-email
+// Verify email with OTP and activate account
 const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IVerifyEmailPayload;
   const result = await AuthService.verifyEmail(payload.sessionId, payload.otp);
@@ -54,7 +55,7 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// POST /api/v1/auth/resend-verification-otp
+// Resend OTP for email verification
 const resendVerificationOtp = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IResendVerificationOtpPayload;
   await AuthService.resendVerificationOtp(payload.sessionId);
@@ -66,7 +67,7 @@ const resendVerificationOtp = asyncHandler(async (req: Request, res: Response) =
   });
 });
 
-// POST /api/v1/auth/login
+// Login with email and password
 const login = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as ILoginPayload;
   const result = await AuthService.login(payload);
@@ -81,7 +82,7 @@ const login = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// POST /api/v1/auth/forgot-password
+// Initiate password reset with OTP
 const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IForgotPasswordPayload;
   const { sessionId } = await AuthService.forgotPassword(payload.email);
@@ -94,7 +95,7 @@ const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// POST /api/v1/auth/verify-forgot-password-otp
+// Verify OTP for password reset
 const verifyForgotPasswordOtp = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IVerifyForgotPasswordOtpPayload;
   const { resetToken } = await AuthService.verifyForgotPasswordOtp(payload.sessionId, payload.otp);
@@ -107,7 +108,7 @@ const verifyForgotPasswordOtp = asyncHandler(async (req: Request, res: Response)
   });
 });
 
-// POST /api/v1/auth/resend-forgot-password-otp
+// Resend OTP for password reset
 const resendForgotPasswordOtp = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IResendForgotPasswordOtpPayload;
   await AuthService.resendForgotPasswordOtp(payload.sessionId);
@@ -119,7 +120,7 @@ const resendForgotPasswordOtp = asyncHandler(async (req: Request, res: Response)
   });
 });
 
-// POST /api/v1/auth/reset-password
+// Reset password with reset token
 const resetPassword = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as IResetPasswordPayload;
   await AuthService.resetPassword(payload.resetToken, payload.newPassword);
@@ -130,7 +131,8 @@ const resetPassword = asyncHandler(async (req: Request, res: Response) => {
     message: 'Password has been reset successfully.',
   });
 });
-// POST /api/v1/auth/refresh
+
+// Refresh access token using refresh token
 const refresh = asyncHandler(async (req: Request, res: Response) => {
   const refreshToken =
     (req.cookies?.['refreshToken'] as string) || (req.body?.refreshToken as string);
@@ -151,7 +153,7 @@ const refresh = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// POST /api/v1/auth/change-password
+// Change password for authenticated user
 const changePassword = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user?.userId) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Unauthorized user context.');
@@ -167,7 +169,7 @@ const changePassword = asyncHandler(async (req: AuthenticatedRequest, res: Respo
   });
 });
 
-// POST /api/v1/auth/logout
+// Logout user and revoke tokens
 const logout = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const authorization = req.headers.authorization;
   const accessToken = authorization?.startsWith('Bearer ')

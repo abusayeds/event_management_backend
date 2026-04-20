@@ -1,5 +1,6 @@
 import { UserGender, UserRole, UserStatus } from '../../../prisma/generated/enums';
 
+// User domain model with all profile details
 export interface IUser {
   id: string;
   firstName: string;
@@ -25,6 +26,7 @@ export interface IUser {
   updatedAt: Date;
 }
 
+// Create user payload with optional owner-managed fields
 export interface ICreateUserPayload {
   accountId?: string;
   username?: string;
@@ -45,6 +47,7 @@ export interface ICreateUserPayload {
   createdById?: string;
 }
 
+// Update user payload with all optional fields
 export interface IUpdateUserPayload {
   username?: string;
   firstName?: string;
@@ -61,6 +64,7 @@ export interface IUpdateUserPayload {
   profilePicture?: string;
 }
 
+// User query filter parameters
 export interface IUserFilters {
   fullName?: string;
   username?: string;

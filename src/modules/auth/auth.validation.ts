@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { UserGender } from '../../../prisma/generated/enums';
 import { strongPasswordSchema } from '../../utils/passwordPolicy';
 
+// Login request validation
 const login = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
@@ -9,6 +10,7 @@ const login = z.object({
   }),
 });
 
+// Registration with user profile information
 const register = z.object({
   body: z.object({
     username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30),
@@ -25,6 +27,7 @@ const register = z.object({
   }),
 });
 
+// Email verification with OTP validation
 const verifyEmail = z.object({
   body: z.object({
     otp: z.string().length(6, 'OTP must be 6 digits'),
@@ -32,12 +35,14 @@ const verifyEmail = z.object({
   }),
 });
 
+// Resend verification OTP request
 const resendVerificationOtp = z.object({
   body: z.object({
     sessionId: z.string().min(1, 'sessionId is required'),
   }),
 });
 
+// Token refresh validation - supports cookie or body
 const refresh = z
   .object({
     body: z
@@ -56,6 +61,7 @@ const refresh = z
     'Refresh token is required in cookie or request body'
   );
 
+// Logout endpoint validation
 const logout = z.object({
   body: z.object({}).optional(),
   params: z.object({}).optional(),
@@ -63,12 +69,14 @@ const logout = z.object({
   cookies: z.object({}).optional(),
 });
 
+// Forgot password request validation
 const forgotPassword = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
   }),
 });
 
+// Verify OTP from forgot password email
 const verifyForgotPasswordOtp = z.object({
   body: z.object({
     sessionId: z.string().min(1, 'sessionId is required'),
@@ -76,12 +84,14 @@ const verifyForgotPasswordOtp = z.object({
   }),
 });
 
+// Resend forgot password OTP request
 const resendForgotPasswordOtp = z.object({
   body: z.object({
     sessionId: z.string().min(1, 'sessionId is required'),
   }),
 });
 
+// Reset password with reset token validation
 const resetPassword = z.object({
   body: z.object({
     resetToken: z.string().min(1, 'resetToken is required'),
@@ -89,6 +99,7 @@ const resetPassword = z.object({
   }),
 });
 
+// Change password for authenticated user
 const changePassword = z.object({
   body: z.object({
     currentPassword: z.string().min(1, 'Current password is required'),

@@ -4,6 +4,7 @@ import ApiError from '../../utils/apiError';
 import { ICreateUserPayload } from './user.interface';
 import { UserRepository } from './user.repository';
 
+// Normalize username: lowercase, no spaces, only alphanumeric, dots, underscores
 export const normalizeUsername = (value: string): string =>
   value
     .trim()
@@ -11,6 +12,7 @@ export const normalizeUsername = (value: string): string =>
     .replace(/\s+/g, '')
     .replace(/[^a-z0-9._]/g, '');
 
+// Create username base from first name, last name, or email prefix
 export const createUsernameBase = (payload: ICreateUserPayload): string => {
   const firstName = payload.firstName?.trim().toLowerCase() || '';
   const lastName = payload.lastName?.trim().toLowerCase() || '';
@@ -20,6 +22,7 @@ export const createUsernameBase = (payload: ICreateUserPayload): string => {
   return base || 'user';
 };
 
+// Generate random digits for unique username suffix
 export const randomDigits = (length: number): string => {
   let output = '';
   for (let index = 0; index < length; index += 1) {
@@ -28,6 +31,7 @@ export const randomDigits = (length: number): string => {
   return output;
 };
 
+// Create unique account ID with retry mechanism
 export const createUniqueAccountId = async (): Promise<string> => {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const length = crypto.randomInt(8, 13);
@@ -41,6 +45,7 @@ export const createUniqueAccountId = async (): Promise<string> => {
   throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Unable to generate unique account id.');
 };
 
+// Resolve username: validate provided or generate unique one
 export const resolveUsername = async (payload: ICreateUserPayload): Promise<string> => {
   const providedUsername = payload.username ? normalizeUsername(payload.username) : '';
 
@@ -70,6 +75,7 @@ export const resolveUsername = async (payload: ICreateUserPayload): Promise<stri
   throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Unable to generate unique username.');
 };
 
+// Prepare user creation payload with normalized email, resolved username, and account ID
 export const prepareCreateUserPayload = async (
   payload: ICreateUserPayload
 ): Promise<ICreateUserPayload> => {
