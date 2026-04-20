@@ -1,12 +1,12 @@
 import bcrypt from 'bcryptjs';
 import { StatusCodes } from 'http-status-codes';
-import { UserRole, UserStatus } from '../../../prisma/generated/enums';
+import { UserStatus } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces/pagination.interface';
 import ApiError from '../../utils/apiError';
+import { deleteFileFromS3, generatePresignedUrl, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import { normalizeUsername, prepareCreateUserPayload } from './user.helpers';
 import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
 import { UserRepository } from './user.repository';
-import { deleteImageFromS3, generatePresignedUrl, uploadImageToS3 } from '../../utils/s3Upload';
 
 const normalizeSkills = (skills: string[]) => {
   const cleanedSkills = skills.map(skill => skill.trim()).filter(skill => skill.length > 0);
@@ -73,15 +73,13 @@ const updateMyProfile = async (
   // Step 2 : Handle profile picture upload if file is provided
   let profilePictureUrl: string | undefined;
   if (file) {
-    const uploaded = await uploadImageToS3(file, 'profiles');
+    const uploaded = await uploadSingleFileToS3(file, 'profiles');
     profilePictureUrl = uploaded?.url;
     // Delete old profile picture from S3 if exists
     if (user?.profilePicture) {
-      const oldKey = user?.profilePicture?.split('.amazonaws.com/')[1];
-      await deleteImageFromS3(oldKey);
+      await deleteFileFromS3(user.profilePicture);
     }
   }
-
   // Step 3 : Prepare update payload
   payload = {
     ...payload,
@@ -112,7 +110,6 @@ const updateUser = async (
   if (!actor) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Actor user not found.');
   }
-  
 
   // when email update check if the new email is already taken by another user
   if (payload.email) {
@@ -144,12 +141,18 @@ const updateUser = async (
     payload.skills = normalizeSkills(payload.skills);
   }
 
+  if (file) {
+    const uploaded = await uploadSingleFileToS3(file, 'profiles');
+    payload.profilePicture = uploaded.url;
+
+    if (existing.profilePicture) {
+      await deleteFileFromS3(existing.profilePicture);
+    }
+  }
   if (Object.keys(payload).length === 0) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update user.');
   }
-
   const updated = await UserRepository.updateUserById(id, payload);
-
   return updated;
 };
 

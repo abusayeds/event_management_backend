@@ -72,7 +72,7 @@ const updateUser = z.object({
           z.string().trim(),
         ])
         .optional()
-        .transform((value) => {
+        .transform(value => {
           if (value === undefined) {
             return undefined;
           }
@@ -89,8 +89,8 @@ const updateUser = z.object({
             const parsed = JSON.parse(value) as unknown;
             if (Array.isArray(parsed)) {
               return parsed
-                .map((item) => (typeof item === 'string' ? item.trim() : ''))
-                .filter((item) => item.length > 0);
+                .map(item => (typeof item === 'string' ? item.trim() : ''))
+                .filter(item => item.length > 0);
             }
           } catch {
             // If not JSON, treat as comma-separated skills.
@@ -98,11 +98,11 @@ const updateUser = z.object({
 
           return value
             .split(',')
-            .map((item) => item.trim())
-            .filter((item) => item.length > 0);
+            .map(item => item.trim())
+            .filter(item => item.length > 0);
         }),
     })
-    .refine((value) => Object.keys(value).length > 0, {
+    .refine(value => Object.keys(value).length > 0, {
       message: 'At least one field is required to update user',
     }),
   params: idParamSchema,
@@ -132,7 +132,7 @@ const updateMyProfile = z.object({
           z.string().trim(),
         ])
         .optional()
-        .transform((value) => {
+        .transform(value => {
           if (value === undefined) {
             return undefined;
           }
@@ -149,8 +149,8 @@ const updateMyProfile = z.object({
             const parsed = JSON.parse(value) as unknown;
             if (Array.isArray(parsed)) {
               return parsed
-                .map((item) => (typeof item === 'string' ? item.trim() : ''))
-                .filter((item) => item.length > 0);
+                .map(item => (typeof item === 'string' ? item.trim() : ''))
+                .filter(item => item.length > 0);
             }
           } catch {
             // If not JSON, treat as comma-separated skills.
@@ -158,13 +158,13 @@ const updateMyProfile = z.object({
 
           return value
             .split(',')
-            .map((item) => item.trim())
-            .filter((item) => item.length > 0);
+            .map(item => item.trim())
+            .filter(item => item.length > 0);
         }),
     })
-    .refine((value) => Object.keys(value).length > 0, {
+    .refine(value => Object.keys(value).length > 0, {
       message: 'At least one field is required to update user',
-    })
+    }),
 });
 
 const updateUserStatus = z.object({
@@ -201,6 +201,6 @@ export const UserValidation = {
   updateUser,
   updateUserStatus,
   deleteUser,
-  // Presigned URL (Future)
+  updateMyProfile,
   getPresignedUrl,
 };

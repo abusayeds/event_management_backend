@@ -4,6 +4,7 @@ export interface IFamily {
   id: string;
   name: string;
   description: string;
+  imageUrl?: string;
   createdBy: string;
   isDeleted: boolean;
   createdAt: string;
@@ -13,6 +14,7 @@ export interface IFamily {
 export interface ICreateFamilyPayload {
   name: string;
   description?: string;
+  imageUrl?: string;
   createdBy: string;
   familyMembers: {
     userId: string;

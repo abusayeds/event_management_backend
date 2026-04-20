@@ -154,8 +154,10 @@ const verifyEmail = async (sessionId: string, otp: string) => {
     state: pendingEmailVerificationData.state,
     city: pendingEmailVerificationData.city,
     email: pendingEmailVerificationData.email,
+    isEmailVerified: true,
+    isIndependent: true,
     password: pendingEmailVerificationData.password,
-    username: pendingEmailVerificationData.username
+    username: pendingEmailVerificationData.username,
   });
 
   // Cleanup - remove from both caches
@@ -394,7 +396,11 @@ const verifyForgotPasswordOtp = async (
     createdAt: new Date().toISOString(),
   };
 
-  await cacheService.set(CACHE_KEYS.AUTH.PASSWORD_RESET_TOKEN(resetToken), grant, CACHE_KEYS.TTL.MEDIUM);
+  await cacheService.set(
+    CACHE_KEYS.AUTH.PASSWORD_RESET_TOKEN(resetToken),
+    grant,
+    CACHE_KEYS.TTL.MEDIUM
+  );
 
   await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_SESSION(sessionId));
   await cacheService.del(CACHE_KEYS.AUTH.PASSWORD_RESET_ATTEMPTS(normalizedEmail));

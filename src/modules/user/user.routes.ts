@@ -20,7 +20,7 @@ router.patch(
   '/update-me',
   auth(UserRole.ADMIN, UserRole.USER),
   upload.single('profilePicture'),
-  validateRequest(UserValidation.updateUser),
+  validateRequest(UserValidation.updateMyProfile),
   UserController.updateMyProfile
 );
 

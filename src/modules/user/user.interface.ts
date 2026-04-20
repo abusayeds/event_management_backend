@@ -31,6 +31,7 @@ export interface ICreateUserPayload {
   firstName: string;
   lastName: string;
   gender: UserGender;
+  isEmailVerified?: boolean;
   birthDate: string;
   location: string;
   country: string;

@@ -1,11 +1,15 @@
 import { Request } from 'express';
 import multer from 'multer';
 
-const imageFileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const imageFileFilter = (
+  _req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  const allowedMimeTypes = ['image/jpg', 'image/heic', 'image/jpeg', 'image/png', 'image/webp'];
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    cb(new Error('Invalid file type. Only JPG, PNG, and WEBP are allowed.'));
+    cb(new Error('Invalid file type. Only JPG, HEIC, PNG, and WEBP are allowed.'));
     return;
   }
 

@@ -117,7 +117,12 @@ const config = {
     enableFileLogging: process.env.ENABLE_FILE_LOGGING !== 'false',
   },
   // AWS Configuration
-  aws: awsConfig,
+  aws: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    region: process.env.AWS_REGION || 'us-east-1',
+    bucketName: process.env.AWS_S3_BUCKET_NAME || '',
+  },
 
   // Queue Configuration (BullMQ)
   queue: {
