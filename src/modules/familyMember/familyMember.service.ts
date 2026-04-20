@@ -45,6 +45,7 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
       {
         ...userPayload,
         email: normalizedEmail,
+        isIndependent: false,
       },
       actorId
     );
@@ -209,7 +210,9 @@ const updateOwnerIndependentStatus = async (
   }
 
   // Step 4: Update owner independence
-  return UserService.updateUserIndependentStatusByOwner(targetUserId, isIndependent);
+  return UserService.updateUserIndependentStatus(targetUserId, isIndependent, actorId, {
+    allowOwnerOverride: true,
+  });
 };
 
 export const FamilyMemberService = {

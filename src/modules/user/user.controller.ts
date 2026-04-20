@@ -78,9 +78,9 @@ const updateMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Resp
 // PATCH /api/users/:id
 const updateUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id: userId } = req.params;
-  const { userId: actorId } = req.user!;
+  const { userId: actorId, role: actorRole } = req.user!;
 
-  const user = await UserService.updateUser(userId as string, req.body, actorId, req.file);
+  const user = await UserService.updateUser(userId as string, req.body, actorId, actorRole, req.file);
 
   apiResponse(res, {
     success: true,

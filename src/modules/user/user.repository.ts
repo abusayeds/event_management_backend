@@ -27,6 +27,7 @@ export const userFullSelect = {
   skills: true,
   role: true,
   status: true,
+  isIndependent: true,
   createdByOwner: true,
   contributionScore: true,
 };

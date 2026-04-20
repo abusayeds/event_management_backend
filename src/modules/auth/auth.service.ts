@@ -464,6 +464,8 @@ const resetPassword = async (resetToken: string, newPassword: string) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
 
+  validateUserStatus(user.status);
+
   const hashedPassword = await getPasswordHash(newPassword);
   await UserService.updateUserPassword(user.id, hashedPassword);
 
@@ -478,6 +480,8 @@ const changePassword = async (userId: string, currentPassword: string, newPasswo
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
+
+  validateUserStatus(user.status);
 
   const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
   if (!isCurrentPasswordValid) {

@@ -27,8 +27,6 @@ const addFamilyMember = z.object({
     password: strongPasswordSchema,
     relationShip: z.string().optional(),
     skills: z.array(z.string()).optional(),
-    isIndependent: z.boolean().optional(),
-    createdById: z.string().optional(),
     role: z.enum(Object.values(FamilyRole) as [string, ...string[]]).optional(),
   }),
 });

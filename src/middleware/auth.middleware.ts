@@ -1,11 +1,12 @@
 import { NextFunction, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import { UserRole, UserStatus } from '../../prisma/generated/enums';
 import { cacheService } from '../cache/cache.service';
 import { AuthenticatedRequest } from '../interfaces/request.interface';
 import { IDecodedToken } from '../interfaces/token.interface';
+import { UserRepository } from '../modules/user/user.repository';
 import ApiError from '../utils/apiError';
 import { verifyAccessToken } from '../utils/generateToken';
-import { UserRole } from '../../prisma/generated/enums';
 
 /**
  * Authentication middleware with role-based access control
@@ -33,10 +34,29 @@ const auth =
 
       // Verify token and get decoded user
       const verifiedUser = verifyAccessToken(token) as IDecodedToken;
-      req.user = verifiedUser;
+
+      // Always re-check live user status from DB for protected routes.
+      const currentUser = await UserRepository.getUserById(verifiedUser.userId);
+      if (!currentUser) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'User not found or token is invalid');
+      }
+
+      if (currentUser.status !== UserStatus.ACTIVE) {
+        if (currentUser.status === UserStatus.BANNED) {
+          throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned.');
+        }
+
+        throw new ApiError(StatusCodes.FORBIDDEN, 'Your account is not active.');
+      }
+
+      req.user = {
+        ...verifiedUser,
+        role: currentUser.role,
+        email: currentUser.email,
+      };
 
       // Role-based access control
-      if (requiredRoles.length > 0 && !requiredRoles.includes(verifiedUser.role as UserRole)) {
+      if (requiredRoles.length > 0 && !requiredRoles.includes(req.user.role as UserRole)) {
         throw new ApiError(
           StatusCodes.FORBIDDEN,
           'Forbidden: You do not have the required role to access this resource'

@@ -106,6 +106,26 @@ const getFamilyMembersByFamilyId = async (
   return createPaginationResult(familyMembers, total, pagination);
 };
 
+const isOwnerOfMember = async (ownerUserId: string, memberUserId: string): Promise<boolean> => {
+  const membership = await database.familyMember.findFirst({
+    where: {
+      userId: ownerUserId,
+      role: FamilyRole.OWNER,
+      family: {
+        isDeleted: false,
+        familyMembers: {
+          some: {
+            userId: memberUserId,
+          },
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  return !!membership;
+};
+
 export const FamilyMemberRepository = {
   addFamilyMember,
   getFamilyMemberByFamilyAndUser,
@@ -113,4 +133,5 @@ export const FamilyMemberRepository = {
   updateMemberRole,
   removeFamilyMember,
   getFamilyMembersByFamilyId,
+  isOwnerOfMember,
 };

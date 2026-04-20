@@ -4,6 +4,7 @@ import { UserStatus } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces/pagination.interface';
 import ApiError from '../../utils/apiError';
 import { deleteFileFromS3, generatePresignedUrl, uploadSingleFileToS3 } from '../../utils/s3Upload';
+import { FamilyMemberRepository } from '../familyMember/familyMember.repository';
 import { normalizeUsername, prepareCreateUserPayload } from './user.helpers';
 import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
 import { UserRepository } from './user.repository';
@@ -97,6 +98,7 @@ const updateUser = async (
   id: string,
   payload: IUpdateUserPayload,
   actorId: string,
+  actorRole: string,
   file?: Express.Multer.File | undefined
 ) => {
   //Step 1 : User existence check
@@ -109,6 +111,33 @@ const updateUser = async (
   const actor = await UserRepository.getUserById(actorId);
   if (!actor) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Actor user not found.');
+  }
+
+  const isAdmin = actorRole === 'ADMIN';
+  const isSelfUpdate = id === actorId;
+
+  if (!isAdmin && !isSelfUpdate) {
+    const ownerControlsTarget = await FamilyMemberRepository.isOwnerOfMember(actorId, id);
+    if (!ownerControlsTarget) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Only admins, yourself, or your family owner can update this profile.'
+      );
+    }
+
+    if (existing.isIndependent) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Independent users can only update their own profile.'
+      );
+    }
+  }
+
+  if (payload.isIndependent !== undefined && !isAdmin && !isSelfUpdate) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only the user or an admin can change independent status.'
+    );
   }
 
   // when email update check if the new email is already taken by another user
@@ -174,7 +203,10 @@ const updateUserStatus = async (id: string, status: UserStatus, actorId: string)
 const updateUserIndependentStatus = async (
   userId: string,
   isIndependent: boolean,
-  actorId: string
+  actorId: string,
+  options?: {
+    allowOwnerOverride?: boolean;
+  }
 ) => {
   // User existence check
   const existing = await UserRepository.getUserById(userId);
@@ -182,18 +214,30 @@ const updateUserIndependentStatus = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
 
-  // Self-only toggle for owner flow
-  if (userId !== actorId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'You can only update your own independence status.');
-  }
+  const isSelfUpdate = userId === actorId;
 
-  return UserRepository.updateUserIndependentStatus(userId, isIndependent);
-};
+  if (!isSelfUpdate) {
+    if (!options?.allowOwnerOverride) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'You can only update your own independence status.'
+      );
+    }
 
-const updateUserIndependentStatusByOwner = async (userId: string, isIndependent: boolean) => {
-  const existing = await UserRepository.getUserById(userId);
-  if (!existing) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+    const ownerControlsTarget = await FamilyMemberRepository.isOwnerOfMember(actorId, userId);
+    if (!ownerControlsTarget) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Only family owner can update this user independent status.'
+      );
+    }
+
+    if (existing.isIndependent) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'User is already independent and cannot be controlled by owner.'
+      );
+    }
   }
 
   return UserRepository.updateUserIndependentStatus(userId, isIndependent);
@@ -269,7 +313,6 @@ export const UserService = {
   updateUser,
   updateUserStatus,
   updateUserIndependentStatus,
-  updateUserIndependentStatusByOwner,
   deleteUser,
   getMyProfile,
   updateMyProfile,
