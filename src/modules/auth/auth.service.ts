@@ -33,16 +33,20 @@ import {
 } from './auth.interface';
 
 const failLoginAttempt = async (email: string): Promise<never> => {
+  // Step:1 Get cache keys for attempt tracking and account locking
   const attemptsKey = CACHE_KEYS.AUTH.ATTEMPTS(email);
   const lockKey = CACHE_KEYS.AUTH.LOCK(email);
   const lockSeconds = config.auth.lockTime * 60;
 
+  // Step:2 Increment failed attempt counter
   const attempts = await cacheService.increment(attemptsKey);
 
+  // Step:3 Set TTL on first attempt
   if (attempts === 1) {
     await cacheService.setTTL(attemptsKey, lockSeconds);
   }
 
+  // Step:4 Lock account if max attempts exceeded, then throw error
   if (attempts >= config.auth.maxLoginAttempts) {
     await cacheService.set(lockKey, true, lockSeconds);
     await cacheService.del(attemptsKey);
@@ -52,22 +56,25 @@ const failLoginAttempt = async (email: string): Promise<never> => {
     );
   }
 
+  // Step:5 Throw unauthorized error
   throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid credentials.');
 };
 
 const register = async (payload: IRegisterPayload): Promise<{ sessionId: string }> => {
+  // Step:1 Normalize email
   const normalizedEmail = normalizeEmail(payload.email);
 
-  // Check if email is already registered or pending verification
+  // Step:2 Check if email is already registered or pending verification
   const existingUser = await UserService.getUserByEmail(normalizedEmail);
   if (existingUser) {
     throw new ApiError(StatusCodes.CONFLICT, 'Email is already registered. Please login instead.');
   }
 
+  // Step:3 Generate OTP and session ID
   const otp = generateOtp();
   const sessionId = generateOpaqueToken('sess');
 
-  // Store registration challenge in cache
+  // Step:4 Create registration challenge with hashed OTP
   const pendingEmailVerification: IPendingEmailVerification = {
     ...payload,
     otpHash: hashOtp('registration', normalizedEmail, otp),
@@ -75,7 +82,7 @@ const register = async (payload: IRegisterPayload): Promise<{ sessionId: string 
     createdAt: new Date().toISOString(),
   };
 
-  // Store by both email and sessionId for flexibility
+  // Step:5 Store in Redis by both email and sessionId for flexibility
   await cacheService.set(
     CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail),
     pendingEmailVerification,
@@ -88,33 +95,40 @@ const register = async (payload: IRegisterPayload): Promise<{ sessionId: string 
     CACHE_KEYS.TTL.MEDIUM
   );
 
+  // Step:6 Send verification email with OTP
   try {
     await emailTemplates.sendVerificationEmail(normalizedEmail, otp);
   } catch (error) {
+    // Step:7 Cleanup on email send failure
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
     throw error;
   }
 
+  // Step:8 Return session ID for next step
   return { sessionId };
 };
 
 const verifyEmail = async (sessionId: string, otp: string) => {
-  // Fetch pending registration by sessionId (secure - no email in body)
+  // Step:1 Fetch pending registration from cache by sessionId
   const pendingEmailVerificationData = await cacheService.get<IPendingEmailVerification>(
     CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId)
   );
 
+  // Step:2 Check if session exists and not expired
   if (!pendingEmailVerificationData) {
     throw new ApiError(StatusCodes.GONE, 'Verification code has expired. Please register again.');
   }
 
+  // Step:3 Normalize email
   const normalizedEmail = normalizeEmail(pendingEmailVerificationData.email);
 
+  // Step:4 Verify OTP hash matches
   if (
     pendingEmailVerificationData.otpHash !==
     crypto.createHash('sha256').update(`registration:${normalizedEmail}:${otp}`).digest('hex')
   ) {
+    // Step:5a Track failed OTP attempts
     const attempts = await cacheService.increment(
       CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail)
     );
@@ -124,6 +138,7 @@ const verifyEmail = async (sessionId: string, otp: string) => {
         CACHE_KEYS.TTL.MEDIUM
       );
     }
+    // Step:5b Lock registration if max attempts exceeded
     if (attempts >= 5) {
       await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
       await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
@@ -136,6 +151,7 @@ const verifyEmail = async (sessionId: string, otp: string) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired OTP.');
   }
 
+  // Step:6 Check if email not already registered during verification
   const existingUser = await UserService.getUserByEmail(normalizedEmail);
   if (existingUser) {
     await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
@@ -144,6 +160,7 @@ const verifyEmail = async (sessionId: string, otp: string) => {
     throw new ApiError(StatusCodes.CONFLICT, 'Email already in use.');
   }
 
+  // Step:7 Create user account with verified data
   const createdUser = await UserService.createUser({
     firstName: pendingEmailVerificationData.firstName,
     lastName: pendingEmailVerificationData.lastName,
@@ -160,30 +177,31 @@ const verifyEmail = async (sessionId: string, otp: string) => {
     username: pendingEmailVerificationData.username,
   });
 
-  // Cleanup - remove from both caches
+  // Step:8 Cleanup cache entries
   await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
   await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
   await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));
 
-  // Send welcome email
+  // Step:9 Send welcome email
   await emailTemplates.sendWelcomeEmail(
     createdUser.email,
     `${createdUser.firstName} ${createdUser.lastName}`
   );
 
-  // Generate tokens in parallel and auto-login
+  // Step:10 Generate tokens in parallel
   const [accessToken, refreshToken] = await Promise.all([
     generateAccessToken(createdUser.id, createdUser.email, createdUser.role),
     generateRefreshToken(createdUser.id, createdUser.email, createdUser.role),
   ]);
 
-  // Store refresh token in cache with expiration
+  // Step:11 Store refresh token in cache with TTL
   await cacheService.set(
     CACHE_KEYS.AUTH.REFRESH_TOKEN(createdUser.id),
     refreshToken,
     CACHE_KEYS.TTL.WEEK
   );
 
+  // Step:12 Return user and tokens
   return {
     user: {
       id: createdUser.id,
@@ -200,7 +218,10 @@ const verifyEmail = async (sessionId: string, otp: string) => {
 };
 
 const login = async (payload: ILoginPayload) => {
+  // Step:1 Normalize email
   const normalizedEmail = normalizeEmail(payload.email);
+  
+  // Step:2 Check if account is locked due to failed attempts
   const isLocked = await cacheService.exists(CACHE_KEYS.AUTH.LOCK(normalizedEmail));
   if (isLocked) {
     securityLogger.loginAttempt(normalizedEmail, 'unknown', false);
@@ -210,6 +231,7 @@ const login = async (payload: ILoginPayload) => {
     );
   }
 
+  // Step:3 Fetch user by email
   const user = await UserService.getUserByEmail(normalizedEmail);
   if (!user) {
     securityLogger.loginAttempt(normalizedEmail, 'unknown', false);
@@ -217,34 +239,37 @@ const login = async (payload: ILoginPayload) => {
   }
   const existingUser = user!;
 
-  // ✅ Validate user account status
+  // Step:4 Validate user account status (not banned or deleted)
   validateUserStatus(existingUser.status);
 
+  // Step:5 Verify password hash
   const isPasswordValid = await bcrypt.compare(payload.password, existingUser.password);
   if (!isPasswordValid) {
     securityLogger.loginAttempt(normalizedEmail, 'unknown', false);
     await failLoginAttempt(normalizedEmail);
   }
 
-  // Successful login - reset attempts and lock
+  // Step:6 Clear attempt counter and lock on successful login
   await cacheService.del(CACHE_KEYS.AUTH.ATTEMPTS(normalizedEmail));
   await cacheService.del(CACHE_KEYS.AUTH.LOCK(normalizedEmail));
 
-  // Generate tokens in parallel
+  // Step:7 Generate tokens in parallel
   const [accessToken, refreshToken] = await Promise.all([
     generateAccessToken(existingUser.id, existingUser.email, existingUser.role),
     generateRefreshToken(existingUser.id, existingUser.email, existingUser.role),
   ]);
 
-  // Store refresh token in cache with expiration
+  // Step:8 Store refresh token in cache with TTL
   await cacheService.set(
     CACHE_KEYS.AUTH.REFRESH_TOKEN(existingUser.id),
     refreshToken,
     CACHE_KEYS.TTL.WEEK
   );
 
+  // Step:9 Log successful login
   securityLogger.loginAttempt(normalizedEmail, 'unknown', true);
 
+  // Step:10 Return user and tokens
   return {
     user: {
       id: existingUser.id,
@@ -301,31 +326,36 @@ const resendVerificationOtp = async (sessionId: string) => {
 };
 
 const refresh = async (refreshToken: string) => {
+  // Step:1 Decode refresh token to get user ID
   const decoded = verifyRefreshToken(refreshToken);
 
+  // Step:2 Verify token is stored in cache and matches
   const stored = await cacheService.get<string>(CACHE_KEYS.AUTH.REFRESH_TOKEN(decoded.userId));
   if (!stored || stored !== refreshToken) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid credentials.');
   }
 
+  // Step:3 Fetch user from database
   const user = await UserService.getUserById(decoded.userId);
   if (!user) throw new ApiError(StatusCodes.UNAUTHORIZED, 'User not found.');
 
-  // ✅ Validate user account status
+  // Step:4 Validate user account status
   validateUserStatus(user.status);
 
-  // Generate new tokens in parallel
+  // Step:5 Generate new tokens in parallel
   const [newAccessToken, newRefreshToken] = await Promise.all([
     generateAccessToken(user.id, user.email, user.role),
     generateRefreshToken(user.id, user.email, user.role),
   ]);
 
+  // Step:6 Store new refresh token in cache with TTL
   await cacheService.set(
     CACHE_KEYS.AUTH.REFRESH_TOKEN(user.id),
     newRefreshToken,
     CACHE_KEYS.TTL.WEEK // 7 days in seconds
   );
 
+  // Step:7 Return new tokens
   return {
     accessToken: newAccessToken,
     refreshToken: newRefreshToken,

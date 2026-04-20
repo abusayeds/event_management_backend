@@ -15,13 +15,13 @@ import { FamilyMemberRepository } from './familyMember.repository';
 const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUserPayload) => {
   const { familyId, role, relationShip, ...userPayload } = payload;
 
-  // Step 1: Ensure family exists
+  // Step:1 Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
   if (!family) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
   }
 
-  // Step 2: Only family owner can add members
+  // Step:2 Only family owner can add members
   const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
     actorId
@@ -30,7 +30,7 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
     throw new ApiError(StatusCodes.FORBIDDEN, 'Only family owner can add members.');
   }
 
-  // Step 3: Check existing user by email
+  // Step:3 Check existing user by email
   const normalizedEmail = userPayload.email.trim().toLowerCase();
   const existingUser = await UserRepository.getUserByEmail(normalizedEmail);
   if (existingUser) {
@@ -40,7 +40,7 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
   let createdUser: Awaited<ReturnType<typeof UserService.createUser>> | null = null;
 
   try {
-    // Step 4: Create user first
+    // Step:4 Create user first with isIndependent=false (forced dependent)
     createdUser = await UserService.createUser(
       {
         ...userPayload,
@@ -50,7 +50,7 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
       actorId
     );
 
-    // Step 5: Add new user as family member
+    // Step:5 Add new user as family member
     const familyMember = await FamilyMemberRepository.addFamilyMember({
       familyId,
       userId: createdUser.id,
@@ -58,12 +58,13 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
       relationShip,
     });
 
+    // Step:6 Return both family member and user
     return {
       familyMember,
       user: createdUser,
     };
   } catch (error) {
-    // Best-effort rollback to avoid dangling users if member creation fails.
+    // Step:7 Best-effort rollback to avoid dangling users if member creation fails
     if (createdUser) {
       await UserRepository.deleteUserById(createdUser.id);
     }
@@ -78,13 +79,13 @@ const getFamilyMembersByFamilyId = async (
   filters: IFamilyMemberFilters,
   options: PaginationOptions
 ) => {
-  // Step 1: Ensure family exists
+  // Step:1 Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
   if (!family) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
   }
 
-  // Step 2: Ensure requester is a member of this family
+  // Step:2 Ensure requester is a member of this family
   const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
     actorId
@@ -93,17 +94,18 @@ const getFamilyMembersByFamilyId = async (
     throw new ApiError(StatusCodes.FORBIDDEN, 'You are not a member of this family.');
   }
 
+  // Step:3 Fetch family members with filters and pagination
   return FamilyMemberRepository.getFamilyMembersByFamilyId(familyId, filters, options);
 };
 
 const removeFamilyMember = async (actorId: string, familyId: string, userId: string) => {
-  // Step 1: Ensure family exists
+  // Step:1 Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
   if (!family) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
   }
 
-  // Step 2: Only owner can remove members
+  // Step:2 Only owner can remove members
   const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
     actorId
@@ -112,7 +114,7 @@ const removeFamilyMember = async (actorId: string, familyId: string, userId: str
     throw new ApiError(StatusCodes.FORBIDDEN, 'Only family owner can remove members.');
   }
 
-  // Step 3: Prevent self-remove for owner
+  // Step:3 Prevent self-remove for owner
   if (actorId === userId) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
@@ -120,7 +122,7 @@ const removeFamilyMember = async (actorId: string, familyId: string, userId: str
     );
   }
 
-  // Step 4: Ensure target membership exists
+  // Step:4 Ensure target membership exists
   const targetMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
     userId
@@ -129,19 +131,20 @@ const removeFamilyMember = async (actorId: string, familyId: string, userId: str
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family member not found.');
   }
 
+  // Step:5 Remove family member from database
   return FamilyMemberRepository.removeFamilyMember(familyId, userId);
 };
 
 const addFamilyOwner = async (actorId: string, payload: IAddFamilyOwnerPayload) => {
   const { familyId, newOwnerUserId } = payload;
 
-  // Step 1: Ensure family exists
+  // Step:1 Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
   if (!family) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
   }
 
-  // Step 2: Ensure requester is current owner
+  // Step:2 Ensure requester is current owner
   const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
     actorId
@@ -150,12 +153,12 @@ const addFamilyOwner = async (actorId: string, payload: IAddFamilyOwnerPayload) 
     throw new ApiError(StatusCodes.FORBIDDEN, 'Only current owner can add another owner.');
   }
 
-  // Step 3: Prevent no-op transfer
+  // Step:3 Prevent no-op transfer
   if (actorId === newOwnerUserId) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You are already the owner.');
   }
 
-  // Step 4: New owner must be a member
+  // Step:4 New owner must be a member
   const newOwnerMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
     newOwnerUserId
@@ -164,9 +167,10 @@ const addFamilyOwner = async (actorId: string, payload: IAddFamilyOwnerPayload) 
     throw new ApiError(StatusCodes.NOT_FOUND, 'Target user is not a family member.');
   }
 
-  // Step 5: Promote the target member to OWNER and keep current owner as OWNER
+  // Step:5 Promote the target member to OWNER and keep current owner as OWNER
   await FamilyMemberRepository.updateMemberRole(familyId, newOwnerUserId, FamilyRole.OWNER);
 
+  // Step:6 Return previous and new owner IDs
   return {
     previousOwnerUserId: actorId,
     newOwnerUserId,
@@ -179,13 +183,13 @@ const updateOwnerIndependentStatus = async (
   targetUserId: string,
   isIndependent: boolean
 ) => {
-  // Step 1: Ensure family exists
+  // Step:1 Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
   if (!family) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
   }
 
-  // Step 2: Ensure requester is current owner
+  // Step:2 Ensure requester is current owner
   const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
     actorId
@@ -194,7 +198,7 @@ const updateOwnerIndependentStatus = async (
     throw new ApiError(StatusCodes.FORBIDDEN, 'Only family owner can update independence status.');
   }
 
-  // Step 3: Ensure target user is an OWNER in this family
+  // Step:3 Ensure target user is a member in this family
   const targetMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
     targetUserId
@@ -202,6 +206,8 @@ const updateOwnerIndependentStatus = async (
   if (!targetMembership) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Target user is not a family member.');
   }
+  
+  // Step:4 Ensure target is an OWNER (only owners can have independence status changed)
   if (targetMembership.role !== FamilyRole.OWNER) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
@@ -209,7 +215,7 @@ const updateOwnerIndependentStatus = async (
     );
   }
 
-  // Step 4: Update owner independence
+  // Step:5 Update owner's independence status via UserService
   return UserService.updateUserIndependentStatus(targetUserId, isIndependent, actorId, {
     allowOwnerOverride: true,
   });

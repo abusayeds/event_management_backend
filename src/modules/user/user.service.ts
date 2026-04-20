@@ -17,47 +17,56 @@ const normalizeSkills = (skills: string[]) => {
 
 // Create User
 const createUser = async (payload: ICreateUserPayload, actorId?: string) => {
+  // Step:1 Prepare payload with normalized email, username, and account ID
   const preparedPayload = await prepareCreateUserPayload(payload);
   const createdByOwner = actorId ?? payload.createdById;
 
-  // check email already exists
+  // Step:2 Check if email already exists in database
   const emailExists = await UserRepository.isEmailExists(preparedPayload.email);
   if (emailExists) {
     throw new ApiError(StatusCodes.CONFLICT, 'Email already in use.');
   }
 
-  // Hash password (skip if already hashed - prevents double hashing)
+  // Step:3 Hash password with bcrypt
   const hashedPassword = await bcrypt.hash(preparedPayload.password, 12);
 
-  // create user
+  // Step:4 Create user in database with prepared data
   const user = await UserRepository.createUser({
     ...preparedPayload,
     createdById: createdByOwner,
     password: hashedPassword,
   });
 
+  // Step:5 Return created user
   return user;
 };
 
 // Get All Users
 const getAllUsers = async (filters: IUserFilters, options: PaginationOptions) => {
+  // Step:1 Fetch users from repository with filters and pagination
   return UserRepository.getAllUsers(filters, options);
 };
 
 // Get Single User
 const getUserById = async (id: string) => {
+  // Step:1 Fetch user from repository (public fields only)
   const user = await UserRepository.getUserByIdPublic(id);
+  // Step:2 Throw error if user not found
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
+  // Step:3 Return user
   return user;
 };
 
 const getMyProfile = async (userId: string) => {
+  // Step:1 Fetch authenticated user profile (public fields only)
   const user = await UserRepository.getUserByIdPublic(userId);
+  // Step:2 Throw error if user not found
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
+  // Step:3 Return user profile
   return user;
 };
 
@@ -66,30 +75,32 @@ const updateMyProfile = async (
   payload: IUpdateUserPayload,
   file?: Express.Multer.File
 ) => {
-  // Step 1 : Check user  exist
+  // Step:1 Check user exists
   const user = await UserRepository.getUserById(userId);
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  // Step 2 : Handle profile picture upload if file is provided
+  // Step:2 Handle profile picture upload if file is provided
   let profilePictureUrl: string | undefined;
   if (file) {
     const uploaded = await uploadSingleFileToS3(file, 'profiles');
     profilePictureUrl = uploaded?.url;
-    // Delete old profile picture from S3 if exists
+    // Step:3 Delete old profile picture from S3 if exists
     if (user?.profilePicture) {
       await deleteFileFromS3(user.profilePicture);
     }
   }
-  // Step 3 : Prepare update payload
+  // Step:4 Prepare update payload with profile picture URL
   payload = {
     ...payload,
     profilePicture: profilePictureUrl,
   };
 
+  // Step:5 Validate at least one field is provided
   if (Object.keys(payload).length === 0) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update user.');
   }
+  // Step:6 Update user in database
   return UserRepository.updateUserById(userId, payload);
 };
 
@@ -101,21 +112,23 @@ const updateUser = async (
   actorRole: string,
   file?: Express.Multer.File | undefined
 ) => {
-  //Step 1 : User existence check
+  //Step:1 Check target user exists
   const existing = await UserRepository.getUserById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
 
-  // Step 2 : Check actor existence
+  // Step:2 Check actor user exists
   const actor = await UserRepository.getUserById(actorId);
   if (!actor) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Actor user not found.');
   }
 
+  // Step:3 Determine if actor is admin or updating self
   const isAdmin = actorRole === 'ADMIN';
   const isSelfUpdate = id === actorId;
 
+  // Step:4 If not admin and not self, check family ownership for authorization
   if (!isAdmin && !isSelfUpdate) {
     const ownerControlsTarget = await FamilyMemberRepository.isOwnerOfMember(actorId, id);
     if (!ownerControlsTarget) {
@@ -125,6 +138,7 @@ const updateUser = async (
       );
     }
 
+    // Step:5 Prevent owner from updating independent users
     if (existing.isIndependent) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
@@ -133,6 +147,7 @@ const updateUser = async (
     }
   }
 
+  // Step:6 Prevent non-admin/self from changing independence status
   if (payload.isIndependent !== undefined && !isAdmin && !isSelfUpdate) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
@@ -140,62 +155,67 @@ const updateUser = async (
     );
   }
 
-  // when email update check if the new email is already taken by another user
+  // Step:7 Check email uniqueness if updating email
   if (payload.email) {
     const normalizedEmail = payload.email.trim().toLowerCase();
     const emailExists = await UserRepository.isEmailExists(normalizedEmail, id);
     if (emailExists) {
       throw new ApiError(StatusCodes.CONFLICT, 'Email already in use.');
     }
-
     payload.email = normalizedEmail;
   }
 
+  // Step:8 Check username uniqueness if updating username
   if (payload.username) {
     const normalizedUsername = normalizeUsername(payload.username);
-
     if (!normalizedUsername) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'username format is invalid.');
     }
-
     const usernameExists = await UserRepository.isUsernameExists(normalizedUsername, id);
     if (usernameExists) {
       throw new ApiError(StatusCodes.CONFLICT, 'username already in use.');
     }
-
     payload.username = normalizedUsername;
   }
 
+  // Step:9 Normalize skills array if updating
   if (payload.skills) {
     payload.skills = normalizeSkills(payload.skills);
   }
 
+  // Step:10 Handle profile picture upload if file provided
   if (file) {
     const uploaded = await uploadSingleFileToS3(file, 'profiles');
     payload.profilePicture = uploaded.url;
-
+    // Step:11 Delete old profile picture from S3
     if (existing.profilePicture) {
       await deleteFileFromS3(existing.profilePicture);
     }
   }
+  
+  // Step:12 Validate at least one field is provided
   if (Object.keys(payload).length === 0) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update user.');
   }
+  
+  // Step:13 Update user in database
   const updated = await UserRepository.updateUserById(id, payload);
   return updated;
 };
 
 const updateUserStatus = async (id: string, status: UserStatus, actorId: string) => {
-  // User existence check
+  // Step:1 Check user exists
   const existing = await UserRepository.getUserById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
 
-  // Self user status change check
+  // Step:2 Prevent user from changing own status
   if (id === actorId) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot change your own status.');
   }
+  
+  // Step:3 Update user status in database
   const updated = await UserRepository.updateUserStatus(id, status);
   return updated;
 };
@@ -208,15 +228,18 @@ const updateUserIndependentStatus = async (
     allowOwnerOverride?: boolean;
   }
 ) => {
-  // User existence check
+  // Step:1 Check user exists
   const existing = await UserRepository.getUserById(userId);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
 
+  // Step:2 Determine if update is self or owner override
   const isSelfUpdate = userId === actorId;
 
+  // Step:3 If not self update, check owner authorization
   if (!isSelfUpdate) {
+    // Step:4 Verify owner override is allowed
     if (!options?.allowOwnerOverride) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
@@ -224,6 +247,7 @@ const updateUserIndependentStatus = async (
       );
     }
 
+    // Step:5 Check if actor is family owner
     const ownerControlsTarget = await FamilyMemberRepository.isOwnerOfMember(actorId, userId);
     if (!ownerControlsTarget) {
       throw new ApiError(
@@ -232,6 +256,7 @@ const updateUserIndependentStatus = async (
       );
     }
 
+    // Step:6 Prevent owner from making already-independent user independent
     if (existing.isIndependent) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
@@ -240,21 +265,27 @@ const updateUserIndependentStatus = async (
     }
   }
 
+  // Step:7 Update independence status in database
   return UserRepository.updateUserIndependentStatus(userId, isIndependent);
 };
 
 // Delete User
 const deleteUser = async (id: string, actorId: string, actorRole: string) => {
+  // Step:1 Check if actor is admin
   const isAdmin = actorRole === 'ADMIN';
+  
+  // Step:2 Prevent non-admin from deleting other users
   if (!isAdmin && id !== actorId) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'You can only delete your own account.');
   }
 
-  // User existence check
+  // Step:3 Check user exists
   const existing = await UserRepository.getUserById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
+  
+  // Step:4 Soft delete user (set status to DELETED)
   await UserRepository.deleteUserById(id);
 };
 
