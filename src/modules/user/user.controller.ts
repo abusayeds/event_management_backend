@@ -4,7 +4,6 @@ import { AuthenticatedRequest } from '../../interfaces/request.interface';
 import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
-import { uploadImageToS3 } from '../../utils/s3Upload';
 import { UserService } from './user.service';
 
 // POST /api/users
@@ -107,10 +106,9 @@ const updateUserStatus = asyncHandler(async (req: AuthenticatedRequest, res: Res
 });
 
 // DELETE /api/users/:id
-const deleteUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { userId: actorId } = req.user!;
-  const { id: userId } = req.params;
-  await UserService.deleteUser(userId as string, actorId);
+const deleteAccount = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { userId } = req.user!;
+  await UserService.deleteUser(userId as string);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -161,5 +159,5 @@ export const UserController = {
   checkUsernameExists,
   updateUser,
   updateUserStatus,
-  deleteUser,
+  deleteAccount,
 };

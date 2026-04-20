@@ -191,18 +191,12 @@ const updateUserIndependentStatus = async (
 };
 
 // Delete User
-const deleteUser = async (id: string, actorId: string) => {
+const deleteUser = async (id: string) => {
   // User existence check
   const existing = await UserRepository.getUserById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-
-  // You cannot delete your own account check
-  if (id === actorId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot delete your own account.');
-  }
-
   await UserRepository.deleteUserById(id);
 };
 

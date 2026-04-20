@@ -38,7 +38,7 @@ router
 router
   .route('/:id')
   .get(
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.USER),
     validateRequest(UserValidation.getUserById),
     UserController.getUserById
   )
@@ -49,9 +49,9 @@ router
     UserController.updateUser
   )
   .delete(
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.USER),
     validateRequest(UserValidation.deleteUser),
-    UserController.deleteUser
+    UserController.deleteAccount
   );
 
 // PATCH /api/users/:id/status

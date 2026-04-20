@@ -27,8 +27,6 @@ export const userFullSelect = {
   skills: true,
   role: true,
   status: true,
-  isIndependent: true,
-  isEmailVerified: true,
   createdByOwner: true,
   contributionScore: true,
 };
@@ -217,8 +215,9 @@ const updateUserPasswordById = async (id: string, hashedPassword: string) => {
 
 // Delete User (Hard Delete)
 const deleteUserById = async (id: string) => {
-  return database.user.delete({
+  return database.user.update({
     where: { id },
+    data: { status: 'DELETED' },
   });
 };
 
