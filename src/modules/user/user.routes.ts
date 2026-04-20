@@ -16,6 +16,13 @@ router.get(
 );
 
 router.get('/me', auth(UserRole.ADMIN, UserRole.USER), UserController.getMyProfile);
+router.patch(
+  '/update-me',
+  auth(UserRole.ADMIN, UserRole.USER),
+  upload.single('profilePicture'),
+  validateRequest(UserValidation.updateUser),
+  UserController.updateMyProfile
+);
 
 // GET  /api/users
 router

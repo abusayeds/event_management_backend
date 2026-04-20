@@ -1,33 +1,32 @@
 import colors from 'colors';
 import RedisIO from 'ioredis';
 import config from './index';
+const localRedisHosts = new Set(['localhost', '127.0.0.1', '::1', 'redis']);
+const redisOptions = {
+  host: config.redis.host,
+  port: config.redis.port,
+  db: config.redis.db || 0,
+  ...(config.redis.password ? { password: config.redis.password } : {}),
+  ...(config.redis.password && config.redis.username ? { username: config.redis.username } : {}),
+  maxRetriesPerRequest: null as null,
+  lazyConnect: true,
+  enableReadyCheck: false,
+};
 
-const redisUrl = process.env.REDIS_URL;
+if (localRedisHosts.has(config.redis.host)) {
+  delete (redisOptions as { password?: string }).password;
+  delete (redisOptions as { username?: string }).username;
+}
 
-export const redisConnection = redisUrl
-  ? new RedisIO(redisUrl, {
-      maxRetriesPerRequest: null,
-      lazyConnect: true,
-      enableReadyCheck: false,
-    })
-  : new RedisIO({
-      host: config.queue.redis.host,
-      port: config.queue.redis.port,
-      password: config.queue.redis.password,
-      maxRetriesPerRequest: null,
-      lazyConnect: true,
-      enableReadyCheck: false,
-    });
-
-// Use local Redis for cache and queue operations
+export const redisConnection = new RedisIO(redisOptions);
 export const redisClient = redisConnection;
 
 export const connectRedis = async (): Promise<void> => {
   try {
-    if (redisConnection.status === 'wait' || redisConnection.status === 'end') {
-      await redisConnection.connect();
+    if (redisClient.status === 'wait' || redisClient.status === 'end') {
+      await redisClient.connect();
     }
-    await redisConnection.ping();
+    await redisClient.ping();
   } catch (error) {
     console.error(colors.red(' Local Redis connection failed:'), error);
     throw error;
@@ -37,7 +36,7 @@ export const connectRedis = async (): Promise<void> => {
 // Graceful shutdown
 export const closeRedis = async (): Promise<void> => {
   try {
-    await redisConnection.quit();
+    await redisClient.quit();
     console.log(colors.green(' Redis connections closed'));
   } catch (error) {
     console.error(colors.red(' Error closing Redis:'), error);

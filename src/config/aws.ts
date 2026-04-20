@@ -10,13 +10,13 @@ const awsConfig = {
     maxFileSize: parseInt(process.env.AWS_MAX_FILE_SIZE || '10485760'), // 10MB
     allowedMimeTypes: [
       'image/jpeg',
+      'image/jpg',
       'image/png',
       'image/gif',
       'image/webp',
       'application/pdf',
       'text/plain',
       'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ],
   },
 };

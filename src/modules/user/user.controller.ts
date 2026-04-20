@@ -56,7 +56,7 @@ const getUserById = asyncHandler(async (req: Request, res: Response) => {
 
 const getMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId } = req.user!;
-  const user = await UserService.getUserById(userId);
+  const user = await UserService.getMyProfile(userId);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -65,32 +65,23 @@ const getMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 });
 
+const updateMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { userId } = req.user!;
+  const user = await UserService.updateMyProfile(userId, req.body, req.file);
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User updated successfully.',
+    data: user,
+  });
+});
+
 // PATCH /api/users/:id
 const updateUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id: userId } = req.params;
-  const { userId: actorId, role: actorRole } = req.user!;
+  const { userId: actorId } = req.user!;
 
-  let profilePictureUrl: string | undefined;
-  if (req.file) {
-    const uploaded = await uploadImageToS3(
-      req.file.buffer,
-      req.file.mimetype,
-      req.file.originalname,
-      'profiles'
-    );
-    profilePictureUrl = uploaded.url;
-  }
-
-  const payload = {
-    ...req.body,
-    ...(profilePictureUrl
-      ? {
-          profilePicture: profilePictureUrl,
-        }
-      : {}),
-  };
-
-  const user = await UserService.updateUser(userId as string, payload, actorId, actorRole);
+  const user = await UserService.updateUser(userId as string, req.body, actorId, req.file);
 
   apiResponse(res, {
     success: true,
@@ -165,6 +156,7 @@ export const UserController = {
   createUser,
   getAllUsers,
   getMyProfile,
+  updateMyProfile,
   getUserById,
   checkUsernameExists,
   updateUser,

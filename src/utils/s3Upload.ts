@@ -1,4 +1,5 @@
-import AWS from 'aws-sdk';
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { StatusCodes } from 'http-status-codes';
 import awsConfig from '../config/aws';
 import ApiError from './apiError';
@@ -16,15 +17,14 @@ const createS3Client = () => {
     );
   }
 
-  return new AWS.S3({
+  return new S3Client({
+    region: awsConfig.region,
     credentials: {
       accessKeyId: awsConfig.accessKeyId,
       secretAccessKey: awsConfig.secretAccessKey,
     },
-    region: awsConfig.region,
     ...(awsConfig.s3.endpoint ? { endpoint: awsConfig.s3.endpoint } : {}),
-    s3ForcePathStyle: awsConfig.s3.forcePathStyle,
-    signatureVersion: 'v4',
+    forcePathStyle: awsConfig.s3.forcePathStyle,
   });
 };
 
@@ -32,31 +32,58 @@ const createS3Client = () => {
  * METHOD 1: Backend Relay Upload (Current)
  * File uploaded to backend, then relayed to S3
  */
-export const uploadImageToS3 = async (
-  fileBuffer: Buffer,
-  mimeType: string,
-  originalName: string,
-  folder = 'profiles'
-) => {
-  const s3 = createS3Client();
-  const extension = originalName.includes('.') ? originalName.split('.').pop()?.toLowerCase() : '';
-  const safeName = sanitizeFileName(originalName);
-  const key = `${folder}/${Date.now()}-${safeName}${extension ? `.${extension}` : ''}`;
+export const uploadImageToS3 = async (file: Express.Multer.File, folder: string = 'uploads') => {
+  try {
+    const s3 = createS3Client();
+    const extension = file.originalname.includes('.')
+      ? file.originalname.split('.').pop()?.toLowerCase()
+      : '';
+    const safeName = sanitizeFileName(file.originalname);
+    const key = `${folder}/${Date.now()}-${safeName}${extension ? `.${extension}` : ''}`;
 
-  const result = await s3
-    .upload({
-      Bucket: awsConfig.bucket,
-      Key: key,
-      Body: fileBuffer,
-      ContentType: mimeType,
-      ACL: 'public-read',
-    })
-    .promise();
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: awsConfig.bucket,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        ACL: 'public-read',
+      })
+    );
 
-  return {
-    key,
-    url: result.Location,
-  };
+    const url = awsConfig.s3.endpoint
+      ? `${awsConfig.s3.endpoint.replace(/\/$/, '')}/${awsConfig.bucket}/${key}`
+      : `https://${awsConfig.bucket}.s3.${awsConfig.region}.amazonaws.com/${key}`;
+
+    return {
+      key,
+      url,
+    };
+  } catch (error) {
+    console.error('Error uploading to S3:', error);
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      `Failed to upload image to S3: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+};
+
+export const deleteImageFromS3 = async (key: string) => {
+  try {
+    const s3 = createS3Client();
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: awsConfig.bucket,
+        Key: key,
+      })
+    );
+  } catch (error) {
+    console.error('Error deleting from S3:', error);
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      `Failed to delete image from S3: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 };
 
 /**
@@ -73,13 +100,16 @@ export const generatePresignedUrl = async (
   const safeName = sanitizeFileName(fileName);
   const key = `${folder}/${Date.now()}-${safeName}${extension ? `.${extension}` : ''}`;
 
-  const presignedUrl = await s3.getSignedUrlPromise('putObject', {
-    Bucket: awsConfig.bucket,
-    Key: key,
-    ContentType: mimeType,
-    Expires: awsConfig.s3.signedUrlExpiry,
-    ACL: 'public-read',
-  });
+  const presignedUrl = await getSignedUrl(
+    s3,
+    new PutObjectCommand({
+      Bucket: awsConfig.bucket,
+      Key: key,
+      ContentType: mimeType,
+      ACL: 'public-read',
+    }),
+    { expiresIn: awsConfig.s3.signedUrlExpiry }
+  );
 
   return {
     key,

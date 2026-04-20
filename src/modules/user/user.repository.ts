@@ -17,7 +17,6 @@ export const userFullSelect = {
   lastName: true,
   username: true,
   email: true,
-  password: true,
   gender: true,
   birthDate: true,
   profilePicture: true,

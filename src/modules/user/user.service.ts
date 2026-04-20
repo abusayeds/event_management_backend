@@ -6,7 +6,7 @@ import ApiError from '../../utils/apiError';
 import { normalizeUsername, prepareCreateUserPayload } from './user.helpers';
 import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
 import { UserRepository } from './user.repository';
-import { generatePresignedUrl } from '../../utils/s3Upload';
+import { deleteImageFromS3, generatePresignedUrl, uploadImageToS3 } from '../../utils/s3Upload';
 
 const normalizeSkills = (skills: string[]) => {
   const cleanedSkills = skills.map(skill => skill.trim()).filter(skill => skill.length > 0);
@@ -52,26 +52,67 @@ const getUserById = async (id: string) => {
   return user;
 };
 
+const getMyProfile = async (userId: string) => {
+  const user = await UserRepository.getUserByIdPublic(userId);
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+  return user;
+};
+
+const updateMyProfile = async (
+  userId: string,
+  payload: IUpdateUserPayload,
+  file?: Express.Multer.File
+) => {
+  // Step 1 : Check user  exist
+  const user = await UserRepository.getUserById(userId);
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+  // Step 2 : Handle profile picture upload if file is provided
+  let profilePictureUrl: string | undefined;
+  if (file) {
+    const uploaded = await uploadImageToS3(file, 'profiles');
+    profilePictureUrl = uploaded?.url;
+    // Delete old profile picture from S3 if exists
+    if (user?.profilePicture) {
+      const oldKey = user?.profilePicture?.split('.amazonaws.com/')[1];
+      await deleteImageFromS3(oldKey);
+    }
+  }
+
+  // Step 3 : Prepare update payload
+  payload = {
+    ...payload,
+    profilePicture: profilePictureUrl,
+  };
+
+  if (Object.keys(payload).length === 0) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update user.');
+  }
+  return UserRepository.updateUserById(userId, payload);
+};
+
 // Update User
 const updateUser = async (
   id: string,
   payload: IUpdateUserPayload,
   actorId: string,
-  actorRole: string
+  file?: Express.Multer.File | undefined
 ) => {
-  // Only admin can update any user. Regular user can update own profile only.
-  if (actorRole !== UserRole.ADMIN && actorId !== id) {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'You are not authorized to update this user profile.'
-    );
-  }
-
-  // User existence check
-  const existing = await UserRepository.isUserExists(id);
+  //Step 1 : User existence check
+  const existing = await UserRepository.getUserById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
+
+  // Step 2 : Check actor existence
+  const actor = await UserRepository.getUserById(actorId);
+  if (!actor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Actor user not found.');
+  }
+  
 
   // when email update check if the new email is already taken by another user
   if (payload.email) {
@@ -114,7 +155,7 @@ const updateUser = async (
 
 const updateUserStatus = async (id: string, status: UserStatus, actorId: string) => {
   // User existence check
-  const existing = await UserRepository.isUserExists(id);
+  const existing = await UserRepository.getUserById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
@@ -133,7 +174,7 @@ const updateUserIndependentStatus = async (
   actorId: string
 ) => {
   // User existence check
-  const existing = await UserRepository.isUserExists(userId);
+  const existing = await UserRepository.getUserById(userId);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
@@ -149,7 +190,7 @@ const updateUserIndependentStatus = async (
 // Delete User
 const deleteUser = async (id: string, actorId: string) => {
   // User existence check
-  const existing = await UserRepository.isUserExists(id);
+  const existing = await UserRepository.getUserById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
@@ -218,6 +259,8 @@ export const UserService = {
   updateUserStatus,
   updateUserIndependentStatus,
   deleteUser,
+  getMyProfile,
+  updateMyProfile,
   // Helper methods for auth
   getUserByEmail,
   getUserByIdForAuth,
