@@ -107,14 +107,20 @@ const getAllUsers = async (
 
   const where: any = {};
 
+  if (filters.status) {
+    where.status = filters.status;
+  } else {
+    where.status = { not: UserStatus.DELETED };
+  }
+
   // Search filter
-  if (filters.searchTerm) {
+  if (filters.search) {
     where.OR = [
-      { firstName: { contains: filters.searchTerm, mode: 'insensitive' } },
-      { lastName: { contains: filters.searchTerm, mode: 'insensitive' } },
-      { username: { contains: filters.searchTerm, mode: 'insensitive' } },
-      { accountId: { contains: filters.searchTerm, mode: 'insensitive' } },
-      { email: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { firstName: { contains: filters.search, mode: 'insensitive' } },
+      { lastName: { contains: filters.search, mode: 'insensitive' } },
+      { username: { contains: filters.search, mode: 'insensitive' } },
+      { accountId: { contains: filters.search, mode: 'insensitive' } },
+      { email: { contains: filters.search, mode: 'insensitive' } },
     ];
   }
 
@@ -130,9 +136,6 @@ const getAllUsers = async (
   }
   if (filters.username) {
     where.username = { contains: filters.username, mode: 'insensitive' };
-  }
-  if (filters.status) {
-    where.status = filters.status;
   }
   if (filters.role) {
     where.role = filters.role;

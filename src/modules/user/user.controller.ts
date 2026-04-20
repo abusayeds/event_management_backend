@@ -106,9 +106,20 @@ const updateUserStatus = asyncHandler(async (req: AuthenticatedRequest, res: Res
 });
 
 // DELETE /api/users/:id
-const deleteAccount = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { userId } = req.user!;
-  await UserService.deleteUser(userId as string);
+const deleteUserById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { id: targetUserId } = req.params;
+  const { userId: actorId, role: actorRole } = req.user!;
+  await UserService.deleteUser(targetUserId as string, actorId, actorRole);
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User deleted successfully.',
+  });
+});
+
+const deleteMyAccount = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { userId: actorId, role: actorRole } = req.user!;
+  await UserService.deleteUser(actorId as string, actorId, actorRole);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -159,5 +170,6 @@ export const UserController = {
   checkUsernameExists,
   updateUser,
   updateUserStatus,
-  deleteAccount,
+  deleteUserById,
+  deleteMyAccount,
 };

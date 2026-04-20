@@ -16,6 +16,7 @@ router.get(
 );
 
 router.get('/me', auth(UserRole.ADMIN, UserRole.USER), UserController.getMyProfile);
+router.delete('/me', auth(UserRole.ADMIN, UserRole.USER), UserController.deleteMyAccount);
 router.patch(
   '/update-me',
   auth(UserRole.ADMIN, UserRole.USER),
@@ -59,7 +60,7 @@ router
   .delete(
     auth(UserRole.ADMIN, UserRole.USER),
     validateRequest(UserValidation.deleteUser),
-    UserController.deleteAccount
+    UserController.deleteUserById
   );
 
 // METHOD 2: Presigned URL endpoint (Future - uncomment when ready)

@@ -6,9 +6,9 @@ import { FamilyRepository } from '../family/family.repository';
 import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import {
-  IAddFamilyMemberWithUserPayload,
-  IAddFamilyOwnerPayload,
-  IFamilyMemberFilters,
+    IAddFamilyMemberWithUserPayload,
+    IAddFamilyOwnerPayload,
+    IFamilyMemberFilters,
 } from './familyMember.interface';
 import { FamilyMemberRepository } from './familyMember.repository';
 
@@ -37,27 +37,38 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
     throw new ApiError(StatusCodes.CONFLICT, 'A user with this email already exists.');
   }
 
-  // Step 4: Create user first
-  const createdUser = await UserService.createUser(
-    {
-      ...userPayload,
-      email: normalizedEmail,
-    },
-    actorId
-  );
+  let createdUser: Awaited<ReturnType<typeof UserService.createUser>> | null = null;
 
-  // Step 5: Add new user as family member
-  const familyMember = await FamilyMemberRepository.addFamilyMember({
-    familyId,
-    userId: createdUser.id,
-    role: role ?? FamilyRole.MEMBER,
-    relationShip,
-  });
+  try {
+    // Step 4: Create user first
+    createdUser = await UserService.createUser(
+      {
+        ...userPayload,
+        email: normalizedEmail,
+      },
+      actorId
+    );
 
-  return {
-    familyMember,
-    user: createdUser,
-  };
+    // Step 5: Add new user as family member
+    const familyMember = await FamilyMemberRepository.addFamilyMember({
+      familyId,
+      userId: createdUser.id,
+      role: role ?? FamilyRole.MEMBER,
+      relationShip,
+    });
+
+    return {
+      familyMember,
+      user: createdUser,
+    };
+  } catch (error) {
+    // Best-effort rollback to avoid dangling users if member creation fails.
+    if (createdUser) {
+      await UserRepository.deleteUserById(createdUser.id);
+    }
+
+    throw error;
+  }
 };
 
 const getFamilyMembersByFamilyId = async (
@@ -182,8 +193,23 @@ const updateOwnerIndependentStatus = async (
     throw new ApiError(StatusCodes.FORBIDDEN, 'Only family owner can update independence status.');
   }
 
-  // Step 3: Update owner independence
-  return UserService.updateUserIndependentStatus(targetUserId, isIndependent, actorId);
+  // Step 3: Ensure target user is an OWNER in this family
+  const targetMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
+    familyId,
+    targetUserId
+  );
+  if (!targetMembership) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Target user is not a family member.');
+  }
+  if (targetMembership.role !== FamilyRole.OWNER) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Independence status can only be updated for family owners.'
+    );
+  }
+
+  // Step 4: Update owner independence
+  return UserService.updateUserIndependentStatusByOwner(targetUserId, isIndependent);
 };
 
 export const FamilyMemberService = {

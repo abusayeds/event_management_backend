@@ -1,4 +1,4 @@
-import { UserGender, UserStatus } from '../../../prisma/generated/enums';
+import { UserGender, UserRole, UserStatus } from '../../../prisma/generated/enums';
 
 export interface IUser {
   id: string;
@@ -8,21 +8,21 @@ export interface IUser {
   email: string;
   password: string;
   gender: UserGender;
-  birthDate: string;
-  profilePicture: string;
+  birthDate: Date;
+  profilePicture?: string | null;
   location: string;
   country: string;
   state: string;
   city: string;
   skills: string[];
-  role: string;
+  role: UserRole;
   status: UserStatus;
   isIndependent: boolean;
   isEmailVerified: boolean;
-  createdByOwner: boolean;
+  createdByOwner?: string | null;
   contributionScore: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ICreateUserPayload {
@@ -66,7 +66,7 @@ export interface IUserFilters {
   username?: string;
   email?: string;
   status?: UserStatus;
-  searchTerm?: string;
+  search?: string;
   role?: string;
   roleId?: string;
   createdByOwner?: string;

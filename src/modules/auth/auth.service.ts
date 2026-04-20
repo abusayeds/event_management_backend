@@ -212,8 +212,8 @@ const login = async (payload: ILoginPayload) => {
 
   const user = await UserService.getUserByEmail(normalizedEmail);
   if (!user) {
-    await failLoginAttempt(normalizedEmail);
     securityLogger.loginAttempt(normalizedEmail, 'unknown', false);
+    await failLoginAttempt(normalizedEmail);
   }
   const existingUser = user!;
 
@@ -222,6 +222,7 @@ const login = async (payload: ILoginPayload) => {
 
   const isPasswordValid = await bcrypt.compare(payload.password, existingUser.password);
   if (!isPasswordValid) {
+    securityLogger.loginAttempt(normalizedEmail, 'unknown', false);
     await failLoginAttempt(normalizedEmail);
   }
 
@@ -241,6 +242,8 @@ const login = async (payload: ILoginPayload) => {
     refreshToken,
     CACHE_KEYS.TTL.WEEK
   );
+
+  securityLogger.loginAttempt(normalizedEmail, 'unknown', true);
 
   return {
     user: {

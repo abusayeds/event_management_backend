@@ -33,7 +33,7 @@ const updateFamily = z.object({
       description: z.string().trim().max(500).optional(),
       imageUrl: z.string().url('Invalid image URL').optional(),
     })
-    .refine((value: any) => Object.keys(value).length > 0, {
+    .refine((value: Record<string, unknown>) => Object.keys(value).length > 0, {
       message: 'At least one field is required to update family',
     }),
   params: idParamSchema,

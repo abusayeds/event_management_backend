@@ -190,8 +190,22 @@ const updateUserIndependentStatus = async (
   return UserRepository.updateUserIndependentStatus(userId, isIndependent);
 };
 
+const updateUserIndependentStatusByOwner = async (userId: string, isIndependent: boolean) => {
+  const existing = await UserRepository.getUserById(userId);
+  if (!existing) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+
+  return UserRepository.updateUserIndependentStatus(userId, isIndependent);
+};
+
 // Delete User
-const deleteUser = async (id: string) => {
+const deleteUser = async (id: string, actorId: string, actorRole: string) => {
+  const isAdmin = actorRole === 'ADMIN';
+  if (!isAdmin && id !== actorId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You can only delete your own account.');
+  }
+
   // User existence check
   const existing = await UserRepository.getUserById(id);
   if (!existing) {
@@ -255,6 +269,7 @@ export const UserService = {
   updateUser,
   updateUserStatus,
   updateUserIndependentStatus,
+  updateUserIndependentStatusByOwner,
   deleteUser,
   getMyProfile,
   updateMyProfile,

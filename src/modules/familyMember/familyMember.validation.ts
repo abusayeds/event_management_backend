@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { FamilyRole, UserGender } from '../../../prisma/generated/enums';
+import { strongPasswordSchema } from '../../utils/passwordPolicy';
 
 const familyIdParamSchema = z.object({
   familyId: z.string().min(1, 'familyId is required'),
@@ -23,7 +24,7 @@ const addFamilyMember = z.object({
     state: z.string().trim().min(1, 'state is required'),
     city: z.string().trim().min(1, 'city is required'),
     email: z.string().email('Invalid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: strongPasswordSchema,
     relationShip: z.string().optional(),
     skills: z.array(z.string()).optional(),
     isIndependent: z.boolean().optional(),

@@ -1,9 +1,69 @@
 import { z } from 'zod';
 import { UserGender, UserStatus } from '../../../prisma/generated/enums';
+import { strongPasswordSchema } from '../../utils/passwordPolicy';
 
 const idParamSchema = z.object({
   id: z.string().min(1, 'User id is required'),
 });
+
+const parseSkillsInput = (value: unknown): string[] | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map(item => (typeof item === 'string' ? item.trim() : ''))
+      .filter(item => item.length > 0);
+  }
+
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  if (value.length === 0) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map(item => (typeof item === 'string' ? item.trim() : ''))
+        .filter(item => item.length > 0);
+    }
+  } catch {
+    // If not JSON, treat as comma-separated skills.
+  }
+
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(item => item.length > 0);
+};
+
+const updateUserBodySchema = z
+  .object({
+    username: z.string().trim().min(3, 'Username must be at least 3 characters').max(30).optional(),
+    firstName: z.string().trim().min(1, 'firstName cannot be empty').max(60).optional(),
+    lastName: z.string().trim().min(1, 'lastName cannot be empty').max(60).optional(),
+    gender: z.enum(Object.values(UserGender) as [string, ...string[]]).optional(),
+    birthDate: z.string().min(1, 'birthDate cannot be empty').optional(),
+    location: z.string().trim().min(1, 'location cannot be empty').optional(),
+    country: z.string().trim().min(1, 'country cannot be empty').optional(),
+    state: z.string().trim().min(1, 'state cannot be empty').optional(),
+    city: z.string().trim().min(1, 'city cannot be empty').optional(),
+    email: z.string().email('Invalid email address').optional(),
+    isIndependent: z.boolean().optional(),
+    profilePicture: z.string().trim().min(1).optional(),
+    skills: z
+      .union([z.array(z.string().trim().min(1, 'Each skill must be non-empty')), z.string().trim()])
+      .optional()
+      .transform(value => parseSkillsInput(value)),
+  })
+  .refine(value => Object.keys(value).length > 0, {
+    message: 'At least one field is required to update user',
+  });
 
 const createUser = z.object({
   body: z.object({
@@ -17,7 +77,7 @@ const createUser = z.object({
     state: z.string().trim().min(1, 'state is required'),
     city: z.string().trim().min(1, 'city is required'),
     email: z.string().email('Invalid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: strongPasswordSchema,
     skills: z.array(z.string()).optional(),
     isIndependent: z.boolean().optional(),
     createdById: z.string().optional(),
@@ -47,124 +107,11 @@ const getUserById = z.object({
 });
 
 const updateUser = z.object({
-  body: z
-    .object({
-      username: z
-        .string()
-        .trim()
-        .min(3, 'Username must be at least 3 characters')
-        .max(30)
-        .optional(),
-      firstName: z.string().trim().min(1, 'firstName cannot be empty').max(60).optional(),
-      lastName: z.string().trim().min(1, 'lastName cannot be empty').max(60).optional(),
-      gender: z.enum(Object.values(UserGender) as [string, ...string[]]).optional(),
-      birthDate: z.string().min(1, 'birthDate cannot be empty').optional(),
-      location: z.string().trim().min(1, 'location cannot be empty').optional(),
-      country: z.string().trim().min(1, 'country cannot be empty').optional(),
-      state: z.string().trim().min(1, 'state cannot be empty').optional(),
-      city: z.string().trim().min(1, 'city cannot be empty').optional(),
-      email: z.string().email('Invalid email address').optional(),
-      isIndependent: z.boolean().optional(),
-      profilePicture: z.string().trim().min(1).optional(),
-      skills: z
-        .union([
-          z.array(z.string().trim().min(1, 'Each skill must be non-empty')),
-          z.string().trim(),
-        ])
-        .optional()
-        .transform(value => {
-          if (value === undefined) {
-            return undefined;
-          }
-
-          if (Array.isArray(value)) {
-            return value;
-          }
-
-          if (value.length === 0) {
-            return [];
-          }
-
-          try {
-            const parsed = JSON.parse(value) as unknown;
-            if (Array.isArray(parsed)) {
-              return parsed
-                .map(item => (typeof item === 'string' ? item.trim() : ''))
-                .filter(item => item.length > 0);
-            }
-          } catch {
-            // If not JSON, treat as comma-separated skills.
-          }
-
-          return value
-            .split(',')
-            .map(item => item.trim())
-            .filter(item => item.length > 0);
-        }),
-    })
-    .refine(value => Object.keys(value).length > 0, {
-      message: 'At least one field is required to update user',
-    }),
+  body: updateUserBodySchema,
   params: idParamSchema,
 });
 const updateMyProfile = z.object({
-  body: z
-    .object({
-      username: z
-        .string()
-        .trim()
-        .min(3, 'Username must be at least 3 characters')
-        .max(30)
-        .optional(),
-      firstName: z.string().trim().min(1, 'firstName cannot be empty').max(60).optional(),
-      lastName: z.string().trim().min(1, 'lastName cannot be empty').max(60).optional(),
-      gender: z.enum(Object.values(UserGender) as [string, ...string[]]).optional(),
-      birthDate: z.string().min(1, 'birthDate cannot be empty').optional(),
-      location: z.string().trim().min(1, 'location cannot be empty').optional(),
-      country: z.string().trim().min(1, 'country cannot be empty').optional(),
-      state: z.string().trim().min(1, 'state cannot be empty').optional(),
-      city: z.string().trim().min(1, 'city cannot be empty').optional(),
-      email: z.string().email('Invalid email address').optional(),
-      profilePicture: z.string().trim().min(1).optional(),
-      skills: z
-        .union([
-          z.array(z.string().trim().min(1, 'Each skill must be non-empty')),
-          z.string().trim(),
-        ])
-        .optional()
-        .transform(value => {
-          if (value === undefined) {
-            return undefined;
-          }
-
-          if (Array.isArray(value)) {
-            return value;
-          }
-
-          if (value.length === 0) {
-            return [];
-          }
-
-          try {
-            const parsed = JSON.parse(value) as unknown;
-            if (Array.isArray(parsed)) {
-              return parsed
-                .map(item => (typeof item === 'string' ? item.trim() : ''))
-                .filter(item => item.length > 0);
-            }
-          } catch {
-            // If not JSON, treat as comma-separated skills.
-          }
-
-          return value
-            .split(',')
-            .map(item => item.trim())
-            .filter(item => item.length > 0);
-        }),
-    })
-    .refine(value => Object.keys(value).length > 0, {
-      message: 'At least one field is required to update user',
-    }),
+  body: updateUserBodySchema,
 });
 
 const updateUserStatus = z.object({

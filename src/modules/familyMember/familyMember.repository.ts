@@ -10,6 +10,7 @@ const addFamilyMember = async (payload: ICreateFamilyMemberPayload) => {
       familyId: payload.familyId,
       userId: payload.userId,
       role: payload.role,
+      relationShip: payload.relationShip,
     },
   });
   return familyMember;

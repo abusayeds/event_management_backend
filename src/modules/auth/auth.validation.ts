@@ -1,14 +1,6 @@
 import { z } from 'zod';
 import { UserGender } from '../../../prisma/generated/enums';
-
-// Password Validation Schema
-const passwordSchema = z
-  .string()
-  .min(8, 'Password must be at least 8 characters')
-  .refine(
-    password => /[A-Z]/.test(password),
-    'Password must contain at least one uppercase letter'
-  );
+import { strongPasswordSchema } from '../../utils/passwordPolicy';
 
 const login = z.object({
   body: z.object({
@@ -29,7 +21,7 @@ const register = z.object({
     state: z.string().trim().min(1, 'state is required'),
     city: z.string().trim().min(1, 'city is required'),
     email: z.string().email('Invalid email address'),
-    password: passwordSchema,
+    password: strongPasswordSchema,
   }),
 });
 
@@ -93,14 +85,14 @@ const resendForgotPasswordOtp = z.object({
 const resetPassword = z.object({
   body: z.object({
     resetToken: z.string().min(1, 'resetToken is required'),
-    newPassword: passwordSchema,
+    newPassword: strongPasswordSchema,
   }),
 });
 
 const changePassword = z.object({
   body: z.object({
     currentPassword: z.string().min(1, 'Current password is required'),
-    newPassword: passwordSchema,
+    newPassword: strongPasswordSchema,
   }),
 });
 
