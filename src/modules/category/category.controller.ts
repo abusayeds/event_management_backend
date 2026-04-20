@@ -7,7 +7,7 @@ import { CategoryService } from './category.service';
 
 // Create category
 const createCategory = asyncHandler(async (req: Request, res: Response) => {
-  const result = await CategoryService.createCategory(req.body);
+  const result = await CategoryService.createCategory(req.body, req.file);
 
   apiResponse(res, {
     success: true,
@@ -49,7 +49,7 @@ const getCategoryById = asyncHandler(async (req: Request, res: Response) => {
 // Update category by id
 const updateCategory = asyncHandler(async (req: Request, res: Response) => {
   const categoryId = req.params.id as string;
-  const result = await CategoryService.updateCategory(categoryId, req.body);
+  const result = await CategoryService.updateCategory(categoryId, req.body, req.file);
 
   apiResponse(res, {
     success: true,

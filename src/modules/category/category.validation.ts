@@ -33,15 +33,11 @@ const getCategoryById = z.object({
 
 // Update category payload validation
 const updateCategory = z.object({
-  body: z
-    .object({
-      name: z.string().trim().min(1, 'Category name cannot be empty').max(100).optional(),
-      imageUrl: z.string().url('Invalid image URL').optional(),
-      description: z.string().trim().max(500, 'Description is too long').optional(),
-    })
-    .refine((value: Record<string, unknown>) => Object.keys(value).length > 0, {
-      message: 'At least one field is required to update category',
-    }),
+  body: z.object({
+    name: z.string().trim().min(1, 'Category name cannot be empty').max(100).optional(),
+    imageUrl: z.string().url('Invalid image URL').optional(),
+    description: z.string().trim().max(500, 'Description is too long').optional(),
+  }),
   params: idParamSchema,
 });
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { UserRole } from '../../../prisma/generated/enums';
 import { auth } from '../../middleware/auth.middleware';
+import { upload } from '../../middleware/upload.middleware';
 import validateRequest from '../../middleware/validate.middleware';
 import { CategoryController } from './category.controller';
 import { CategoryValidation } from './category.validation';
@@ -11,6 +12,7 @@ router
   .route('/')
   .post(
     auth(UserRole.ADMIN),
+    upload.single('image'),
     validateRequest(CategoryValidation.createCategory),
     CategoryController.createCategory
   )
@@ -29,6 +31,7 @@ router
   )
   .patch(
     auth(UserRole.ADMIN),
+    upload.single('image'),
     validateRequest(CategoryValidation.updateCategory),
     CategoryController.updateCategory
   )
