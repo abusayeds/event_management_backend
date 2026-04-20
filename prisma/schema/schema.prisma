@@ -44,12 +44,13 @@ model User {
     firstName          String
     lastName           String
     username           String              @unique
+    displayName        String?
     email              String              @unique
     password           String
     phoneNumber        String?
     gender             UserGender
     birthDate          DateTime
-    profilePicture     String?
+    profilePicture     String?             @default("https://areawins.s3.us-east-2.amazonaws.com/common/user.jpg")
     location           String
     country            String
     state              String
@@ -72,6 +73,58 @@ model User {
 
     @@index([createdByOwner])
     @@map("users")
+}
+
+// Category Model
+model Category {
+    id            String        @id @default(uuid())
+    name          String        @unique
+    imageUrl      String?
+    description   String?
+    isDeleted     Boolean       @default(false)
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+    subcategories Subcategory[]
+    programs      Program[]
+
+    @@map("categories")
+}
+
+// Create subcategory model with reference to category
+model Subcategory {
+    id          String    @id @default(uuid())
+    categoryId  String
+    name        String    @unique
+    imageUrl    String?
+    description String?
+    isDeleted   Boolean   @default(false)
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+    programs    Program[]
+
+    @@index([categoryId])
+    @@map("subcategories")
+}
+
+// Program model with reference category Or subcategory
+
+model Program {
+    id            String       @id @default(uuid())
+    categoryId    String?
+    subcategoryId String?
+    name          String       @unique
+    description   String?
+    imageUrl      String?
+    isDeleted     Boolean      @default(false)
+    createdAt     DateTime     @default(now())
+    updatedAt     DateTime     @updatedAt
+    category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+    subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+
+    @@index([categoryId])
+    @@index([subcategoryId])
+    @@map("programs")
 }
 
 model Family {
