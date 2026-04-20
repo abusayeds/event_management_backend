@@ -222,13 +222,17 @@ const getSecurityLoggingMiddleware = () => {
 
 const getSecurityErrorHandler = () => {
   return (
-    error: any,
+    error: unknown,
     req: express.Request,
     res: express.Response,
     next: express.NextFunction
   ): void => {
+    const securityError =
+      typeof error === 'object' && error !== null
+        ? (error as { code?: string; message?: string })
+        : {};
     // Log security-related errors
-    if (error.code === 'EBADCSRFTOKEN') {
+    if (securityError.code === 'EBADCSRFTOKEN') {
       logger.warn('CSRF token validation failed', {
         type: 'SECURITY',
         ip: req.ip,
@@ -239,7 +243,7 @@ const getSecurityErrorHandler = () => {
       return;
     }
 
-    if (error.message === 'Not allowed by CORS') {
+    if (securityError.message === 'Not allowed by CORS') {
       logger.warn('CORS policy violation', {
         type: 'SECURITY',
         origin: req.get('Origin'),
@@ -252,7 +256,7 @@ const getSecurityErrorHandler = () => {
     }
 
     // Use existing global error handler
-    globalErrorHandler(error, req, res, next);
+    globalErrorHandler(error as Error, req, res, next);
   };
 };
 

@@ -23,7 +23,7 @@ let isShuttingDown = false;
 let server: http.Server | null = null;
 let io: SocketIOServer | null = null;
 let activeConnections = new Set<TrackedSocket>();
-let workers: any[] = [];
+let workers: ReturnType<typeof initializeWorkers> = [];
 
 // ==========================================
 // UNCAUGHT EXCEPTION HANDLER

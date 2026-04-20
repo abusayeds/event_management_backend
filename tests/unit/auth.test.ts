@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import request from 'supertest';
 import { StatusCodes } from 'http-status-codes';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import app from '../../src/app';
 import { prisma } from '../setup';
-import { generateAccessToken } from '../../src/utils/generateToken';
 
 describe('Auth Module', () => {
   let accessToken: string;
-  let testUser: any;
+  let testUser: Pick<Awaited<ReturnType<typeof prisma.user.create>>, 'id' | 'email'>;
 
   beforeAll(async () => {
     // Create a test user for authentication tests
@@ -109,9 +109,7 @@ describe('Auth Module', () => {
     });
 
     it('should return error without token', async () => {
-      const response = await request(app)
-        .get('/api/auth/profile')
-        .expect(StatusCodes.UNAUTHORIZED);
+      const response = await request(app).get('/api/auth/profile').expect(StatusCodes.UNAUTHORIZED);
 
       expect(response.body.success).toBe(false);
     });

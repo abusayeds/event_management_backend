@@ -107,6 +107,65 @@ const updateUser = z.object({
     }),
   params: idParamSchema,
 });
+const updateMyProfile = z.object({
+  body: z
+    .object({
+      username: z
+        .string()
+        .trim()
+        .min(3, 'Username must be at least 3 characters')
+        .max(30)
+        .optional(),
+      firstName: z.string().trim().min(1, 'firstName cannot be empty').max(60).optional(),
+      lastName: z.string().trim().min(1, 'lastName cannot be empty').max(60).optional(),
+      gender: z.enum(Object.values(UserGender) as [string, ...string[]]).optional(),
+      birthDate: z.string().min(1, 'birthDate cannot be empty').optional(),
+      location: z.string().trim().min(1, 'location cannot be empty').optional(),
+      country: z.string().trim().min(1, 'country cannot be empty').optional(),
+      state: z.string().trim().min(1, 'state cannot be empty').optional(),
+      city: z.string().trim().min(1, 'city cannot be empty').optional(),
+      email: z.string().email('Invalid email address').optional(),
+      profilePicture: z.string().trim().min(1).optional(),
+      skills: z
+        .union([
+          z.array(z.string().trim().min(1, 'Each skill must be non-empty')),
+          z.string().trim(),
+        ])
+        .optional()
+        .transform((value) => {
+          if (value === undefined) {
+            return undefined;
+          }
+
+          if (Array.isArray(value)) {
+            return value;
+          }
+
+          if (value.length === 0) {
+            return [];
+          }
+
+          try {
+            const parsed = JSON.parse(value) as unknown;
+            if (Array.isArray(parsed)) {
+              return parsed
+                .map((item) => (typeof item === 'string' ? item.trim() : ''))
+                .filter((item) => item.length > 0);
+            }
+          } catch {
+            // If not JSON, treat as comma-separated skills.
+          }
+
+          return value
+            .split(',')
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0);
+        }),
+    })
+    .refine((value) => Object.keys(value).length > 0, {
+      message: 'At least one field is required to update user',
+    })
+});
 
 const updateUserStatus = z.object({
   body: z.object({

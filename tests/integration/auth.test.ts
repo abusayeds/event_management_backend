@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import request from 'supertest';
 import { StatusCodes } from 'http-status-codes';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import app from '../../src/app';
 import { prisma } from '../setup';
 
 describe('Auth Integration Tests', () => {
-  let testUser: any;
+  let testUser: Pick<Awaited<ReturnType<typeof prisma.user.create>>, 'id' | 'email'>;
 
   beforeAll(async () => {
     testUser = await prisma.user.create({
