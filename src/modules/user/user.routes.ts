@@ -24,6 +24,14 @@ router.patch(
   UserController.updateMyProfile
 );
 
+// PATCH /api/users/:id/status
+router.patch(
+  '/status/:id',
+  auth(UserRole.ADMIN),
+  validateRequest(UserValidation.updateUserStatus),
+  UserController.updateUserStatus
+);
+
 // GET  /api/users
 router
   .route('/')
@@ -53,14 +61,6 @@ router
     validateRequest(UserValidation.deleteUser),
     UserController.deleteAccount
   );
-
-// PATCH /api/users/:id/status
-router.patch(
-  '/:id/status',
-  auth(UserRole.ADMIN),
-  validateRequest(UserValidation.updateUserStatus),
-  UserController.updateUserStatus
-);
 
 // METHOD 2: Presigned URL endpoint (Future - uncomment when ready)
 // GET /api/users/:id/presigned-url

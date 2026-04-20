@@ -3,13 +3,23 @@ import {
   PaginationOptions,
   PaginationResult,
 } from '../interfaces/pagination.interface';
-
 export { PaginationMeta, PaginationOptions, PaginationResult };
+
+const toPositiveInteger = (value: unknown, fallback: number): number => {
+  const numericValue =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+      ? Number.parseInt(value, 10)
+      : Number.NaN;
+
+  return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : fallback;
+};
 
 export const parsePaginationOptions = (options: PaginationOptions): Required<PaginationOptions> => {
   return {
-    page: options.page || 1,
-    limit: options.limit || 10,
+    page: toPositiveInteger(options.page, 1),
+    limit: toPositiveInteger(options.limit, 10),
     sortBy: options.sortBy || 'createdAt',
     sortOrder: options.sortOrder || 'desc',
   };
