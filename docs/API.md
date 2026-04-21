@@ -152,7 +152,7 @@ Content-Type: application/json
 
 #### Get Accepted Connections
 ```
-GET /api/connections/my?page=1&limit=10
+GET /api/connections?page=1&limit=10
 Authorization: Bearer <access-token>
 ```
 
@@ -182,7 +182,7 @@ Authorization: Bearer <access-token>
 
 #### Cancel Sent Request
 ```
-DELETE /api/connections/requests/:id
+DELETE /api/connections/requests/:id/cancel
 Authorization: Bearer <access-token>
 ```
 

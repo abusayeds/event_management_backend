@@ -11,7 +11,7 @@ const paginationQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional(),
 });
 
-const sendConnectionRequest = z.object({
+const createConnectionRequest = z.object({
   body: z.object({
     receiverId: z.string().min(1, 'Receiver user id is required'),
   }),
@@ -21,11 +21,11 @@ const getAcceptedConnections = z.object({
   query: paginationQuerySchema,
 });
 
-const getIncomingPendingRequests = z.object({
+const getReceivedConnectionRequests = z.object({
   query: paginationQuerySchema,
 });
 
-const getOutgoingPendingRequests = z.object({
+const getSentConnectionRequests = z.object({
   query: paginationQuerySchema,
 });
 
@@ -46,10 +46,10 @@ const removeConnection = z.object({
 });
 
 export const ConnectionValidation = {
-  sendConnectionRequest,
+  createConnectionRequest,
   getAcceptedConnections,
-  getIncomingPendingRequests,
-  getOutgoingPendingRequests,
+  getReceivedConnectionRequests,
+  getSentConnectionRequests,
   acceptRequest,
   rejectRequest,
   cancelRequest,

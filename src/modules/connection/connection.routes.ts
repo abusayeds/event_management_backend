@@ -8,7 +8,7 @@ import { ConnectionValidation } from './connection.validation';
 const router = Router();
 
 router
-  .route('/my')
+  .route('/')
   .get(
     auth(UserRole.ADMIN, UserRole.USER),
     validateRequest(ConnectionValidation.getAcceptedConnections),
@@ -18,40 +18,40 @@ router
 router.post(
   '/requests',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(ConnectionValidation.sendConnectionRequest),
-  ConnectionController.sendConnectionRequest
+  validateRequest(ConnectionValidation.createConnectionRequest),
+  ConnectionController.createConnectionRequest
 );
 
 router.get(
   '/requests/received',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(ConnectionValidation.getIncomingPendingRequests),
-  ConnectionController.getIncomingPendingRequests
+  validateRequest(ConnectionValidation.getReceivedConnectionRequests),
+  ConnectionController.getReceivedConnectionRequests
 );
 
 router.get(
   '/requests/sent',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(ConnectionValidation.getOutgoingPendingRequests),
-  ConnectionController.getOutgoingPendingRequests
+  validateRequest(ConnectionValidation.getSentConnectionRequests),
+  ConnectionController.getSentConnectionRequests
 );
 
 router.patch(
-  '/requests/:id/accept',
+  '/requests/accept/:id',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(ConnectionValidation.acceptRequest),
   ConnectionController.acceptRequest
 );
 
 router.patch(
-  '/requests/:id/reject',
+  '/requests/reject/:id',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(ConnectionValidation.rejectRequest),
   ConnectionController.rejectRequest
 );
 
 router.delete(
-  '/requests/:id',
+  '/requests/cancel/:id',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(ConnectionValidation.cancelRequest),
   ConnectionController.cancelRequest

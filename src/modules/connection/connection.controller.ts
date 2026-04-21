@@ -6,13 +6,13 @@ import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
 import { ConnectionService } from './connection.service';
 
-const sendConnectionRequest = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const createConnectionRequest = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   // Step:1 Read sender and target user ids from authenticated request.
   const { userId } = req.user!;
   const { receiverId } = req.body;
 
   // Step:2 Send a new connection request.
-  const result = await ConnectionService.sendConnectionRequest(userId, receiverId);
+  const result = await ConnectionService.createConnectionRequest(userId, receiverId);
 
   // Step:3 Return success response with created request.
   apiResponse(res, {
@@ -23,13 +23,13 @@ const sendConnectionRequest = asyncHandler(async (req: AuthenticatedRequest, res
   });
 });
 
-const getIncomingPendingRequests = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const getReceivedConnectionRequests = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   // Step:1 Read authenticated user id and pagination options.
   const { userId } = req.user!;
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
   // Step:2 Fetch received pending requests.
-  const result = await ConnectionService.getIncomingPendingRequests(userId, options);
+  const result = await ConnectionService.getReceivedConnectionRequests(userId, options);
 
   // Step:3 Return paginated request list.
   apiResponse(res, {
@@ -41,13 +41,13 @@ const getIncomingPendingRequests = asyncHandler(async (req: AuthenticatedRequest
   });
 });
 
-const getOutgoingPendingRequests = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const getSentConnectionRequests = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   // Step:1 Read authenticated user id and pagination options.
   const { userId } = req.user!;
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
   // Step:2 Fetch sent pending requests.
-  const result = await ConnectionService.getOutgoingPendingRequests(userId, options);
+  const result = await ConnectionService.getSentConnectionRequests(userId, options);
 
   // Step:3 Return paginated request list.
   apiResponse(res, {
@@ -146,9 +146,9 @@ const removeConnection = asyncHandler(async (req: AuthenticatedRequest, res: Res
 });
 
 export const ConnectionController = {
-  sendConnectionRequest,
-  getIncomingPendingRequests,
-  getOutgoingPendingRequests,
+  createConnectionRequest,
+  getReceivedConnectionRequests,
+  getSentConnectionRequests,
   getAcceptedConnections,
   acceptRequest,
   rejectRequest,

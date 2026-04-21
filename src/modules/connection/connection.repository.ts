@@ -47,7 +47,7 @@ const getUserById = async (userId: string) => {
   });
 };
 
-const findAnyBetweenUsers = async (userAId: string, userBId: string) => {
+const findConnectionBetweenUsers = async (userAId: string, userBId: string) => {
   return database.connection.findFirst({
     where: {
       OR: [
@@ -98,7 +98,7 @@ const getConnectionById = async (id: string) => {
   });
 };
 
-const getIncomingPendingRequests = async (
+const getReceivedPendingRequests = async (
   userId: string,
   options: PaginationOptions
 ): Promise<PaginationResult<IConnection>> => {
@@ -124,7 +124,7 @@ const getIncomingPendingRequests = async (
   return createPaginationResult(rows as IConnection[], total, pagination);
 };
 
-const getOutgoingPendingRequests = async (
+const getSentPendingRequests = async (
   userId: string,
   options: PaginationOptions
 ): Promise<PaginationResult<IConnection>> => {
@@ -178,11 +178,11 @@ const getAcceptedConnections = async (
 
 export const ConnectionRepository = {
   getUserById,
-  findAnyBetweenUsers,
+  findConnectionBetweenUsers,
   createConnection,
   updateConnection,
   getConnectionById,
-  getIncomingPendingRequests,
-  getOutgoingPendingRequests,
+  getReceivedPendingRequests,
+  getSentPendingRequests,
   getAcceptedConnections,
 };

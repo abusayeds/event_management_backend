@@ -4,7 +4,7 @@ import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { ConnectionRepository } from './connection.repository';
 
-const sendConnectionRequest = async (senderId: string, receiverId: string) => {
+const createConnectionRequest = async (senderId: string, receiverId: string) => {
   // Step:1 Block self-request to keep request flow valid.
   if (senderId === receiverId) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot send a connection request to yourself.');
@@ -17,7 +17,7 @@ const sendConnectionRequest = async (senderId: string, receiverId: string) => {
   }
 
   // Step:3 Find any existing relationship between both users.
-  const existing = await ConnectionRepository.findAnyBetweenUsers(senderId, receiverId);
+  const existing = await ConnectionRepository.findConnectionBetweenUsers(senderId, receiverId);
 
   // Step:4 Create new pending request when no previous record exists.
   if (!existing) {
@@ -49,14 +49,14 @@ const sendConnectionRequest = async (senderId: string, receiverId: string) => {
   });
 };
 
-const getIncomingPendingRequests = async (userId: string, options: PaginationOptions) => {
+const getReceivedConnectionRequests = async (userId: string, options: PaginationOptions) => {
   // Step:1 Return pending requests where current user is receiver.
-  return ConnectionRepository.getIncomingPendingRequests(userId, options);
+  return ConnectionRepository.getReceivedPendingRequests(userId, options);
 };
 
-const getOutgoingPendingRequests = async (userId: string, options: PaginationOptions) => {
+const getSentConnectionRequests = async (userId: string, options: PaginationOptions) => {
   // Step:1 Return pending requests sent by current user.
-  return ConnectionRepository.getOutgoingPendingRequests(userId, options);
+  return ConnectionRepository.getSentPendingRequests(userId, options);
 };
 
 const getAcceptedConnections = async (userId: string, options: PaginationOptions) => {
@@ -166,9 +166,9 @@ const removeConnection = async (connectionId: string, userId: string) => {
 };
 
 export const ConnectionService = {
-  sendConnectionRequest,
-  getIncomingPendingRequests,
-  getOutgoingPendingRequests,
+  createConnectionRequest,
+  getReceivedConnectionRequests,
+  getSentConnectionRequests,
   getAcceptedConnections,
   acceptRequest,
   rejectRequest,
