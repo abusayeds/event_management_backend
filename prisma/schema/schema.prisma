@@ -37,6 +37,28 @@ enum FamilyRole {
     MEMBER
 }
 
+enum EventRepeatPattern {
+    MONTHLY
+    QUARTERLY
+    YEARLY
+    CUSTOM
+    NULL
+}
+
+enum EventType {
+    ONLINE
+    OFFLINE
+    HYBRID
+}
+
+enum EventStatus {
+    UNVERIFIED
+    VERIFIED
+    CANCELED
+    ACTIVE
+    ENDED
+}
+
 // Models
 model User {
     id                 String              @id @default(uuid())
@@ -70,6 +92,8 @@ model User {
     familyMembers      FamilyMember[]
     familyInvitations  FamilyInvitation[]  @relation("FamilyInvitedBy")
     familyJoinRequests FamilyJoinRequest[] @relation("FamilyJoinRequest")
+    events             Event[]             @relation("EventCreator")
+    editHistories      EditHistory[]
 
     @@index([createdByOwner])
     @@map("users")
@@ -108,25 +132,142 @@ model Subcategory {
 }
 
 // Program model with reference category Or subcategory
-
 model Program {
-    id            String       @id @default(uuid())
+    id            String         @id @default(uuid())
     categoryId    String?
     subcategoryId String?
-    name          String       @unique
+    name          String         @unique
     description   String?
     imageUrl      String?
-    isDeleted     Boolean      @default(false)
-    createdAt     DateTime     @default(now())
-    updatedAt     DateTime     @updatedAt
-    category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-    subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+    isDeleted     Boolean        @default(false)
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+    category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+    subcategory   Subcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+    events        Event[]
+    eventSessions EventSession[]
 
     @@index([categoryId])
     @@index([subcategoryId])
     @@map("programs")
 }
 
+// Event Model
+model Event {
+    id            String             @id @default(uuid())
+    eventName     String
+    createdBy     String
+    creator       User               @relation("EventCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+    programId     String
+    program       Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
+    repeatPattern EventRepeatPattern @default(NULL)
+    createdAt     DateTime           @default(now())
+    updatedAt     DateTime           @updatedAt
+    isDeleted     Boolean            @default(false)
+    eventSessions EventSession[]
+    editHistories EditHistory[]
+}
+
+model OwnHistory {
+    id             String        @id @default(uuid())
+    session        String
+    record         String[]
+    eventSession   EventSession? @relation(fields: [eventSessionId], references: [id])
+    eventSessionId String?
+
+    @@map("own_histories")
+}
+
+model EventSession {
+    // Step 1: Basic Information
+    id                 String  @id @default(uuid())
+    eventId            String
+    sessionNumber      Int
+    year               Int
+    sessionLabel       String
+    coverImageUrl      String?
+    programId          String
+    organizer          String?
+    eventPortal        String?
+    registrationPortal String?
+    description        String?
+    notes              String?
+    program            Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+    event              Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+    // Details
+    competitionLevel     String?
+    type                 EventType?
+    registrationOpenDate DateTime?
+    deadline             DateTime?
+    cost                 Float?
+    isHasFinalDeadline   Boolean?   @default(false)
+    finalDeadline        DateTime?
+    lateFee              String?
+    location             String?
+
+    // Own History + Checkboxes
+    ownHistory       OwnHistory[]
+    isShareCommunity Boolean      @default(true)
+    isUserAgreement  Boolean      @default(true)
+    status           EventStatus  @default(UNVERIFIED)
+    createdAt        DateTime     @default(now())
+    updatedAt        DateTime     @updatedAt
+    eventGroups      EventGroup[]
+
+    @@index([eventId])
+    @@map("event_sessions")
+}
+
+// EventGroup
+model EventGroup {
+    id             String       @id @default(uuid())
+    sessionId      String
+    eventSession   EventSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    category       String
+    conditionType  String
+    conditionValue Int
+    groupLabel     String
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+    rounds         EventRound[]
+
+    @@map("event_groups")
+}
+
+// EventRound
+model EventRound {
+    id                 String      @id @default(uuid())
+    roundName          String
+    deadline           DateTime
+    cost               Float?
+    isHasFinalDeadline Boolean?    @default(false)
+    finalDeadline      DateTime?
+    lateFee            String?
+    type               String
+    description        String?
+    createdAt          DateTime    @default(now())
+    updatedAt          DateTime    @updatedAt
+    eventGroup         EventGroup? @relation(fields: [eventGroupId], references: [id])
+    eventGroupId       String?
+
+    @@map("event_rounds")
+}
+
+model EditHistory {
+    id        String   @id @default(uuid())
+    eventId   String
+    editorId  String
+    changes   String
+    action    String  //'created' | 'edited' | 'verified' | 'cancelled' | 'uncancelled'
+    timestamp DateTime @default(now())
+    event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    editor    User     @relation(fields: [editorId], references: [id], onDelete: Cascade)
+
+    @@map("edit_histories")
+}
+
+// Family Model
 model Family {
     id                 String              @id @default(uuid())
     name               String
@@ -145,6 +286,7 @@ model Family {
     @@map("families")
 }
 
+// FamilyMember Model
 model FamilyMember {
     id           String     @id @default(uuid())
     familyId     String
@@ -162,6 +304,7 @@ model FamilyMember {
     @@map("family_members")
 }
 
+// FamilyInvitation Model
 model FamilyInvitation {
     id              String           @id @default(uuid())
     familyId        String
@@ -179,6 +322,7 @@ model FamilyInvitation {
     @@map("family_invitations")
 }
 
+// FamilyJoinRequest Model
 model FamilyJoinRequest {
     id        String           @id @default(uuid())
     familyId  String

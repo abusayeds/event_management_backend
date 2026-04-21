@@ -12,7 +12,7 @@ router
   .route('/')
   .post(
     auth(UserRole.ADMIN),
-    upload.single('image'),
+    upload.single('imageUrl'),
     validateRequest(CategoryValidation.createCategory),
     CategoryController.createCategory
   )

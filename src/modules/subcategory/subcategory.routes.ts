@@ -12,7 +12,7 @@ router
   .route('/')
   .post(
     auth(UserRole.ADMIN),
-    upload.single('image'),
+    upload.single('imageUrl'),
     validateRequest(SubcategoryValidation.createSubcategory),
     SubcategoryController.createSubcategory
   )
@@ -31,7 +31,7 @@ router
   )
   .patch(
     auth(UserRole.ADMIN),
-    upload.single('image'),
+    upload.single('imageUrl'),
     validateRequest(SubcategoryValidation.updateSubcategory),
     SubcategoryController.updateSubcategory
   )

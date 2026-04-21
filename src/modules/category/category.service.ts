@@ -3,9 +3,9 @@ import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { deleteFileFromS3, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import {
-    ICategoryFilters,
-    ICreateCategoryPayload,
-    IUpdateCategoryPayload,
+  ICategoryFilters,
+  ICreateCategoryPayload,
+  IUpdateCategoryPayload,
 } from './category.interface';
 import { CategoryRepository } from './category.repository';
 
@@ -39,7 +39,7 @@ const createCategory = async (payload: ICreateCategoryPayload, file?: Express.Mu
     if (uploadedImageUrl) {
       await deleteFileFromS3(uploadedImageUrl);
     }
-    throw error;
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create category.');
   }
 };
 
@@ -116,7 +116,7 @@ const updateCategory = async (
     if (uploadedImageUrl) {
       await deleteFileFromS3(uploadedImageUrl);
     }
-    throw error;
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to update category.');
   }
 };
 
