@@ -59,6 +59,13 @@ enum EventStatus {
     ENDED
 }
 
+enum ConnectionStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
+    CANCELED
+}
+
 // Models
 model User {
     id                 String              @id @default(uuid())
@@ -94,9 +101,28 @@ model User {
     familyJoinRequests FamilyJoinRequest[] @relation("FamilyJoinRequest")
     events             Event[]             @relation("EventCreator")
     editHistories      EditHistory[]
+    sentConnections    Connection[]        @relation("ConnectionRequester")
+    receivedConnections Connection[]       @relation("ConnectionReceiver")
 
     @@index([createdByOwner])
     @@map("users")
+}
+
+model Connection {
+    id          String           @id @default(uuid())
+    requesterId String
+    receiverId  String
+    status      ConnectionStatus @default(PENDING)
+    requester   User             @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+    receiver    User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+    createdAt   DateTime         @default(now())
+    updatedAt   DateTime         @updatedAt
+
+    @@unique([requesterId, receiverId])
+    @@index([requesterId])
+    @@index([receiverId])
+    @@index([status])
+    @@map("connections")
 }
 
 // Category Model

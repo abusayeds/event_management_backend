@@ -71,7 +71,7 @@ const createUser = async (userData: ICreateUserPayload) => {
 // Get User by ID
 const getUserById = async (id: string) => {
   return database.user.findFirst({
-    where: { id },
+    where: { id, status: { not: UserStatus.DELETED } },
     select: {
       ...userFullSelect,
       password: true,
@@ -82,7 +82,7 @@ const getUserById = async (id: string) => {
 // Get User by ID Public
 const getUserByIdPublic = async (id: string) => {
   return database.user.findFirst({
-    where: { id },
+    where: { id, status: { not: UserStatus.DELETED } },
     select: userFullSelect,
   });
 };
@@ -90,7 +90,7 @@ const getUserByIdPublic = async (id: string) => {
 // Get User by Email
 const getUserByEmail = async (email: string) => {
   return database.user.findFirst({
-    where: { email },
+    where: { email, status: { not: UserStatus.DELETED } },
     select: {
       ...userFullSelect,
       password: true,
@@ -170,7 +170,7 @@ const updateUserById = async (id: string, data: IUpdateUserPayload) => {
   const { birthDate, ...rest } = data;
 
   return database.user.update({
-    where: { id },
+    where: { id, status: { not: UserStatus.DELETED } },
     data: {
       ...rest,
       ...(birthDate ? { birthDate: new Date(birthDate) } : {}),
@@ -182,7 +182,7 @@ const updateUserById = async (id: string, data: IUpdateUserPayload) => {
 // Update User Status
 const updateUserStatus = async (id: string, status: UserStatus) => {
   return database.user.update({
-    where: { id },
+    where: { id, status: { not: UserStatus.DELETED } },
     data: { status },
     select: userListSelect,
   });
@@ -190,7 +190,7 @@ const updateUserStatus = async (id: string, status: UserStatus) => {
 
 const updateUserIndependentStatus = async (id: string, isIndependent: boolean) => {
   return database.user.update({
-    where: { id },
+    where: { id, status: { not: UserStatus.DELETED } },
     data: { isIndependent },
     select: {
       id: true,
@@ -206,7 +206,7 @@ const updateUserIndependentStatus = async (id: string, isIndependent: boolean) =
 
 const updateUserPasswordById = async (id: string, hashedPassword: string) => {
   return database.user.update({
-    where: { id },
+    where: { id, status: { not: UserStatus.DELETED } },
     data: { password: hashedPassword },
     select: {
       id: true,
@@ -225,12 +225,13 @@ const deleteUserById = async (id: string) => {
   });
 };
 
-// Email Exists Check
+// Email Exists Check 
 const isEmailExists = async (email: string, excludeUserId?: string): Promise<boolean> => {
   const user = await database.user.findFirst({
     where: {
       email,
       ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+      status: { not: UserStatus.DELETED },
     },
     select: { id: true },
   });
@@ -242,6 +243,7 @@ const isUsernameExists = async (username: string, excludeUserId?: string): Promi
     where: {
       username,
       ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+      status: { not: UserStatus.DELETED },
     },
     select: { id: true },
   });
@@ -251,7 +253,7 @@ const isUsernameExists = async (username: string, excludeUserId?: string): Promi
 
 const isAccountIdExists = async (accountId: string): Promise<boolean> => {
   const user = await database.user.findFirst({
-    where: { accountId },
+    where: { accountId, status: { not: UserStatus.DELETED } },
     select: { id: true },
   });
 
@@ -261,7 +263,7 @@ const isAccountIdExists = async (accountId: string): Promise<boolean> => {
 // User Exists Check
 const isUserExists = async (id: string): Promise<boolean> => {
   const user = await database.user.findUnique({
-    where: { id },
+    where: { id, status: { not: UserStatus.DELETED } },
     select: { id: true },
   });
   return !!user;

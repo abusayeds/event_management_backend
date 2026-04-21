@@ -137,6 +137,61 @@ Content-Type: application/json
 }
 ```
 
+### Connections
+
+#### Send Connection Request
+```
+POST /api/connections/requests
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "receiverId": "target-user-id"
+}
+```
+
+#### Get Accepted Connections
+```
+GET /api/connections/my?page=1&limit=10
+Authorization: Bearer <access-token>
+```
+
+#### Get Received Requests
+```
+GET /api/connections/requests/received?page=1&limit=10
+Authorization: Bearer <access-token>
+```
+
+#### Get Sent Requests
+```
+GET /api/connections/requests/sent?page=1&limit=10
+Authorization: Bearer <access-token>
+```
+
+#### Accept Request
+```
+PATCH /api/connections/requests/:id/accept
+Authorization: Bearer <access-token>
+```
+
+#### Reject Request
+```
+PATCH /api/connections/requests/:id/reject
+Authorization: Bearer <access-token>
+```
+
+#### Cancel Sent Request
+```
+DELETE /api/connections/requests/:id
+Authorization: Bearer <access-token>
+```
+
+#### Remove Accepted Connection
+```
+DELETE /api/connections/:id
+Authorization: Bearer <access-token>
+```
+
 ### Products
 
 #### Get All Products
