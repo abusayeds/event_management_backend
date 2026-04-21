@@ -12,7 +12,7 @@ router
   .route('/')
   .post(
     auth(UserRole.ADMIN),
-    upload.single('image'),
+    upload.single('imageUrl'),
     validateRequest(ProgramValidation.createProgram),
     ProgramController.createProgram
   )
@@ -31,7 +31,7 @@ router
   )
   .patch(
     auth(UserRole.ADMIN),
-    upload.single('image'),
+    upload.single('imageUrl'),
     validateRequest(ProgramValidation.updateProgram),
     ProgramController.updateProgram
   )
