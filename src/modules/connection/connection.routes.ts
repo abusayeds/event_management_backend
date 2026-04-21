@@ -15,6 +15,13 @@ router
     ConnectionController.getAcceptedConnections
   );
 
+router.get(
+  '/suggestions',
+  auth(UserRole.ADMIN, UserRole.USER),
+  validateRequest(ConnectionValidation.getConnectionSuggestions),
+  ConnectionController.getConnectionSuggestions
+);
+
 router.post(
   '/requests/create',
   auth(UserRole.ADMIN, UserRole.USER),

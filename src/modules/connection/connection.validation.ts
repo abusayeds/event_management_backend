@@ -21,6 +21,10 @@ const getAcceptedConnections = z.object({
   query: paginationQuerySchema,
 });
 
+const getConnectionSuggestions = z.object({
+  query: paginationQuerySchema,
+});
+
 const getReceivedConnectionRequests = z.object({
   query: paginationQuerySchema,
 });
@@ -48,6 +52,7 @@ const removeConnection = z.object({
 export const ConnectionValidation = {
   createConnectionRequest,
   getAcceptedConnections,
+  getConnectionSuggestions,
   getReceivedConnectionRequests,
   getSentConnectionRequests,
   acceptRequest,

@@ -77,6 +77,24 @@ const getAcceptedConnections = asyncHandler(async (req: AuthenticatedRequest, re
   });
 });
 
+const getConnectionSuggestions = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  // Step:1 Read authenticated user id and pagination options.
+  const { userId } = req.user!;
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+
+  // Step:2 Fetch suggestion list excluding pending/accepted connections.
+  const result = await ConnectionService.getConnectionSuggestions(userId, options);
+
+  // Step:3 Return paginated suggestion list.
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Connection suggestions fetched.',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 const acceptRequest = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   // Step:1 Read authenticated user id and request id.
   const { userId } = req.user!;
@@ -150,6 +168,7 @@ export const ConnectionController = {
   getReceivedConnectionRequests,
   getSentConnectionRequests,
   getAcceptedConnections,
+  getConnectionSuggestions,
   acceptRequest,
   rejectRequest,
   cancelRequest,

@@ -1,13 +1,13 @@
-import { ConnectionStatus, UserStatus } from '../../../prisma/generated/enums';
+import { ConnectionStatus, UserRole, UserStatus } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import {
-    createPaginationQuery,
-    createPaginationResult,
-    PaginationOptions,
-    PaginationResult,
-    parsePaginationOptions,
+  createPaginationQuery,
+  createPaginationResult,
+  PaginationOptions,
+  PaginationResult,
+  parsePaginationOptions,
 } from '../../utils/paginate';
-import { IConnection } from './connection.interface';
+import { IConnection, IConnectionSuggestion } from './connection.interface';
 
 const connectionUserSelect = {
   id: true,
@@ -176,6 +176,112 @@ const getAcceptedConnections = async (
   return createPaginationResult(rows as IConnection[], total, pagination);
 };
 
+const getConnectionSuggestions = async (
+  userId: string,
+  options: PaginationOptions
+): Promise<PaginationResult<IConnectionSuggestion>> => {
+  const pagination = parsePaginationOptions(options);
+  const { skip, take, orderBy } = createPaginationQuery(pagination);
+
+  const where = {
+    id: { not: userId },
+    role: { not: UserRole.ADMIN },
+    status: UserStatus.ACTIVE,
+    AND: [
+      {
+        sentConnections: {
+          none: {
+            receiverId: userId,
+            status: { in: [ConnectionStatus.PENDING, ConnectionStatus.ACCEPTED] },
+          },
+        },
+      },
+      {
+        receivedConnections: {
+          none: {
+            requesterId: userId,
+            status: { in: [ConnectionStatus.PENDING, ConnectionStatus.ACCEPTED] },
+          },
+        },
+      },
+    ],
+  };
+
+  const [rows, total] = await Promise.all([
+    database.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profilePicture: true,
+        location: true,
+        country: true,
+        state: true,
+        city: true,
+        sentConnections: {
+          where: {
+            receiverId: userId,
+            status: { in: [ConnectionStatus.REJECTED, ConnectionStatus.CANCELED] },
+          },
+          select: { status: true, updatedAt: true },
+          orderBy: { updatedAt: 'desc' },
+          take: 1,
+        },
+        receivedConnections: {
+          where: {
+            requesterId: userId,
+            status: { in: [ConnectionStatus.REJECTED, ConnectionStatus.CANCELED] },
+          },
+          select: { status: true, updatedAt: true },
+          orderBy: { updatedAt: 'desc' },
+          take: 1,
+        },
+      },
+      skip,
+      take,
+      orderBy,
+    }),
+    database.user.count({ where }),
+  ]);
+
+  const suggestions: IConnectionSuggestion[] = rows.map(row => {
+    const sentRelation = row.sentConnections[0] ?? null;
+    const receivedRelation = row.receivedConnections[0] ?? null;
+
+    let relationStatus: 'REJECTED' | 'CANCELED' | null = null;
+
+    if (sentRelation && receivedRelation) {
+      relationStatus =
+        sentRelation.updatedAt > receivedRelation.updatedAt
+          ? (sentRelation.status as 'REJECTED' | 'CANCELED')
+          : (receivedRelation.status as 'REJECTED' | 'CANCELED');
+    } else if (sentRelation) {
+      relationStatus = sentRelation.status as 'REJECTED' | 'CANCELED';
+    } else if (receivedRelation) {
+      relationStatus = receivedRelation.status as 'REJECTED' | 'CANCELED';
+    }
+
+    return {
+      id: row.id,
+      username: row.username,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      email: row.email,
+      profilePicture: row.profilePicture,
+      location: row.location,
+      country: row.country,
+      state: row.state,
+      city: row.city,
+      relationStatus,
+    };
+  });
+
+  return createPaginationResult(suggestions, total, pagination);
+};
+
 export const ConnectionRepository = {
   getUserById,
   findConnectionBetweenUsers,
@@ -185,4 +291,5 @@ export const ConnectionRepository = {
   getReceivedPendingRequests,
   getSentPendingRequests,
   getAcceptedConnections,
+  getConnectionSuggestions,
 };

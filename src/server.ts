@@ -8,6 +8,7 @@ import { verifyEmailConnection } from './config/email';
 import logger from './config/logger';
 import { closeRedis, connectRedis } from './config/redis';
 import { initializeWorkers, shutdownWorkers } from './jobs';
+import { seedDefaultUsers } from './scripts/userSeeder';
 import { initializeSocket } from './socket';
 
 type TrackedSocket = {
@@ -255,6 +256,10 @@ async function main() {
     // Step 1: Connect to Database
     logger.info(colors.cyan('📦 [1/5] Connecting to Database...'));
     await connectDB();
+
+    // Step 1.5: Seed default users on startup (idempotent)
+    logger.info(colors.cyan('👥 [1.5/5] Seeding default users...'));
+    await seedDefaultUsers();
 
     // Step 2: Connect to Redis
     logger.info(colors.cyan('📦 [2/5] Connecting to Redis...'));

@@ -67,6 +67,11 @@ const getAcceptedConnections = async (userId: string, options: PaginationOptions
   return ConnectionRepository.getAcceptedConnections(userId, options);
 };
 
+const getConnectionSuggestions = async (userId: string, options: PaginationOptions) => {
+  // Step:1 Return users except self/admin/pending/accepted connected users.
+  return ConnectionRepository.getConnectionSuggestions(userId, options);
+};
+
 const acceptRequest = async (connectionId: string, userId: string) => {
   // Step:1 Load the connection request by id.
   const connection = await ConnectionRepository.getConnectionById(connectionId);
@@ -173,6 +178,7 @@ export const ConnectionService = {
   getReceivedConnectionRequests,
   getSentConnectionRequests,
   getAcceptedConnections,
+  getConnectionSuggestions,
   acceptRequest,
   rejectRequest,
   cancelRequest,

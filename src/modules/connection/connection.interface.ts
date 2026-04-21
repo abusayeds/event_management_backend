@@ -28,3 +28,17 @@ export interface ICreateConnectionPayload {
 export interface IConnectionQuery {
   options: PaginationOptions;
 }
+
+export interface IConnectionSuggestion {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profilePicture?: string | null;
+  location: string;
+  country: string;
+  state: string;
+  city: string;
+  relationStatus: 'REJECTED' | 'CANCELED' | null;
+}
