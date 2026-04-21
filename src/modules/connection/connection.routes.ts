@@ -8,7 +8,7 @@ import { ConnectionValidation } from './connection.validation';
 const router = Router();
 
 router
-  .route('/')
+  .route('/my-connections')
   .get(
     auth(UserRole.ADMIN, UserRole.USER),
     validateRequest(ConnectionValidation.getAcceptedConnections),
@@ -16,7 +16,7 @@ router
   );
 
 router.post(
-  '/requests',
+  '/requests/create',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(ConnectionValidation.createConnectionRequest),
   ConnectionController.createConnectionRequest
@@ -58,7 +58,7 @@ router.delete(
 );
 
 router.delete(
-  '/:id',
+  '/requests/remove/:id',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(ConnectionValidation.removeConnection),
   ConnectionController.removeConnection

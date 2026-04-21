@@ -7,7 +7,10 @@ import { ConnectionRepository } from './connection.repository';
 const createConnectionRequest = async (senderId: string, receiverId: string) => {
   // Step:1 Block self-request to keep request flow valid.
   if (senderId === receiverId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot send a connection request to yourself.');
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'You cannot send a connection request to yourself.'
+    );
   }
 
   // Step:2 Validate that receiver user exists.
