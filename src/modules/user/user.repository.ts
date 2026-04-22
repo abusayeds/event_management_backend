@@ -168,12 +168,11 @@ const getAllUsers = async (
 // Update User by ID
 const updateUserById = async (id: string, data: IUpdateUserPayload) => {
   const { birthDate, ...rest } = data;
-
   return database.user.update({
     where: { id, status: { not: UserStatus.DELETED } },
     data: {
       ...rest,
-      ...(birthDate ? { birthDate: new Date(birthDate) } : {}),
+      ...(birthDate !== undefined ? { birthDate: new Date(birthDate) } : {}),
     },
     select: userListSelect,
   });
@@ -225,7 +224,7 @@ const deleteUserById = async (id: string) => {
   });
 };
 
-// Email Exists Check 
+// Email Exists Check
 const isEmailExists = async (email: string, excludeUserId?: string): Promise<boolean> => {
   const user = await database.user.findFirst({
     where: {

@@ -80,26 +80,52 @@ const updateMyProfile = async (
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  // Step:2 Handle profile picture upload if file is provided
+
+  // ✅ Step:2 Check email uniqueness (নিজেকে exclude করে)
+  if (payload.email) {
+    const normalizedEmail = payload.email.trim().toLowerCase();
+    const emailExists = await UserRepository.isEmailExists(normalizedEmail, userId);
+    if (emailExists) {
+      throw new ApiError(StatusCodes.CONFLICT, 'Email already in use.');
+    }
+    payload.email = normalizedEmail;
+  }
+
+  // ✅ Step:3 Check username uniqueness (নিজেকে exclude করে)
+  if (payload.username) {
+    const normalizedUsername = normalizeUsername(payload.username);
+    if (!normalizedUsername) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'username format is invalid.');
+    }
+    const usernameExists = await UserRepository.isUsernameExists(normalizedUsername, userId);
+    if (usernameExists) {
+      throw new ApiError(StatusCodes.CONFLICT, 'username already in use.');
+    }
+    payload.username = normalizedUsername;
+  }
+
+  // ✅ Step:4 Normalize skills
+  if (payload.skills) {
+    payload.skills = normalizeSkills(payload.skills);
+  }
+
+  // Step:5 Handle profile picture upload
+
   let profilePictureUrl: string | undefined;
   if (file) {
     const uploaded = await uploadSingleFileToS3(file, 'profiles');
     profilePictureUrl = uploaded?.url;
-    // Step:3 Delete old profile picture from S3 if exists
+    // Step:6 Delete old profile picture from S3 if exists
     if (user?.profilePicture) {
       await deleteFileFromS3(user.profilePicture);
     }
   }
-  // Step:4 Prepare update payload with profile picture URL
+  // Step:7 Prepare update payload with profile picture URL
   payload = {
     ...payload,
     profilePicture: profilePictureUrl,
   };
 
-  // Step:5 Validate at least one field is provided
-  if (Object.keys(payload).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update user.');
-  }
   // Step:6 Update user in database
   return UserRepository.updateUserById(userId, payload);
 };
@@ -192,12 +218,12 @@ const updateUser = async (
       await deleteFileFromS3(existing.profilePicture);
     }
   }
-  
+
   // Step:12 Validate at least one field is provided
   if (Object.keys(payload).length === 0) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update user.');
   }
-  
+
   // Step:13 Update user in database
   const updated = await UserRepository.updateUserById(id, payload);
   return updated;
@@ -214,7 +240,7 @@ const updateUserStatus = async (id: string, status: UserStatus, actorId: string)
   if (id === actorId) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot change your own status.');
   }
-  
+
   // Step:3 Update user status in database
   const updated = await UserRepository.updateUserStatus(id, status);
   return updated;
@@ -273,7 +299,7 @@ const updateUserIndependentStatus = async (
 const deleteUser = async (id: string, actorId: string, actorRole: string) => {
   // Step:1 Check if actor is admin
   const isAdmin = actorRole === 'ADMIN';
-  
+
   // Step:2 Prevent non-admin from deleting other users
   if (!isAdmin && id !== actorId) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'You can only delete your own account.');
@@ -284,7 +310,7 @@ const deleteUser = async (id: string, actorId: string, actorRole: string) => {
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  
+
   // Step:4 Soft delete user (set status to DELETED)
   await UserRepository.deleteUserById(id);
 };
