@@ -1,0 +1,58 @@
+model User {
+    id                  String              @id @default(uuid())
+    accountId           String              @unique
+    firstName           String
+    lastName            String
+    username            String              @unique
+    displayName         String?
+    email               String              @unique
+    password            String
+    phoneNumber         String?
+    gender              UserGender
+    birthDate           DateTime
+    profilePicture      String?             @default("https://areawins.s3.us-east-2.amazonaws.com/common/user.jpg")
+    location            String
+    country             String
+    state               String
+    city                String
+    skills              String[]
+    role                UserRole            @default(USER)
+    status              UserStatus          @default(ACTIVE)
+    isIndependent       Boolean             @default(false)
+    isEmailVerified     Boolean             @default(false)
+    createdByOwner      String?
+    owner               User?               @relation("OwnerCreatedUsers", fields: [createdByOwner], references: [id], onDelete: SetNull)
+    createdUsers        User[]              @relation("OwnerCreatedUsers")
+    contributionScore   Int                 @default(0)
+    createdAt           DateTime            @default(now())
+    updatedAt           DateTime            @updatedAt
+    families            Family[]            @relation("FamilyCreator")
+    familyMembers       FamilyMember[]
+    familyInvitations   FamilyInvitation[]  @relation("FamilyInvitedBy")
+    familyJoinRequests  FamilyJoinRequest[] @relation("FamilyJoinRequest")
+    sentConnections     Connection[]        @relation("ConnectionRequester")
+    receivedConnections Connection[]        @relation("ConnectionReceiver")
+    eventsCreated       Event[]             @relation("EventCreator")
+    eventsLastEdited    Event[]             @relation("EventLastEditor")
+    eventEditLogs       EditLog[]
+
+    @@index([createdByOwner])
+    @@map("users")
+}
+
+model Connection {
+    id          String           @id @default(uuid())
+    requesterId String
+    receiverId  String
+    status      ConnectionStatus @default(PENDING)
+    requester   User             @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+    receiver    User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+    createdAt   DateTime         @default(now())
+    updatedAt   DateTime         @updatedAt
+
+    @@unique([requesterId, receiverId])
+    @@index([requesterId])
+    @@index([receiverId])
+    @@index([status])
+    @@map("connections")
+}

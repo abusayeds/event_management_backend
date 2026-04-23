@@ -1,0 +1,49 @@
+model Category {
+    id            String        @id @default(uuid())
+    name          String        @unique
+    imageUrl      String?
+    description   String?
+    isDeleted     Boolean       @default(false)
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+    subcategories Subcategory[]
+    programs      Program[]
+
+    @@map("categories")
+}
+
+model Subcategory {
+    id          String    @id @default(uuid())
+    categoryId  String
+    name        String    @unique
+    imageUrl    String?
+    description String?
+    isDeleted   Boolean   @default(false)
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+    programs    Program[]
+
+    @@index([categoryId])
+    @@map("subcategories")
+}
+
+model Program {
+    id            String         @id @default(uuid())
+    categoryId    String?
+    subcategoryId String?
+    name          String         @unique
+    description   String?
+    imageUrl      String?
+    isDeleted     Boolean        @default(false)
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+    category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+    subcategory   Subcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+    events        Event[]
+    eventSessions EventSession[]
+
+    @@index([categoryId])
+    @@index([subcategoryId])
+    @@map("programs")
+}

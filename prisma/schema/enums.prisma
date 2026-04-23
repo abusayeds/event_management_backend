@@ -1,0 +1,102 @@
+enum UserRole {
+    ADMIN
+    USER
+}
+
+enum UserStatus {
+    ACTIVE
+    BANNED
+    DELETED
+}
+
+enum UserGender {
+    MALE
+    FEMALE
+    OTHER
+}
+
+enum InvitationStatus {
+    PENDING
+    ACCEPTED
+    DECLINED
+    EXPIRED
+}
+
+enum ConnectionStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
+    CANCELED
+}
+
+enum FamilyRole {
+    OWNER
+    MEMBER
+}
+
+enum CompetitionLevel {
+    Preliminary
+    QuarterFinal
+    SemiFinal
+    Final
+}
+
+enum EventType {
+    Onsite
+    Online
+    Hybrid
+}
+
+enum GroupCriteria {
+    Age
+    Score
+    Location
+    SkillLevel
+    Division
+}
+
+enum RoundCondition {
+    UpTo
+    DownTo
+    Greater
+    GreaterAndEqual
+    Lower
+    LowerAndEqual
+    Equal
+}
+
+enum RepeatFrequency {
+    Daily
+    Weekly
+    BiWeekly
+    Monthly
+    Quarterly
+    Yearly
+}
+
+enum SessionFormat {
+    YYYY_QN // → "2026-Q1"
+    YYYY_MMM // → "2026-JAN"
+    YYYY_NN // → "2026-01"
+}
+
+enum SessionStatus {
+    Draft
+    Published
+    Ongoing
+    Completed
+    Cancelled
+}
+
+enum PlacementType {
+    First
+    Second
+    Third
+    Fourth
+    Gold
+    Silver
+    Bronze
+    Finalist
+    HonorableMention
+    Participation
+}

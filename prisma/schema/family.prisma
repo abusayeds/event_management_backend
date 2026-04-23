@@ -1,0 +1,67 @@
+model Family {
+    id                 String              @id @default(uuid())
+    name               String
+    description        String?
+    imageUrl           String?
+    createdBy          String
+    creator            User                @relation("FamilyCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+    isDeleted          Boolean             @default(false)
+    createdAt          DateTime            @default(now())
+    updatedAt          DateTime            @updatedAt
+    familyMembers      FamilyMember[]
+    familyInvitations  FamilyInvitation[]
+    familyJoinRequests FamilyJoinRequest[]
+
+    @@index([createdBy])
+    @@map("families")
+}
+
+model FamilyMember {
+    id           String     @id @default(uuid())
+    familyId     String
+    userId       String
+    role         FamilyRole @default(MEMBER)
+    relationShip String?
+    family       Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+    user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt    DateTime   @default(now())
+    updatedAt    DateTime   @updatedAt
+
+    @@unique([familyId, userId])
+    @@index([familyId])
+    @@index([userId])
+    @@map("family_members")
+}
+
+model FamilyInvitation {
+    id              String           @id @default(uuid())
+    familyId        String
+    invitedByUserId String
+    invitedEmail    String
+    family          Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+    invitedByUser   User             @relation("FamilyInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+    status          InvitationStatus @default(PENDING)
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt
+
+    @@unique([familyId, invitedEmail])
+    @@index([familyId])
+    @@index([invitedByUserId])
+    @@map("family_invitations")
+}
+
+model FamilyJoinRequest {
+    id        String           @id @default(uuid())
+    familyId  String
+    userId    String
+    family    Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+    user      User             @relation("FamilyJoinRequest", fields: [userId], references: [id], onDelete: Cascade)
+    status    InvitationStatus @default(PENDING)
+    createdAt DateTime         @default(now())
+    updatedAt DateTime         @updatedAt
+
+    @@unique([familyId, userId])
+    @@index([familyId])
+    @@index([userId])
+    @@map("family_join_requests")
+}

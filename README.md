@@ -63,7 +63,12 @@ dawabuyi-backend/
 │   │   ├── internal/
 │   │   └── models/
 │   └── schema/
-│       └── schema.prisma
+│       ├── schema.prisma   // generator + datasource
+│       ├── enums.prisma
+│       ├── user.prisma
+│       ├── catalog.prisma
+│       ├── family.prisma
+│       └── event.prisma
 ├── scripts/
 │   ├── build.sh
 │   ├── deploy.sh
