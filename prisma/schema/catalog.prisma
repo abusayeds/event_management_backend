@@ -41,7 +41,6 @@ model Program {
     category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
     subcategory   Subcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
     events        Event[]
-    eventSessions EventSession[]
 
     @@index([categoryId])
     @@index([subcategoryId])

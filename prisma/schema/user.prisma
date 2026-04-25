@@ -34,6 +34,7 @@ model User {
     receivedConnections Connection[]        @relation("ConnectionReceiver")
     eventsCreated       Event[]             @relation("EventCreator")
     eventsLastEdited    Event[]             @relation("EventLastEditor")
+    eventsVerified      Event[]             @relation("EventVerifier")
     eventEditLogs       EditLog[]
 
     @@index([createdByOwner])

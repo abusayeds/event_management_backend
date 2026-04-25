@@ -28,7 +28,6 @@ model FamilyMember {
     updatedAt    DateTime   @updatedAt
 
     @@unique([familyId, userId])
-    @@index([familyId])
     @@index([userId])
     @@map("family_members")
 }
@@ -45,7 +44,6 @@ model FamilyInvitation {
     updatedAt       DateTime         @updatedAt
 
     @@unique([familyId, invitedEmail])
-    @@index([familyId])
     @@index([invitedByUserId])
     @@map("family_invitations")
 }
@@ -61,7 +59,6 @@ model FamilyJoinRequest {
     updatedAt DateTime         @updatedAt
 
     @@unique([familyId, userId])
-    @@index([familyId])
     @@index([userId])
     @@map("family_join_requests")
 }

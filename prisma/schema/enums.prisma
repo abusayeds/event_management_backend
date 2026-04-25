@@ -36,7 +36,6 @@ enum FamilyRole {
 
 enum CompetitionLevel {
     Preliminary
-    QuarterFinal
     SemiFinal
     Final
 }
@@ -50,9 +49,6 @@ enum EventType {
 enum GroupCriteria {
     Age
     Score
-    Location
-    SkillLevel
-    Division
 }
 
 enum RoundCondition {
@@ -62,22 +58,46 @@ enum RoundCondition {
     GreaterAndEqual
     Lower
     LowerAndEqual
-    Equal
 }
 
 enum RepeatFrequency {
+    DontRepeat
     Daily
     Weekly
-    BiWeekly
     Monthly
-    Quarterly
     Yearly
+    Custom
 }
 
-enum SessionFormat {
-    YYYY_QN // → "2026-Q1"
-    YYYY_MMM // → "2026-JAN"
-    YYYY_NN // → "2026-01"
+enum RepeatUnit {
+    Day
+    Week
+    Month
+    Year
+}
+
+enum RepeatEndType {
+    Never
+    OnDate
+    AfterCount
+}
+
+enum WeekDay {
+    Mon
+    Tue
+    Wed
+    Thu
+    Fri
+    Sat
+    Sun
+}
+
+enum MonthWeek {
+    First
+    Second
+    Third
+    Fourth
+    Last
 }
 
 enum SessionStatus {
