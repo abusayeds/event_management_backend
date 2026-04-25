@@ -36,6 +36,7 @@ model User {
     eventsLastEdited    Event[]             @relation("EventLastEditor")
     eventsVerified      Event[]             @relation("EventVerifier")
     eventEditLogs       EditLog[]
+    eventApplications   EventApplication[]
 
     @@index([createdByOwner])
     @@map("users")

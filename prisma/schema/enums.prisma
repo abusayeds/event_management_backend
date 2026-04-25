@@ -65,8 +65,19 @@ enum RepeatFrequency {
     Daily
     Weekly
     Monthly
+    Quarterly
     Yearly
     Custom
+}
+
+/** Drives `Session.sessionIdentifier` when backend builds it (e.g. 2026-Q1, 2026-JAN). */
+enum SessionBucketFormat {
+    Year_Q
+    Year_MMM
+    Year_MM
+    Year_Only
+    Year_ISOWeek
+    Year_Month_Day
 }
 
 enum RepeatUnit {
@@ -106,6 +117,13 @@ enum SessionStatus {
     Ongoing
     Completed
     Cancelled
+}
+
+enum EventApplicationStatus {
+    Pending
+    Withdrawn
+    Approved
+    Rejected
 }
 
 enum PlacementType {

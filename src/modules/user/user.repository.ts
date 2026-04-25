@@ -268,6 +268,20 @@ const isUserExists = async (id: string): Promise<boolean> => {
   return !!user;
 };
 
+const incrementContributionScore = async (userId: string, delta: number) => {
+  if (delta === 0) {
+    return database.user.findFirst({
+      where: { id: userId, status: { not: UserStatus.DELETED } },
+      select: { id: true, contributionScore: true },
+    });
+  }
+  return database.user.update({
+    where: { id: userId, status: { not: UserStatus.DELETED } },
+    data: { contributionScore: { increment: delta } },
+    select: { id: true, contributionScore: true },
+  });
+};
+
 export const UserRepository = {
   createUser,
   getUserById,
@@ -283,4 +297,5 @@ export const UserRepository = {
   isUsernameExists,
   isAccountIdExists,
   isUserExists,
+  incrementContributionScore,
 };
