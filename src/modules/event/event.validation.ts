@@ -4,11 +4,9 @@ import {
   EventType,
   GroupCriteria,
   MonthWeek,
-  RepeatEndType,
   RepeatFrequency,
   RepeatUnit,
   RoundCondition,
-  SessionBucketFormat,
   SessionStatus,
   WeekDay,
 } from '../../../prisma/generated/enums';
@@ -34,6 +32,44 @@ const mergeEventFormDataField = (raw: unknown) => {
       return value;
     }
   };
+  const normalizeRepeatConfig = (value: unknown) => {
+    if (!value || typeof value !== 'object') return value;
+    const rc = value as Record<string, unknown>;
+    return {
+      ...rc,
+      repeatFunction: rc.repeatFunction ?? rc.frequency,
+      repeatEvery: rc.repeatEvery ?? rc.interval,
+      repeatUnit: rc.repeatUnit ?? rc.unit,
+      daysOfWeek: rc.daysOfWeek ?? rc.weekDays,
+      dayOfMonth: rc.dayOfMonth ?? rc.monthDay,
+      weekOfMonth: rc.weekOfMonth ?? rc.monthWeek,
+      weekDay: rc.weekDay ?? rc.monthWeekDay,
+      startDate: rc.startDate ?? rc.startsOn,
+      untilDate: rc.untilDate ?? rc.endDate,
+    };
+  };
+  const normalizeEventSession = (value: unknown) => {
+    if (!value || typeof value !== 'object') return value;
+    const s = value as Record<string, unknown>;
+    let mappedLevel =
+      (s.sessionLevel as string | undefined) ??
+      (s.sessionKey as string | undefined) ??
+      (s.sessionIdentifier as string | undefined);
+    if (!mappedLevel) {
+      const q = s.quarter ?? s.bucketQuarter;
+      const m = s.month ?? s.bucketMonth;
+      if (q != null && q !== '') mappedLevel = `Q${q}`;
+      else if (m != null && m !== '') mappedLevel = String(m);
+    }
+    return {
+      ...s,
+      sessionLevel: mappedLevel,
+    };
+  };
+  const normalizeEventSessions = (value: unknown) => {
+    if (!Array.isArray(value)) return value;
+    return value.map(normalizeEventSession);
+  };
 
   // multipart/form-data often delivers nested structures as strings.
   // Accept either a single "data" JSON blob or per-field JSON strings.
@@ -44,8 +80,8 @@ const mergeEventFormDataField = (raw: unknown) => {
       return {
         ...parsed,
         ...rest,
-        repeatConfig: parseJsonLikeField(rest.repeatConfig),
-        eventSessions: parseJsonLikeField(rest.eventSessions),
+        repeatConfig: normalizeRepeatConfig(parseJsonLikeField(rest.repeatConfig)),
+        eventSessions: normalizeEventSessions(parseJsonLikeField(rest.eventSessions)),
         currentEventSession: parseJsonLikeField(rest.currentEventSession),
       };
     } catch {
@@ -54,23 +90,23 @@ const mergeEventFormDataField = (raw: unknown) => {
   }
   return {
     ...b,
-    repeatConfig: parseJsonLikeField(b.repeatConfig),
-    eventSessions: parseJsonLikeField(b.eventSessions),
+    repeatConfig: normalizeRepeatConfig(parseJsonLikeField(b.repeatConfig)),
+    eventSessions: normalizeEventSessions(parseJsonLikeField(b.eventSessions)),
     currentEventSession: parseJsonLikeField(b.currentEventSession),
   };
 };
 
 const repeatConfigBody = z
   .object({
-    frequency: z.nativeEnum(RepeatFrequency).optional(),
+    repeatFunction: z.nativeEnum(RepeatFrequency).optional(),
     startDate: z.coerce.date().optional().nullable(),
-    interval: z.coerce.number().int().min(1).optional(),
-    unit: z.nativeEnum(RepeatUnit).optional().nullable(),
-    weekDays: z.array(z.nativeEnum(WeekDay)).optional(),
-    monthDay: z.coerce.number().int().min(1).max(31).optional().nullable(),
-    monthWeek: z.nativeEnum(MonthWeek).optional().nullable(),
-    monthWeekDay: z.nativeEnum(WeekDay).optional().nullable(),
-    endType: z.nativeEnum(RepeatEndType).optional(),
+    repeatEvery: z.coerce.number().int().min(1).optional(),
+    repeatUnit: z.nativeEnum(RepeatUnit).optional().nullable(),
+    daysOfWeek: z.array(z.nativeEnum(WeekDay)).optional(),
+    dayOfMonth: z.coerce.number().int().min(1).max(31).optional().nullable(),
+    weekOfMonth: z.nativeEnum(MonthWeek).optional().nullable(),
+    weekDay: z.nativeEnum(WeekDay).optional().nullable(),
+    untilDate: z.coerce.date().optional().nullable(),
   })
   .optional()
   .nullable();
@@ -97,12 +133,7 @@ const eventSessionInput = z
   .object({
     sessionId: z.string().min(1).optional(),
     year: z.string().trim().min(2).max(16).optional(),
-    sessionIdentifier: z.string().trim().min(1).max(120).optional(),
-    sessionBucketFormat: z.nativeEnum(SessionBucketFormat).optional(),
-    bucketQuarter: z.coerce.number().int().min(1).max(4).optional().nullable(),
-    bucketMonth: z.coerce.number().int().min(1).max(12).optional().nullable(),
-    bucketDate: z.coerce.date().optional().nullable(),
-    sessionNumber: z.coerce.number().int().min(1).optional(),
+    sessionLevel: z.string().trim().min(1).max(120).optional(),
     competitionLevel: z.nativeEnum(CompetitionLevel),
     eventType: z.nativeEnum(EventType),
     registrationDate: z.coerce.date(),
@@ -114,9 +145,6 @@ const eventSessionInput = z
     status: z.nativeEnum(SessionStatus).optional(),
     isSharedToCommunity: z.boolean().optional(),
     isUserAgreementAccepted: z.boolean().optional(),
-    autoGenerated: z.boolean().optional(),
-    /** At most one row in `eventSessions` should be true; if omitted, first session becomes current. */
-    isCurrentSession: z.boolean().optional(),
     groups: z.array(eventGroupInput).optional(),
   })
   .superRefine((val, ctx) => {
@@ -147,17 +175,7 @@ const createEventBodySchema = z
     repeatConfig: repeatConfigBody,
     eventSessions: z.array(eventSessionInput).optional(),
   })
-  .superRefine((body, ctx) => {
-    const sessions = body.eventSessions;
-    if (!sessions?.length) return;
-    const n = sessions.filter(s => s.isCurrentSession === true).length;
-    if (n > 1) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'At most one eventSession may set isCurrentSession to true.',
-      });
-    }
-  });
+  ;
 
 const createEvent = z.object({
   body: z.preprocess(mergeEventFormDataField, createEventBodySchema),
@@ -239,6 +257,7 @@ const updateEventBodySchema = z
     isPublished: z.coerce.boolean().optional(),
     isActive: z.coerce.boolean().optional(),
     isLocked: z.coerce.boolean().optional(),
+    isVerifyActive: z.coerce.boolean().optional(),
     repeatConfig: repeatConfigBody,
     currentEventSession: updateCurrentEventSessionBody.optional(),
   })

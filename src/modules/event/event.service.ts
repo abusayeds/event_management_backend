@@ -11,10 +11,12 @@ import {
   IFeedPriceFilters,
   IUpdateEventPayload,
 } from './event.interface';
-import { diffEventForEditLog } from './eventEditLogDiff.util';
+import {
+  diffEventForEditLog,
+  hasCurrentSessionPatchBody,
+  pickEventSessionForDetail,
+} from './event.helpers';
 import { EventRepository } from './event.repository';
-import { pickEventSessionForDetail } from './eventSessionScope.util';
-import { hasCurrentSessionPatchBody } from './eventUpdateSession.util';
 
 const createEvent = async (
   userId: string,
@@ -138,7 +140,7 @@ const updateEvent = async (
     ? { ...payload, coverImage: uploadedCoverUrl }
     : payload;
 
-  const { repeatConfig, currentEventSession, ...rest } = mergedPayload;
+  const { repeatConfig, currentEventSession, isVerifyActive, ...rest } = mergedPayload;
   const cleaned = Object.fromEntries(
     Object.entries(rest).filter(([, value]) => value !== undefined)
   ) as Record<string, unknown>;
@@ -146,10 +148,11 @@ const updateEvent = async (
   const hasSessionPatch = hasCurrentSessionPatchBody(currentEventSession);
   const hasScalarUpdate = Object.keys(cleaned).length > 0;
   const hasRepeatUpdate = repeatConfig !== undefined;
-  if (!hasScalarUpdate && !hasRepeatUpdate && !file && !hasSessionPatch) {
+  const hasVerifyActiveRequest = isVerifyActive === true;
+  if (!hasScalarUpdate && !hasRepeatUpdate && !file && !hasSessionPatch && !hasVerifyActiveRequest) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'At least one field, repeatConfig, currentEventSession, or a cover image file is required to update an event.'
+      'At least one field, repeatConfig, currentEventSession, isVerifyActive=true, or a cover image file is required to update an event.'
     );
   }
 
@@ -178,6 +181,15 @@ const updateEvent = async (
         currentEventSession
       );
       if (!sessionRow) {
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          'No current event session found (isCurrentSession). Add sessions or mark one as current first.'
+        );
+      }
+    }
+    if (hasVerifyActiveRequest) {
+      const verified = await EventRepository.verifyCurrentSessionForEvent(eventId);
+      if (!verified) {
         throw new ApiError(
           StatusCodes.BAD_REQUEST,
           'No current event session found (isCurrentSession). Add sessions or mark one as current first.'
