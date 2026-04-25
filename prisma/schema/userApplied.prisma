@@ -1,0 +1,19 @@
+model UserApplied {
+    id           String              @id @default(uuid())
+    userId       String
+    user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+    resourceType AppliedResourceType
+    resourceId   String
+    status       UserAppliedStatus   @default(Pending)
+    note         String?
+
+    deletedAt DateTime?
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+
+    @@unique([userId, resourceType, resourceId])
+    @@index([userId])
+    @@index([resourceType, resourceId])
+    @@index([status])
+    @@map("user_applied")
+}

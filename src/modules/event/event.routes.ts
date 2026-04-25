@@ -13,42 +13,28 @@ router.get(
   '/feed/active',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(EventValidation.listFeed),
-  EventController.listActiveEvents
+  EventController.getActiveEvents
 );
 
 router.get(
   '/feed/upcoming',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(EventValidation.listFeed),
-  EventController.listUpcomingEvents
+  EventController.getUpcomingEvents
 );
 
 router.get(
   '/feed/today',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(EventValidation.listFeed),
-  EventController.listTodayEvents
+  EventController.getTodayEvents
 );
 
 router.get(
   '/feed/history',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(EventValidation.listFeed),
-  EventController.listHistoryEvents
-);
-
-router.get(
-  '/feed/calendar/month',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.calendarMonthFeed),
-  EventController.getCalendarMonthFeed
-);
-
-router.get(
-  '/feed/calendar/day',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.calendarDayFeed),
-  EventController.getCalendarDayFeed
+  EventController.getHistoryEvents
 );
 
 router
@@ -61,16 +47,16 @@ router
   )
   .get(
     auth(UserRole.ADMIN, UserRole.USER),
-    validateRequest(EventValidation.listEvents),
-    EventController.listEvents
+    validateRequest(EventValidation.getEvents),
+    EventController.getEvents
   );
 
 // Nested resources (param name matches Prisma: `eventId` on `EventSession`, `EventApplication`, …)
 router.get(
   '/:eventId/event-sessions',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.listEventSessions),
-  EventController.listEventSessions
+  validateRequest(EventValidation.getEventSessions),
+  EventController.getEventSessions
 );
 
 router.post(
@@ -81,24 +67,10 @@ router.post(
 );
 
 router.post(
-  '/:eventId/apply',
+  '/:eventId/event-sessions/:eventSessionId/verify',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.applyToEvent),
-  EventController.applyToEvent
-);
-
-router.delete(
-  '/:eventId/apply',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.withdrawApplication),
-  EventController.withdrawApplication
-);
-
-router.get(
-  '/:eventId/event-applications',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.listEventApplications),
-  EventController.listEventApplications
+  validateRequest(EventValidation.verifyEventSession),
+  EventController.verifyEventSession
 );
 
 router

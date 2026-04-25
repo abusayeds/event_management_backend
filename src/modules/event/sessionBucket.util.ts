@@ -17,10 +17,6 @@ const MONTH_MMM = [
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-/**
- * When the client omits `sessionBucketFormat`, derive a sensible default from
- * `RepeatConfig.frequency` (same idea as the repeat pattern driving session labels).
- */
 export function defaultSessionBucketFormat(
   repeatFrequency?: RepeatFrequency | null
 ): SessionBucketFormat {
@@ -51,7 +47,6 @@ export type BuildSessionIdentifierParams = {
   bucketDate?: Date | null;
 };
 
-/** ISO week-style label e.g. `2026-W03` (UTC-based, good enough for display keys). */
 function formatIsoWeekLabel(d: Date): string {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const day = t.getUTCDay() || 7;
@@ -62,10 +57,6 @@ function formatIsoWeekLabel(d: Date): string {
   return `${isoYear}-W${pad2(week)}`;
 }
 
-/**
- * Build a stable `Session.sessionIdentifier` from year + bucket pattern.
- * Examples: `2026-Q1`, `2026-JAN`, `2026-01`, `2026`, `2026-01-15`, `2026-W03`.
- */
 const calendarYearFromLabel = (yearLabel: string): number | null => {
   const n = parseInt(yearLabel.trim(), 10);
   if (!Number.isFinite(n) || n < 1000 || n > 9999) return null;

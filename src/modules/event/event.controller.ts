@@ -19,7 +19,7 @@ const createEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   });
 });
 
-const listEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const filters = pick(req.query, [
     'search',
     'programId',
@@ -34,7 +34,7 @@ const listEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response)
   ]);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
-  const result = await EventService.listEvents(filters, options);
+  const result = await EventService.getEvents(filters, options);
 
   apiResponse(res, {
     success: true,
@@ -45,10 +45,10 @@ const listEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response)
   });
 });
 
-const listActiveEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const getActiveEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.listActiveEvents(options, price);
+  const result = await EventService.getActiveEvents(options, price);
 
   apiResponse(res, {
     success: true,
@@ -59,10 +59,10 @@ const listActiveEvents = asyncHandler(async (req: AuthenticatedRequest, res: Res
   });
 });
 
-const listUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.listUpcomingEvents(options, price);
+  const result = await EventService.getUpcomingEvents(options, price);
 
   apiResponse(res, {
     success: true,
@@ -73,10 +73,10 @@ const listUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: R
   });
 });
 
-const listTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const getTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.listTodayEvents(options, price);
+  const result = await EventService.getTodayEvents(options, price);
 
   apiResponse(res, {
     success: true,
@@ -87,44 +87,15 @@ const listTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Resp
   });
 });
 
-const listHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.listHistoryEvents(options, price);
+  const result = await EventService.getHistoryEvents(options, price);
 
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'History events fetched successfully.',
-    data: result.data,
-    meta: result.meta,
-  });
-});
-
-const getCalendarMonthFeed = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const filters = pick(req.query, ['programId', 'priceMin', 'priceMax']);
-  const year = Number(req.query.year);
-  const month = Number(req.query.month);
-  const result = await EventService.getCalendarMonthFeed(year, month, filters);
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Calendar month summary fetched successfully.',
-    data: result,
-  });
-});
-
-const getCalendarDayFeed = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const filters = pick(req.query, ['programId', 'priceMin', 'priceMax']);
-  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const dateStr = String(req.query.date);
-  const result = await EventService.getCalendarDayFeed(dateStr, filters, options);
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Events for the selected day fetched successfully.',
     data: result.data,
     meta: result.meta,
   });
@@ -171,8 +142,8 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   });
 });
 
-const listEventSessions = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const result = await EventService.listEventSessions(req.params.eventId as string);
+const getEventSessions = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const result = await EventService.getEventSessions(req.params.eventId as string);
 
   apiResponse(res, {
     success: true,
@@ -189,63 +160,38 @@ const verifyEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Event verified successfully.',
+    message: 'Current event session verified successfully.',
     data: result,
   });
 });
 
-const applyToEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const verifyEventSession = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
-  const result = await EventService.applyToEvent(req.params.eventId as string, userId, req.body?.note);
+  const result = await EventService.verifyEventSession(
+    req.params.eventId as string,
+    req.params.eventSessionId as string,
+    userId
+  );
 
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Application submitted successfully.',
-    data: result,
-  });
-});
-
-const withdrawApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user!.userId;
-  const result = await EventService.withdrawApplication(req.params.eventId as string, userId);
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Application withdrawn successfully.',
-    data: result,
-  });
-});
-
-const listEventApplications = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const requesterId = req.user!.userId;
-  const role = req.user!.role as UserRole;
-  const result = await EventService.listEventApplications(req.params.eventId as string, requesterId, role);
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Event applications fetched successfully.',
+    message: 'Event session verified successfully.',
     data: result,
   });
 });
 
 export const EventController = {
   createEvent,
-  listEvents,
-  listActiveEvents,
-  listUpcomingEvents,
-  listTodayEvents,
-  listHistoryEvents,
-  getCalendarMonthFeed,
-  getCalendarDayFeed,
+  getEvents,
+  getActiveEvents,
+  getUpcomingEvents,
+  getTodayEvents,
+  getHistoryEvents,
   getEventById,
   updateEvent,
   deleteEvent,
-  listEventSessions,
+  getEventSessions,
   verifyEvent,
-  applyToEvent,
-  withdrawApplication,
-  listEventApplications,
+  verifyEventSession,
 };

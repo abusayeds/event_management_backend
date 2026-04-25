@@ -112,7 +112,7 @@ enum MonthWeek {
 }
 
 enum SessionStatus {
-    Draft
+    Unverified
     Published
     Ongoing
     Completed
@@ -120,6 +120,18 @@ enum SessionStatus {
 }
 
 enum EventApplicationStatus {
+    Pending
+    Withdrawn
+    Approved
+    Rejected
+}
+
+enum AppliedResourceType {
+    Event
+    Program
+}
+
+enum UserAppliedStatus {
     Pending
     Withdrawn
     Approved

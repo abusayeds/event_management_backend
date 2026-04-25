@@ -8,6 +8,7 @@ import { FamilyMemberRoutes } from '../modules/familyMember/familyMember.routes'
 import { ProgramRoutes } from '../modules/program/program.routes';
 import { SubcategoryRoutes } from '../modules/subcategory/subcategory.routes';
 import { UserRoutes } from '../modules/user/user.routes';
+import { EventApplicationRoutes } from '../modules/eventApplication/eventApplication.routes';
 
 const router: Router = Router();
 
@@ -28,6 +29,7 @@ router.use('/subcategories', SubcategoryRoutes);
 router.use('/programs', ProgramRoutes);
 router.use('/events', EventRoutes);
 router.use('/users', UserRoutes);
+router.use('/event-applications', EventApplicationRoutes);
 router.use('/families', FamilyRoutes);
 router.use('/family-members', FamilyMemberRoutes);
 
