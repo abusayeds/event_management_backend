@@ -1,10 +1,12 @@
+// Canonical session bucket stored in `sessions` (can be Manual from client, or Auto generated from repeat rules).
 model Session {
-    id                String  @id @default(uuid())
-    sessionIdentifier String  @unique
-    sessionNumber     Int
-    year              String
-    bucketFormat      SessionBucketFormat?
-    isActive          Boolean @default(true)
+    id             String @id @default(uuid())
+    session        SessionBucketType
+    sessionValue   String
+    sessionLevel   String @unique
+    year           String
+    creationMode   SessionCreationMode @default(Manual)
+    isActive       Boolean @default(true)
 
     eventSessions EventSession[]
     eventResults  EventResult[]
@@ -52,7 +54,6 @@ model Event {
     isPublished  Boolean   @default(true)
     /// Ops toggle: pause/hide from feeds without deleting (`deletedAt`). Still separate from `isPublished` (visibility).
     isActive     Boolean   @default(true)
-    isLocked     Boolean   @default(false)
     deletedAt    DateTime? // soft delete
 
     createdAt DateTime @default(now())

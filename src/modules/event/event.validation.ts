@@ -5,6 +5,7 @@ import {
   GroupCriteria,
   RepeatFrequency,
   RoundCondition,
+  SessionBucketType,
   SessionStatus,
 } from '../../../prisma/generated/enums';
 
@@ -44,6 +45,25 @@ const mergeEventFormDataField = (raw: unknown) => {
   const normalizeEventSession = (value: unknown) => {
     if (!value || typeof value !== 'object') return value;
     const s = value as Record<string, unknown>;
+    const normalizeSessionType = (v: unknown): string | null => {
+      if (typeof v !== 'string') return null;
+      const t = v.trim().toLowerCase();
+      if (!t) return null;
+      if (t === 'daily') return 'Daily';
+      if (t === 'weekly') return 'Weekly';
+      if (t === 'monthly') return 'Monthly';
+      if (t === 'quarterly') return 'Quarterly';
+      if (t === 'yearly') return 'Yearly';
+      if (t === 'custom') return 'Custom';
+      return v.trim();
+    };
+    const mappedSession =
+      normalizeSessionType(s.session) ?? normalizeSessionType(s.sessionType);
+    const mappedSessionValue =
+      (s.sessionValue as string | undefined)?.trim() ||
+      (s.value as string | undefined)?.trim() ||
+      (s.label as string | undefined)?.trim() ||
+      null;
     let mappedLevel =
       (s.sessionLevel as string | undefined) ??
       (s.sessionKey as string | undefined) ??
@@ -54,8 +74,13 @@ const mergeEventFormDataField = (raw: unknown) => {
       if (q != null && q !== '') mappedLevel = `Q${q}`;
       else if (m != null && m !== '') mappedLevel = String(m);
     }
+    if (!mappedLevel && typeof s.year === 'string' && mappedSessionValue) {
+      mappedLevel = `${s.year.trim()}-${mappedSessionValue}`;
+    }
     return {
       ...s,
+      ...(mappedSession ? { session: mappedSession } : {}),
+      ...(mappedSessionValue ? { sessionValue: mappedSessionValue } : {}),
       sessionLevel: mappedLevel,
     };
   };
@@ -121,6 +146,8 @@ const eventSessionInput = z
   .object({
     sessionId: z.string().min(1).optional(),
     year: z.string().trim().min(2).max(16).optional(),
+    session: z.nativeEnum(SessionBucketType).optional(),
+    sessionValue: z.string().trim().min(1).max(120).optional(),
     sessionLevel: z.string().trim().min(1).max(120).optional(),
     competitionLevel: z.nativeEnum(CompetitionLevel),
     eventType: z.nativeEnum(EventType),
@@ -181,12 +208,40 @@ const createEventBodySchema = z
           message: 'year is required when repeatFunction is DontRepeat.',
         });
       }
+      if (!data.eventSession.session) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['eventSession', 'session'],
+          message: 'session is required when repeatFunction is DontRepeat.',
+        });
+      }
+      if (!data.eventSession.sessionValue?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['eventSession', 'sessionValue'],
+          message: 'sessionValue is required when repeatFunction is DontRepeat.',
+        });
+      }
       if (!data.eventSession.sessionLevel?.trim()) {
         ctx.addIssue({
           code: 'custom',
           path: ['eventSession'],
           message: 'sessionLevel is required when repeatFunction is DontRepeat.',
         });
+      }
+      if (
+        data.eventSession.year?.trim() &&
+        data.eventSession.sessionValue?.trim() &&
+        data.eventSession.sessionLevel?.trim()
+      ) {
+        const expected = `${data.eventSession.year.trim()}-${data.eventSession.sessionValue.trim()}`;
+        if (data.eventSession.sessionLevel.trim() !== expected) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['eventSession', 'sessionLevel'],
+            message: `sessionLevel must be ${expected} when repeatFunction is DontRepeat.`,
+          });
+        }
       }
       return;
     }
@@ -280,7 +335,6 @@ const updateEventBodySchema = z
     note: z.string().max(2000).optional().nullable(),
     isPublished: z.coerce.boolean().optional(),
     isActive: z.coerce.boolean().optional(),
-    isLocked: z.coerce.boolean().optional(),
     isVerifyActive: z.coerce.boolean().optional(),
     repeatConfig: repeatConfigBody,
     currentEventSession: updateCurrentEventSessionBody.optional(),

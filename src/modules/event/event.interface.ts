@@ -5,6 +5,7 @@ import {
   GroupCriteria,
   RepeatFrequency,
   RoundCondition,
+  SessionBucketType,
   SessionStatus,
 } from '../../../prisma/generated/enums';
 
@@ -43,6 +44,10 @@ export interface IEventGroupInput {
 export interface IEventSessionInput {
   sessionId?: string;
   year?: string;
+  /** Session category/type (Daily/Weekly/Monthly/Quarterly/Yearly/Custom). */
+  session?: SessionBucketType | null;
+  /** Session label value (Q1/January/Sunday/Week1/Year). */
+  sessionValue?: string | null;
   sessionLevel?: string | null;
   competitionLevel: CompetitionLevel;
   eventType: EventType;
@@ -100,7 +105,6 @@ export interface IUpdateEventPayload {
   note?: string | null;
   isPublished?: boolean;
   isActive?: boolean;
-  isLocked?: boolean;
   repeatConfig?: IRepeatConfigInput | null;
   currentEventSession?: IUpdateCurrentEventSessionPayload;
   isVerifyActive?: boolean;

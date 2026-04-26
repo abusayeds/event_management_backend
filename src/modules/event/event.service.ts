@@ -112,9 +112,6 @@ const updateEvent = async (
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
   }
-  if (existing.isLocked) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'This event is locked and cannot be edited.');
-  }
 
   // Snapshot before writes so EditLog can store previous values.
   const auditBefore = await EventRepository.getEventAuditSnapshot(eventId);

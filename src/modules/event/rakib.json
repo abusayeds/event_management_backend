@@ -1,0 +1,63 @@
+{
+  "eventName": "Math Olympiad",
+  "coverImage": "https://example.com/cover.jpg",
+  "programId": "PROGRAM_ID",
+  "organizer": "Dhaka Club",
+  "eventPortal": "https://example.com/event",
+  "registrationPortal": "https://example.com/register",
+  "description": "Desc",
+  "repeatConfig": { "repeatFunction": "DontRepeat" },
+  "eventSession": {
+    "year": "2020",
+    "session": "Monthly",
+    "sessionValue": "January",
+    "sessionLevel": "2020-January",
+    "competitionLevel": "Preliminary",
+    "eventType": "Online",
+    "registrationDate": "2020-01-10T00:00:00.000Z",
+    "deadline": "2020-01-25T23:59:59.000Z",
+    "cost": "500",
+    "hasFinalDeadline": false,
+    "finalDeadline": null,
+    "lateFee": "0",
+    "isSharedToCommunity": false,
+    "isUserAgreementAccepted": true,
+    "groups": [
+      {
+        "name": "Junior Group",
+        "criteria": "Age",
+        "condition": "UpTo",
+        "value": 15,
+        "rounds": [
+          {
+            "roundType": "Preliminary",
+            "deadline": "2020-01-15T23:59:59.000Z",
+            "cost": "100",
+            "hasFinalDeadline": false,
+            "finalDeadline": null,
+            "lateFee": "0",
+            "description": "Shortlist round"
+          }
+        ]
+      },
+      {
+        "name": "Senior Group",
+        "criteria": "Score",
+        "condition": "GreaterAndEqual",
+        "value": 80,
+        "rounds": [
+          {
+            "roundType": "SemiFinal",
+            "deadline": "2020-01-18T23:59:59.000Z",
+            "cost": "150"
+          },
+          {
+            "roundType": "Final",
+            "deadline": "2020-01-22T23:59:59.000Z",
+            "cost": "200"
+          }
+        ]
+      }
+    ]
+  }
+}

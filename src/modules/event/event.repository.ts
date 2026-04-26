@@ -1,6 +1,8 @@
 import { Prisma } from '../../../prisma/generated/client';
 import {
   RepeatFrequency,
+  SessionBucketType,
+  SessionCreationMode,
   SessionStatus,
 } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
@@ -14,261 +16,60 @@ import {
 import {
   ICreateEventPayload,
   IEventFilters,
-  IEventGroupInput,
   IFeedPriceFilters,
   IRepeatConfigInput,
   IUpdateCurrentEventSessionPayload,
 } from './event.interface';
 import {
-  buildSessionIdentifier,
-  defaultSessionBucketFormat,
   endOfUtcDay,
-  pickActiveEventSession,
   priceRangeOnSession,
   sessionScopeWhereInput,
   startOfUtcDay,
   withEventSessionCostEstimation,
 } from './event.helpers';
-
-const toDecimal = (value: string | number | undefined | null): Prisma.Decimal => {
-  if (value === undefined || value === null || value === '') {
-    return new Prisma.Decimal(0);
-  }
-  return new Prisma.Decimal(String(value));
-};
-const eventGroupsToNestedCreate = (groups: IEventGroupInput[] | undefined) => {
-  if (!groups?.length) {
-    return undefined;
-  }
-  return {
-    create: groups.map(g => ({
-      name: g.name,
-      criteria: g.criteria,
-      condition: g.condition,
-      value: g.value,
-      rounds: g.rounds?.length
-        ? {
-            create: g.rounds.map(r => ({
-              roundType: r.roundType,
-              deadline: new Date(r.deadline),
-              cost: toDecimal(r.cost),
-              hasFinalDeadline: r.hasFinalDeadline ?? false,
-              finalDeadline: r.finalDeadline ? new Date(r.finalDeadline) : null,
-              lateFee: toDecimal(r.lateFee ?? 0),
-              description: r.description ?? null,
-            })),
-          }
-        : undefined,
-    })),
-  };
-};
-
-const addDays = (base: Date, days: number) => new Date(base.getTime() + days * 86400000);
-const addMonths = (base: Date, months: number) => {
-  const d = new Date(base.getTime());
-  d.setUTCMonth(d.getUTCMonth() + months);
-  return d;
-};
-const addYears = (base: Date, years: number) => {
-  const d = new Date(base.getTime());
-  d.setUTCFullYear(d.getUTCFullYear() + years);
-  return d;
-};
-
-const MONTH_FULL = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-] as const;
-
-const weekOfYearUtc = (date: Date) => {
-  const start = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const diffDays = Math.floor((date.getTime() - start.getTime()) / 86400000);
-  return Math.floor(diffDays / 7) + 1;
-};
-
-const resolveRepeatFrequency = (input?: IRepeatConfigInput | null): RepeatFrequency =>
-  input?.repeatFunction ?? RepeatFrequency.DontRepeat;
-
-const sessionSuffixFromInput = (input: { sessionLevel?: string | null }) => {
-  const level = input.sessionLevel?.trim();
-  if (level) return level;
-  return null;
-};
-
-const frequencySuffix = (
-  frequency: RepeatFrequency,
-  anchorDate: Date
-) => {
-  switch (frequency) {
-    case RepeatFrequency.Daily:
-      return `${String(anchorDate.getUTCMonth() + 1).padStart(2, '0')}-${String(anchorDate.getUTCDate()).padStart(2, '0')}`;
-    case RepeatFrequency.Weekly:
-      return `Week${weekOfYearUtc(anchorDate)}`;
-    case RepeatFrequency.Monthly:
-      return MONTH_FULL[anchorDate.getUTCMonth()];
-    case RepeatFrequency.Quarterly:
-      return `Q${Math.floor(anchorDate.getUTCMonth() / 3) + 1}`;
-    case RepeatFrequency.Yearly:
-      return 'Year';
-    case RepeatFrequency.Custom:
-      return `${String(anchorDate.getUTCMonth() + 1).padStart(2, '0')}-${String(anchorDate.getUTCDate()).padStart(2, '0')}`;
-    default:
-      return 'Session1';
-  }
-};
-
-const resolveSessionIdentity = (args: {
-  repeatFrequency: RepeatFrequency;
-  anchorDate: Date;
-  incomingYear?: string;
-  incomingLevel?: string | null;
-}) => {
-  if (args.repeatFrequency === RepeatFrequency.DontRepeat) {
-    return {
-      year: args.incomingYear?.trim() || String(args.anchorDate.getUTCFullYear()),
-      sessionLevel: args.incomingLevel ?? null,
-    };
-  }
-  return {
-    year: String(args.anchorDate.getUTCFullYear()),
-    sessionLevel: frequencySuffix(args.repeatFrequency, args.anchorDate),
-  };
-};
-
-const buildEventNameWithSessionSuffix = (args: {
-  baseEventName: string;
-  year?: string;
-  sessionLevel?: string | null;
-  repeatFrequency: RepeatFrequency;
-  anchorDate: Date;
-}) => {
-  const year =
-    args.year?.trim() ||
-    String(args.anchorDate.getUTCFullYear());
-  const fallbackSuffix = frequencySuffix(args.repeatFrequency, args.anchorDate);
-  const sessionSuffix = sessionSuffixFromInput({ sessionLevel: args.sessionLevel }) ?? fallbackSuffix;
-
-  return `${args.baseEventName.trim()}-${year}-${sessionSuffix}`;
-};
-
-const extractEventNameParts = (fullEventName: string, baseEventName: string) => {
-  const normalizedBase = baseEventName.trim();
-  const prefix = `${normalizedBase}-`;
-  if (!fullEventName.startsWith(prefix)) {
-    return { eventYear: null as string | null, eventSessionLabel: null as string | null };
-  }
-  const suffix = fullEventName.slice(prefix.length);
-  const [eventYear, ...rest] = suffix.split('-');
-  const eventSessionLabel = rest.join('-') || null;
-  return {
-    eventYear: eventYear || null,
-    eventSessionLabel,
-  };
-};
-
-const computeNextAutoGenerateDate = (input: IRepeatConfigInput): Date | null => {
-  const frequency = resolveRepeatFrequency(input);
-  if (frequency === RepeatFrequency.DontRepeat) return null;
-
-  const base = input.startDate ? new Date(input.startDate) : new Date();
-
-  switch (frequency) {
-    case RepeatFrequency.Daily:
-      return addDays(base, 1);
-    case RepeatFrequency.Weekly:
-      return addDays(base, 7);
-    case RepeatFrequency.Monthly:
-      return addMonths(base, 1);
-    case RepeatFrequency.Quarterly:
-      return addMonths(base, 3);
-    case RepeatFrequency.Yearly:
-      return addYears(base, 1);
-    case RepeatFrequency.Custom:
-      return addDays(base, 1);
-    default:
-      return null;
-  }
-};
-
-const repeatConfigFields = (input: IRepeatConfigInput) => ({
-  frequency: resolveRepeatFrequency(input),
-  startDate: input.startDate ? new Date(input.startDate) : null,
-  nextAutoGenerateDate: computeNextAutoGenerateDate(input),
-});
-
-export const eventListSelect = {
-  id: true,
-  eventName: true,
-  coverImage: true,
+import {
+  attachActiveSessions,
+  eventGroupsToNestedCreate,
+  eventListSelect,
+  extractEventNameParts,
+  frequencySuffix,
+  publishedEventBaseWhere,
+  repeatConfigFields,
+  resolveRepeatFrequency,
+  sessionTypeFromRepeatFrequency,
+  toDecimal,
+} from './event.utils';
+const eventAuditSnapshotSelect = {
+  version: true,
   programId: true,
   organizer: true,
   location: true,
+  eventPortal: true,
+  registrationPortal: true,
+  description: true,
+  note: true,
   isPublished: true,
   isActive: true,
-  createdAt: true,
-  updatedAt: true,
-  program: { select: { id: true, name: true, imageUrl: true } },
+  coverImage: true,
+  repeatConfig: true,
+  eventSession: {
+    select: {
+      id: true,
+      competitionLevel: true,
+      eventType: true,
+      registrationDate: true,
+      deadline: true,
+      cost: true,
+      status: true,
+      hasFinalDeadline: true,
+      finalDeadline: true,
+      lateFee: true,
+      isSharedToCommunity: true,
+      isUserAgreementAccepted: true,
+      autoGenerated: true,
+    },
+  },
 } as const;
-
-const publishedEventBaseWhere = {
-  deletedAt: null,
-  isActive: true,
-  isPublished: true,
-} as const;
-
-const eventSessionForActivePickSelect = {
-  eventId: true,
-  id: true,
-  status: true,
-  registrationDate: true,
-  deadline: true,
-  cost: true,
-  eventType: true,
-  competitionLevel: true,
-} as const;
-
-type EventSessionForActiveRow = Prisma.EventSessionGetPayload<{
-  select: typeof eventSessionForActivePickSelect;
-}>;
-
-// Internal helper: loads EventSession rows for many events (used to compute `activeSession` on list/feed responses).
-async function sessionsByEventIdMap(eventIds: string[]) {
-  const map = new Map<string, EventSessionForActiveRow[]>();
-  if (!eventIds.length) return map;
-  const rows = await database.eventSession.findMany({
-    where: { eventId: { in: eventIds } },
-    select: eventSessionForActivePickSelect,
-    orderBy: { deadline: 'asc' as const },
-  });
-  for (const r of rows) {
-    const arr = map.get(r.eventId) ?? [];
-    arr.push(r);
-    map.set(r.eventId, arr);
-  }
-  return map;
-}
-
-// Internal helper: attaches `activeSession` to list rows (GET /events + feed endpoints).
-async function attachActiveSessions<T extends { id: string }>(events: T[]) {
-  const map = await sessionsByEventIdMap(events.map(e => e.id));
-  return events.map(e => ({
-    ...e,
-    activeSession: (() => {
-      const picked = pickActiveEventSession(map.get(e.id) ?? []);
-      return picked ? withEventSessionCostEstimation(picked) : null;
-    })(),
-  }));
-}
 
 // POST /events
 const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
@@ -284,19 +85,33 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
     : repeatConfig?.startDate
       ? new Date(repeatConfig.startDate)
       : new Date();
-  const resolvedSessionIdentity = resolveSessionIdentity({
-    repeatFrequency,
-    anchorDate,
-    incomingYear: firstEventSession?.year,
-    incomingLevel: firstEventSession?.sessionLevel,
-  });
-  const eventNameWithSuffix = buildEventNameWithSessionSuffix({
-    baseEventName: payload.eventName,
-    year: resolvedSessionIdentity.year,
-    sessionLevel: resolvedSessionIdentity.sessionLevel,
-    repeatFrequency,
-    anchorDate,
-  });
+  const manualSessionType = firstEventSession?.session ?? null;
+  const manualSessionValue = firstEventSession?.sessionValue?.trim() || '';
+  const manualLevel = firstEventSession?.sessionLevel?.trim() || '';
+  const autoValue = frequencySuffix(repeatFrequency, anchorDate);
+  const yearForEvent =
+    repeatFrequency === RepeatFrequency.DontRepeat
+      ? (firstEventSession?.year?.trim() || String(anchorDate.getUTCFullYear()))
+      : String(anchorDate.getUTCFullYear());
+  const sessionValueForEvent =
+    repeatFrequency === RepeatFrequency.DontRepeat ? manualSessionValue || autoValue : autoValue;
+  const suffixForEvent = (() => {
+    if (repeatFrequency === RepeatFrequency.DontRepeat) {
+      if (manualLevel && manualLevel.startsWith(`${yearForEvent}-`)) {
+        return manualLevel.slice(yearForEvent.length + 1);
+      }
+      if (manualLevel) return manualLevel;
+      return sessionValueForEvent;
+    }
+    // Repeating events: the bucket label is always derived from the chosen repeat frequency + anchor date.
+    return sessionValueForEvent;
+  })();
+  const sessionLevelForEvent = `${yearForEvent}-${suffixForEvent}`;
+  const sessionTypeForEvent: SessionBucketType =
+    repeatFrequency === RepeatFrequency.DontRepeat
+      ? (manualSessionType ?? SessionBucketType.Custom)
+      : sessionTypeFromRepeatFrequency(repeatFrequency);
+  const eventNameWithSuffix = `${payload.eventName.trim()}-${yearForEvent}-${suffixForEvent}`;
   const eventNameParts = extractEventNameParts(eventNameWithSuffix, payload.eventName);
 
   return database.$transaction(async tx => {
@@ -311,8 +126,8 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
         creatorId,
         repeatConfig: repeatConfig
           ? {
-              create: repeatConfigFields(repeatConfig),
-            }
+            create: repeatConfigFields(repeatConfig),
+          }
           : undefined,
       },
       select: { id: true },
@@ -321,30 +136,22 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
     if (eventSession) {
       const s = {
         ...eventSession,
-        year: resolvedSessionIdentity.year,
-        sessionLevel: resolvedSessionIdentity.sessionLevel ?? eventSession.sessionLevel,
+        year: yearForEvent,
+        sessionLevel: sessionLevelForEvent,
+        session: sessionTypeForEvent,
+        sessionValue: sessionValueForEvent,
       };
+      const sessionCreationMode: SessionCreationMode =
+        s.sessionId || repeatFrequency === RepeatFrequency.DontRepeat
+          ? SessionCreationMode.Manual
+          : SessionCreationMode.Auto;
       let sessionId = s.sessionId;
       if (!sessionId && s.year) {
-        const agg = await tx.session.aggregate({
-          where: { year: s.year },
-          _max: { sessionNumber: true },
-        });
-        const sessionNumber = (agg._max.sessionNumber ?? 0) + 1;
-        const bucketFormat = defaultSessionBucketFormat(repeatFrequency);
-        const level = s.sessionLevel?.trim();
-        const autoIdentifier = buildSessionIdentifier({
-          year: s.year,
-          format: bucketFormat,
-          anchorDate: new Date(s.registrationDate),
-        });
-        const baseIdentifier = level
-          ? level.startsWith(`${s.year}-`)
-            ? level
-            : `${s.year}-${level}`
-          : autoIdentifier;
+        const sessionLevelValue = (() => {
+          return s.sessionLevel?.trim() || `${s.year}-${s.sessionValue}`;
+        })();
         const existingSession = await tx.session.findUnique({
-          where: { sessionIdentifier: baseIdentifier },
+          where: { sessionLevel: sessionLevelValue },
           select: { id: true },
         });
         if (existingSession) {
@@ -352,10 +159,11 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
         } else {
           const createdSession = await tx.session.create({
             data: {
-              sessionIdentifier: baseIdentifier,
-              sessionNumber,
+              session: s.session ?? SessionBucketType.Custom,
+              sessionValue: s.sessionValue ?? autoValue,
+              sessionLevel: sessionLevelValue,
               year: s.year,
-              bucketFormat,
+              creationMode: sessionCreationMode,
             },
           });
           sessionId = createdSession.id;
@@ -377,7 +185,7 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
           status: s.status ?? SessionStatus.Unverified,
           isSharedToCommunity: s.isSharedToCommunity ?? false,
           isUserAgreementAccepted: s.isUserAgreementAccepted ?? false,
-          autoGenerated: false,
+          autoGenerated: sessionCreationMode === SessionCreationMode.Auto,
           isCurrentSession: true,
           groups: eventGroupsToNestedCreate(s.groups),
         },
@@ -440,7 +248,16 @@ const getEventById = async (id: string) => {
           lateFee: true,
           status: true,
           isCurrentSession: true,
-          session: { select: { id: true, sessionIdentifier: true, year: true, sessionNumber: true } },
+          session: {
+            select: {
+              id: true,
+              session: true,
+              sessionValue: true,
+              sessionLevel: true,
+              year: true,
+              creationMode: true,
+            },
+          },
           groups: {
             select: {
               id: true,
@@ -466,7 +283,16 @@ const getEventById = async (id: string) => {
       },
       results: {
         include: {
-          session: { select: { id: true, sessionIdentifier: true, year: true, sessionNumber: true } },
+          session: {
+            select: {
+              id: true,
+              session: true,
+              sessionValue: true,
+              sessionLevel: true,
+              year: true,
+              creationMode: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' as const },
       },
@@ -488,7 +314,6 @@ const getEventBare = async (id: string) => {
       id: true,
       eventName: true,
       creatorId: true,
-      isLocked: true,
       deletedAt: true,
       coverImage: true,
       version: true,
@@ -496,38 +321,6 @@ const getEventBare = async (id: string) => {
   });
 };
 
-const eventAuditSnapshotSelect = {
-  version: true,
-  programId: true,
-  organizer: true,
-  location: true,
-  eventPortal: true,
-  registrationPortal: true,
-  description: true,
-  note: true,
-  isPublished: true,
-  isActive: true,
-  isLocked: true,
-  coverImage: true,
-  repeatConfig: true,
-  eventSession: {
-    select: {
-      id: true,
-      competitionLevel: true,
-      eventType: true,
-      registrationDate: true,
-      deadline: true,
-      cost: true,
-      status: true,
-      hasFinalDeadline: true,
-      finalDeadline: true,
-      lateFee: true,
-      isSharedToCommunity: true,
-      isUserAgreementAccepted: true,
-      autoGenerated: true,
-    },
-  },
-} as const;
 
 // Internal: snapshot for EditLog diffing on PATCH /events/:eventId (before/after comparison).
 const getEventAuditSnapshot = async (id: string) => {
@@ -642,10 +435,10 @@ const getActiveEvents = async (
     ...publishedEventBaseWhere,
     ...(priceWhere
       ? {
-          eventSession: {
-            is: priceWhere,
-          },
-        }
+        eventSession: {
+          is: priceWhere,
+        },
+      }
       : {}),
   };
 
@@ -838,7 +631,16 @@ const updateCurrentEventSessionForEvent = async (
     where: { id: current.id },
     data,
     include: {
-      session: { select: { id: true, sessionIdentifier: true, year: true, sessionNumber: true } },
+      session: {
+        select: {
+          id: true,
+          session: true,
+          sessionValue: true,
+          sessionLevel: true,
+          year: true,
+          creationMode: true,
+        },
+      },
       groups: { include: { rounds: true } },
     },
   });
@@ -874,7 +676,16 @@ const verifyCurrentSessionForEvent = async (eventId: string) => {
   const current = await database.eventSession.findFirst({
     where: { eventId },
     include: {
-      session: { select: { id: true, sessionIdentifier: true, year: true, sessionNumber: true } },
+      session: {
+        select: {
+          id: true,
+          session: true,
+          sessionValue: true,
+          sessionLevel: true,
+          year: true,
+          creationMode: true,
+        },
+      },
       groups: { include: { rounds: true } },
     },
   });
@@ -888,7 +699,16 @@ const verifyCurrentSessionForEvent = async (eventId: string) => {
     where: { id: current.id },
     data: { status: SessionStatus.Published },
     include: {
-      session: { select: { id: true, sessionIdentifier: true, year: true, sessionNumber: true } },
+      session: {
+        select: {
+          id: true,
+          session: true,
+          sessionValue: true,
+          sessionLevel: true,
+          year: true,
+          creationMode: true,
+        },
+      },
       groups: { include: { rounds: true } },
     },
   });
