@@ -3,12 +3,9 @@ import {
   CompetitionLevel,
   EventType,
   GroupCriteria,
-  MonthWeek,
   RepeatFrequency,
-  RepeatUnit,
   RoundCondition,
   SessionStatus,
-  WeekDay,
 } from '../../../prisma/generated/enums';
 
 export const EVENT_CONTRIBUTION_SCORE = {
@@ -22,13 +19,6 @@ export const EVENT_CONTRIBUTION_SCORE = {
 export interface IRepeatConfigInput {
   repeatFunction?: RepeatFrequency;
   startDate?: Date | string;
-  repeatEvery?: number;
-  repeatUnit?: RepeatUnit | null;
-  daysOfWeek?: WeekDay[];
-  dayOfMonth?: number | null;
-  weekOfMonth?: MonthWeek | null;
-  weekDay?: WeekDay | null;
-  untilDate?: Date | string | null;
 }
 
 /** Matches Prisma model `EventRound` */
@@ -81,7 +71,7 @@ export interface ICreateEventPayload {
   note?: string | null;
   isPublished?: boolean;
   repeatConfig?: IRepeatConfigInput | null;
-  eventSessions?: IEventSessionInput[];
+  eventSession?: IEventSessionInput;
 }
 export interface IUpdateCurrentEventSessionPayload {
   competitionLevel?: CompetitionLevel;

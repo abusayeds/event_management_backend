@@ -135,7 +135,7 @@ export function diffEventForEditLog(args: {
 
   if (args.sessionPatchRequested) {
     changedFields.push('currentEventSession');
-    previousValues.currentEventSession = args.before.eventSessions[0] ?? null;
+    previousValues.currentEventSession = args.before.eventSession ?? null;
   }
 
   if (!changedFields.length) return null;

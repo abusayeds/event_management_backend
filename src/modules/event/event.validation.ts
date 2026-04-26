@@ -3,20 +3,13 @@ import {
   CompetitionLevel,
   EventType,
   GroupCriteria,
-  MonthWeek,
   RepeatFrequency,
-  RepeatUnit,
   RoundCondition,
   SessionStatus,
-  WeekDay,
 } from '../../../prisma/generated/enums';
 
 const eventIdParam = z.object({
   eventId: z.string().min(1, 'eventId is required'),
-});
-const eventAndSessionIdParam = z.object({
-  eventId: z.string().min(1, 'eventId is required'),
-  eventSessionId: z.string().min(1, 'eventSessionId is required'),
 });
 
 const mergeEventFormDataField = (raw: unknown) => {
@@ -66,13 +59,13 @@ const mergeEventFormDataField = (raw: unknown) => {
       sessionLevel: mappedLevel,
     };
   };
-  const normalizeEventSessions = (value: unknown) => {
-    if (!Array.isArray(value)) return value;
-    return value.map(normalizeEventSession);
+  const normalizeEventSessionField = (value: unknown) => {
+    if (Array.isArray(value)) {
+      return value.length ? normalizeEventSession(value[0]) : undefined;
+    }
+    return normalizeEventSession(value);
   };
 
-  // multipart/form-data often delivers nested structures as strings.
-  // Accept either a single "data" JSON blob or per-field JSON strings.
   if (typeof b.data === 'string' && b.data.trim()) {
     try {
       const parsed = JSON.parse(b.data) as Record<string, unknown>;
@@ -81,7 +74,9 @@ const mergeEventFormDataField = (raw: unknown) => {
         ...parsed,
         ...rest,
         repeatConfig: normalizeRepeatConfig(parseJsonLikeField(rest.repeatConfig)),
-        eventSessions: normalizeEventSessions(parseJsonLikeField(rest.eventSessions)),
+        eventSession: normalizeEventSessionField(
+          parseJsonLikeField((rest as Record<string, unknown>).eventSession ?? rest.eventSessions)
+        ),
         currentEventSession: parseJsonLikeField(rest.currentEventSession),
       };
     } catch {
@@ -91,7 +86,7 @@ const mergeEventFormDataField = (raw: unknown) => {
   return {
     ...b,
     repeatConfig: normalizeRepeatConfig(parseJsonLikeField(b.repeatConfig)),
-    eventSessions: normalizeEventSessions(parseJsonLikeField(b.eventSessions)),
+    eventSession: normalizeEventSessionField(parseJsonLikeField(b.eventSession ?? b.eventSessions)),
     currentEventSession: parseJsonLikeField(b.currentEventSession),
   };
 };
@@ -100,13 +95,6 @@ const repeatConfigBody = z
   .object({
     repeatFunction: z.nativeEnum(RepeatFrequency).optional(),
     startDate: z.coerce.date().optional().nullable(),
-    repeatEvery: z.coerce.number().int().min(1).optional(),
-    repeatUnit: z.nativeEnum(RepeatUnit).optional().nullable(),
-    daysOfWeek: z.array(z.nativeEnum(WeekDay)).optional(),
-    dayOfMonth: z.coerce.number().int().min(1).max(31).optional().nullable(),
-    weekOfMonth: z.nativeEnum(MonthWeek).optional().nullable(),
-    weekDay: z.nativeEnum(WeekDay).optional().nullable(),
-    untilDate: z.coerce.date().optional().nullable(),
   })
   .optional()
   .nullable();
@@ -150,11 +138,10 @@ const eventSessionInput = z
   .superRefine((val, ctx) => {
     const hasSessionId = Boolean(val.sessionId);
     const hasNewSession = Boolean(val.year);
-    if (hasSessionId === hasNewSession) {
+    if (hasSessionId && hasNewSession) {
       ctx.addIssue({
         code: 'custom',
-        message:
-          'Each eventSession must set exactly one of: sessionId (link existing Session) OR year (create Session).',
+        message: 'eventSession cannot include both sessionId and year together.',
       });
     }
   });
@@ -173,9 +160,46 @@ const createEventBodySchema = z
     note: z.string().max(2000).optional().nullable(),
     isPublished: z.coerce.boolean().optional(),
     repeatConfig: repeatConfigBody,
-    eventSessions: z.array(eventSessionInput).optional(),
+    eventSession: eventSessionInput.optional(),
   })
-  ;
+  .superRefine((data, ctx) => {
+    const repeatFunction = data.repeatConfig?.repeatFunction ?? RepeatFrequency.DontRepeat;
+    if (!data.eventSession) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['eventSession'],
+        message: 'eventSession is required.',
+      });
+      return;
+    }
+
+    if (repeatFunction === RepeatFrequency.DontRepeat) {
+      if (!data.eventSession.year?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['eventSession', 'year'],
+          message: 'year is required when repeatFunction is DontRepeat.',
+        });
+      }
+      if (!data.eventSession.sessionLevel?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['eventSession'],
+          message: 'sessionLevel is required when repeatFunction is DontRepeat.',
+        });
+      }
+      return;
+    }
+
+    if (data.eventSession.sessionId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['eventSession', 'sessionId'],
+        message:
+          'sessionId cannot be provided when repeatFunction is Daily/Monthly/Quarterly/Yearly/Custom.',
+      });
+    }
+  });
 
 const createEvent = z.object({
   body: z.preprocess(mergeEventFormDataField, createEventBodySchema),
@@ -280,15 +304,8 @@ const deleteEvent = z.object({
   params: eventIdParam,
 });
 
-const getEventSessions = z.object({
-  params: eventIdParam,
-});
-
 const verifyEvent = z.object({
   params: eventIdParam,
-});
-const verifyEventSession = z.object({
-  params: eventAndSessionIdParam,
 });
 
 export const EventValidation = {
@@ -298,7 +315,5 @@ export const EventValidation = {
   getEventById,
   updateEvent,
   deleteEvent,
-  getEventSessions,
   verifyEvent,
-  verifyEventSession,
 };

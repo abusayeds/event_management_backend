@@ -142,17 +142,6 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   });
 });
 
-const getEventSessions = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const result = await EventService.getEventSessions(req.params.eventId as string);
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Event sessions fetched successfully.',
-    data: result,
-  });
-});
-
 const verifyEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
   const result = await EventService.verifyEvent(req.params.eventId as string, userId);
@@ -161,22 +150,6 @@ const verifyEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Current event session verified successfully.',
-    data: result,
-  });
-});
-
-const verifyEventSession = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user!.userId;
-  const result = await EventService.verifyEventSession(
-    req.params.eventId as string,
-    req.params.eventSessionId as string,
-    userId
-  );
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Event session verified successfully.',
     data: result,
   });
 });
@@ -191,7 +164,5 @@ export const EventController = {
   getEventById,
   updateEvent,
   deleteEvent,
-  getEventSessions,
   verifyEvent,
-  verifyEventSession,
 };

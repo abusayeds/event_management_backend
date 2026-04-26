@@ -51,26 +51,11 @@ router
     EventController.getEvents
   );
 
-// Nested resources (param name matches Prisma: `eventId` on `EventSession`, `EventApplication`, …)
-router.get(
-  '/:eventId/event-sessions',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.getEventSessions),
-  EventController.getEventSessions
-);
-
 router.post(
   '/:eventId/verify',
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(EventValidation.verifyEvent),
   EventController.verifyEvent
-);
-
-router.post(
-  '/:eventId/event-sessions/:eventSessionId/verify',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.verifyEventSession),
-  EventController.verifyEventSession
 );
 
 router

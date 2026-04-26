@@ -27,15 +27,10 @@ const createEvent = async (
   if (!program) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Program not found.');
   }
-  if (payload.eventSessions?.length) {
-    const ids = payload.eventSessions
-      .map(s => s.sessionId)
-      .filter((id): id is string => Boolean(id));
-    if (ids.length) {
-      const ok = await EventRepository.sessionsExist(ids);
-      if (!ok) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, 'One or more sessionId values are invalid.');
-      }
+  if (payload.eventSession?.sessionId) {
+    const ok = await EventRepository.sessionsExist([payload.eventSession.sessionId]);
+    if (!ok) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'sessionId is invalid.');
     }
   }
   let uploadedCoverUrl: string | undefined;
@@ -94,9 +89,9 @@ const getEventById = async (id: string) => {
   if (!event) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
   }
-  const { eventSessions, ...rest } = event;
-  const eventSession = pickEventSessionForDetail(eventSessions ?? []);
-  return { ...rest, eventSession };
+  const { eventSession, ...rest } = event;
+  const pickedEventSession = eventSession ? pickEventSessionForDetail([eventSession]) : null;
+  return { ...rest, eventSession: pickedEventSession };
 };
 
 const updateEvent = async (
@@ -183,7 +178,7 @@ const updateEvent = async (
       if (!sessionRow) {
         throw new ApiError(
           StatusCodes.BAD_REQUEST,
-          'No current event session found (isCurrentSession). Add sessions or mark one as current first.'
+          'No event session found for this event. Create the event with eventSession or add session details first.'
         );
       }
     }
@@ -192,7 +187,7 @@ const updateEvent = async (
       if (!verified) {
         throw new ApiError(
           StatusCodes.BAD_REQUEST,
-          'No current event session found (isCurrentSession). Add sessions or mark one as current first.'
+          'No event session found for this event. Create the event with eventSession or add session details first.'
         );
       }
     }
@@ -245,14 +240,6 @@ const deleteEvent = async (eventId: string, userId: string, role: UserRole) => {
   return EventRepository.softDeleteEvent(eventId);
 };
 
-const getEventSessions = async (eventId: string) => {
-  const existing = await EventRepository.getEventBare(eventId);
-  if (!existing) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
-  }
-  return EventRepository.getEventSessions(eventId);
-};
-
 const verifyEvent = async (eventId: string, userId: string) => {
   const existing = await EventRepository.getEventBare(eventId);
   if (!existing) {
@@ -262,21 +249,8 @@ const verifyEvent = async (eventId: string, userId: string) => {
   if (!updated) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'No current event session found (isCurrentSession). Add sessions or mark one as current first.'
+      'No event session found for this event. Create the event with eventSession or add session details first.'
     );
-  }
-  await rewardUserContribution(userId, EVENT_CONTRIBUTION_SCORE.VERIFY);
-  return updated;
-};
-
-const verifyEventSession = async (eventId: string, eventSessionId: string, userId: string) => {
-  const existing = await EventRepository.getEventBare(eventId);
-  if (!existing) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
-  }
-  const updated = await EventRepository.verifyEventSessionById(eventId, eventSessionId);
-  if (!updated) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Event session not found for this event.');
   }
   await rewardUserContribution(userId, EVENT_CONTRIBUTION_SCORE.VERIFY);
   return updated;
@@ -292,7 +266,5 @@ export const EventService = {
   getEventById,
   updateEvent,
   deleteEvent,
-  getEventSessions,
   verifyEvent,
-  verifyEventSession,
 };
