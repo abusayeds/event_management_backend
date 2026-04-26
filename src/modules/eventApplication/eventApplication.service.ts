@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import { Prisma } from '../../../prisma/generated/client';
-import { UserAppliedStatus, UserRole } from '../../../prisma/generated/enums';
+import { EventApplicationStatus, UserRole } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { EVENT_CONTRIBUTION_SCORE } from '../event/event.interface';
@@ -107,16 +107,19 @@ const updateEventApplication = async (
   }
 
   if (role !== UserRole.ADMIN) {
-    if (payload.status !== undefined && payload.status !== UserAppliedStatus.Withdrawn) {
+    if (payload.status !== undefined && payload.status !== EventApplicationStatus.Withdrawn) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
         'You may only set status to Withdrawn on your own application.'
       );
     }
-    if (payload.status === UserAppliedStatus.Withdrawn && existing.status !== UserAppliedStatus.Pending) {
+    if (
+      payload.status === EventApplicationStatus.Withdrawn &&
+      existing.status !== EventApplicationStatus.Pending
+    ) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Only a pending application can be withdrawn.');
     }
-    if (payload.note !== undefined && existing.status !== UserAppliedStatus.Pending) {
+    if (payload.note !== undefined && existing.status !== EventApplicationStatus.Pending) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
         'You can only edit the note while the application is pending.'
@@ -153,7 +156,7 @@ const withdrawEventApplication = async (eventId: string, userId: string) => {
   if (!application) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'No application found for this event.');
   }
-  if (application.status !== UserAppliedStatus.Pending) {
+  if (application.status !== EventApplicationStatus.Pending) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Only a pending application can be withdrawn.');
   }
   return EventApplicationRepository.softDeleteEventApplication(application.id);

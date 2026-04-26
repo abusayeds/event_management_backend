@@ -93,6 +93,11 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
     repeatFrequency === RepeatFrequency.DontRepeat
       ? (firstEventSession?.year?.trim() || String(anchorDate.getUTCFullYear()))
       : String(anchorDate.getUTCFullYear());
+  const sessionTypeForEvent: SessionBucketType =
+    repeatFrequency === RepeatFrequency.DontRepeat
+      ? (manualSessionType ?? SessionBucketType.Custom)
+      : sessionTypeFromRepeatFrequency(repeatFrequency);
+  const isYearlySession = sessionTypeForEvent === SessionBucketType.Yearly;
   const sessionValueForEvent =
     repeatFrequency === RepeatFrequency.DontRepeat ? manualSessionValue || autoValue : autoValue;
   const suffixForEvent = (() => {
@@ -106,12 +111,10 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
     // Repeating events: the bucket label is always derived from the chosen repeat frequency + anchor date.
     return sessionValueForEvent;
   })();
-  const sessionLevelForEvent = `${yearForEvent}-${suffixForEvent}`;
-  const sessionTypeForEvent: SessionBucketType =
-    repeatFrequency === RepeatFrequency.DontRepeat
-      ? (manualSessionType ?? SessionBucketType.Custom)
-      : sessionTypeFromRepeatFrequency(repeatFrequency);
-  const eventNameWithSuffix = `${payload.eventName.trim()}-${yearForEvent}-${suffixForEvent}`;
+  const sessionLevelForEvent = isYearlySession ? `${yearForEvent}` : `${yearForEvent}-${suffixForEvent}`;
+  const eventNameWithSuffix = isYearlySession
+    ? `${payload.eventName.trim()}-${yearForEvent}`
+    : `${payload.eventName.trim()}-${yearForEvent}-${suffixForEvent}`;
   const eventNameParts = extractEventNameParts(eventNameWithSuffix, payload.eventName);
 
   return database.$transaction(async tx => {

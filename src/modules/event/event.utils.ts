@@ -2,7 +2,7 @@ import { Prisma } from '../../../prisma/generated/client';
 import { RepeatFrequency, SessionBucketType, SessionStatus } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import { IEventGroupInput, IRepeatConfigInput } from './event.interface';
-import { pickActiveEventSession, withEventSessionCostEstimation } from './event.helpers';
+import { pickActiveEventSession } from './event.helpers';
 
 export const toDecimal = (value: string | number | undefined | null): Prisma.Decimal => {
   if (value === undefined || value === null || value === '') {
@@ -206,28 +206,7 @@ const eventSessionForActivePickSelect = {
       sessionValue: true,
       sessionLevel: true,
       year: true,
-      creationMode: true,
-    },
-  },
-  groups: {
-    select: {
-      id: true,
-      name: true,
-      criteria: true,
-      condition: true,
-      value: true,
-      rounds: {
-        select: {
-          id: true,
-          roundType: true,
-          deadline: true,
-          cost: true,
-          hasFinalDeadline: true,
-          finalDeadline: true,
-          lateFee: true,
-          description: true,
-        },
-      },
+      creationMode: true
     },
   },
 } as const;
@@ -258,7 +237,7 @@ export async function attachActiveSessions<T extends { id: string }>(events: T[]
     ...e,
     eventSession: (() => {
       const picked = pickActiveEventSession(map.get(e.id) ?? []);
-      return picked ? withEventSessionCostEstimation(picked) : null;
+      return picked ?? null;
     })(),
   }));
 }

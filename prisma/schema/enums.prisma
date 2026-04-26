@@ -1,3 +1,4 @@
+// ========================== User Related Enums ==========================
 enum UserRole {
     ADMIN
     USER
@@ -15,6 +16,7 @@ enum UserGender {
     OTHER
 }
 
+// ========================== Invitation Related Enums ==========================
 enum InvitationStatus {
     PENDING
     ACCEPTED
@@ -22,6 +24,7 @@ enum InvitationStatus {
     EXPIRED
 }
 
+// ========================== Connection Related Enums ==========================
 enum ConnectionStatus {
     PENDING
     ACCEPTED
@@ -29,11 +32,13 @@ enum ConnectionStatus {
     CANCELED
 }
 
+// ========================== Family Related Enums ==========================
 enum FamilyRole {
     OWNER
     MEMBER
 }
 
+// ========================== Event Related Enums ==========================
 enum CompetitionLevel {
     Preliminary
     SemiFinal
@@ -60,6 +65,19 @@ enum RoundCondition {
     LowerAndEqual
 }
 
+enum PlacementType {
+    First
+    Second
+    Third
+    Fourth
+    Gold
+    Silver
+    Bronze
+    Finalist
+    HonorableMention
+    Participation
+}
+// ========================== Repeat Configuration Related Enums ==========================
 enum RepeatFrequency {
     DontRepeat
     Daily
@@ -84,19 +102,6 @@ enum SessionBucketType {
     Custom
 }
 
-enum RepeatUnit {
-    Day
-    Week
-    Month
-    Year
-}
-
-enum RepeatEndType {
-    Never
-    OnDate
-    AfterCount
-}
-
 enum WeekDay {
     Mon
     Tue
@@ -114,7 +119,7 @@ enum MonthWeek {
     Fourth
     Last
 }
-
+// ========================== Session Related Enums ==========================
 enum SessionStatus {
     Unverified
     Published
@@ -123,34 +128,10 @@ enum SessionStatus {
     Cancelled
 }
 
+// ========================== Event Application Related Enums ==========================
 enum EventApplicationStatus {
     Pending
     Withdrawn
     Approved
     Rejected
-}
-
-enum AppliedResourceType {
-    Event
-    Program
-}
-
-enum UserAppliedStatus {
-    Pending
-    Withdrawn
-    Approved
-    Rejected
-}
-
-enum PlacementType {
-    First
-    Second
-    Third
-    Fourth
-    Gold
-    Silver
-    Bronze
-    Finalist
-    HonorableMention
-    Participation
 }

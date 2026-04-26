@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserAppliedStatus } from '../../../prisma/generated/enums';
+import { EventApplicationStatus } from '../../../prisma/generated/enums';
 
 const appliedIdParam = z.object({
   appliedId: z.string().min(1, 'appliedId is required'),
@@ -13,7 +13,7 @@ const getEventApplicationList = z.object({
   query: z.object({
     userId: z.string().min(1).optional(),
     eventId: z.string().min(1).optional(),
-    status: z.nativeEnum(UserAppliedStatus).optional(),
+    status: z.nativeEnum(EventApplicationStatus).optional(),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
     sortBy: z.string().optional(),
@@ -29,7 +29,7 @@ const updateEventApplication = z.object({
   params: appliedIdParam,
   body: z
     .object({
-      status: z.nativeEnum(UserAppliedStatus).optional(),
+      status: z.nativeEnum(EventApplicationStatus).optional(),
       note: z.string().max(2000).optional().nullable(),
     })
     .refine(data => Object.keys(data).length > 0, 'At least one field is required.'),

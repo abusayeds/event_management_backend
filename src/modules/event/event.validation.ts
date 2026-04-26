@@ -13,108 +13,99 @@ const eventIdParam = z.object({
   eventId: z.string().min(1, 'eventId is required'),
 });
 
-const mergeEventFormDataField = (raw: unknown) => {
-  if (typeof raw !== 'object' || raw === null) return raw;
-  const b = raw as Record<string, unknown>;
-  const parseJsonLikeField = (value: unknown) => {
-    if (typeof value !== 'string') return value;
-    const trimmed = value.trim();
-    if (!trimmed) return value;
-    try {
-      return JSON.parse(trimmed) as unknown;
-    } catch {
-      return value;
-    }
-  };
-  const normalizeRepeatConfig = (value: unknown) => {
-    if (!value || typeof value !== 'object') return value;
-    const rc = value as Record<string, unknown>;
-    return {
-      ...rc,
-      repeatFunction: rc.repeatFunction ?? rc.frequency,
-      repeatEvery: rc.repeatEvery ?? rc.interval,
-      repeatUnit: rc.repeatUnit ?? rc.unit,
-      daysOfWeek: rc.daysOfWeek ?? rc.weekDays,
-      dayOfMonth: rc.dayOfMonth ?? rc.monthDay,
-      weekOfMonth: rc.weekOfMonth ?? rc.monthWeek,
-      weekDay: rc.weekDay ?? rc.monthWeekDay,
-      startDate: rc.startDate ?? rc.startsOn,
-      untilDate: rc.untilDate ?? rc.endDate,
-    };
-  };
-  const normalizeEventSession = (value: unknown) => {
-    if (!value || typeof value !== 'object') return value;
-    const s = value as Record<string, unknown>;
-    const normalizeSessionType = (v: unknown): string | null => {
-      if (typeof v !== 'string') return null;
-      const t = v.trim().toLowerCase();
-      if (!t) return null;
-      if (t === 'daily') return 'Daily';
-      if (t === 'weekly') return 'Weekly';
-      if (t === 'monthly') return 'Monthly';
-      if (t === 'quarterly') return 'Quarterly';
-      if (t === 'yearly') return 'Yearly';
-      if (t === 'custom') return 'Custom';
-      return v.trim();
-    };
-    const mappedSession =
-      normalizeSessionType(s.session) ?? normalizeSessionType(s.sessionType);
-    const mappedSessionValue =
-      (s.sessionValue as string | undefined)?.trim() ||
-      (s.value as string | undefined)?.trim() ||
-      (s.label as string | undefined)?.trim() ||
-      null;
-    let mappedLevel =
-      (s.sessionLevel as string | undefined) ??
-      (s.sessionKey as string | undefined) ??
-      (s.sessionIdentifier as string | undefined);
-    if (!mappedLevel) {
-      const q = s.quarter ?? s.bucketQuarter;
-      const m = s.month ?? s.bucketMonth;
-      if (q != null && q !== '') mappedLevel = `Q${q}`;
-      else if (m != null && m !== '') mappedLevel = String(m);
-    }
-    if (!mappedLevel && typeof s.year === 'string' && mappedSessionValue) {
-      mappedLevel = `${s.year.trim()}-${mappedSessionValue}`;
-    }
-    return {
-      ...s,
-      ...(mappedSession ? { session: mappedSession } : {}),
-      ...(mappedSessionValue ? { sessionValue: mappedSessionValue } : {}),
-      sessionLevel: mappedLevel,
-    };
-  };
-  const normalizeEventSessionField = (value: unknown) => {
-    if (Array.isArray(value)) {
-      return value.length ? normalizeEventSession(value[0]) : undefined;
-    }
-    return normalizeEventSession(value);
-  };
-
-  if (typeof b.data === 'string' && b.data.trim()) {
-    try {
-      const parsed = JSON.parse(b.data) as Record<string, unknown>;
-      const { data: _omit, ...rest } = b;
-      return {
-        ...parsed,
-        ...rest,
-        repeatConfig: normalizeRepeatConfig(parseJsonLikeField(rest.repeatConfig)),
-        eventSession: normalizeEventSessionField(
-          parseJsonLikeField((rest as Record<string, unknown>).eventSession ?? rest.eventSessions)
-        ),
-        currentEventSession: parseJsonLikeField(rest.currentEventSession),
-      };
-    } catch {
-      return raw;
-    }
+const parseJsonLikeField = (value: unknown) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return value;
   }
+};
+
+const normalizeSessionType = (v: unknown): string | null => {
+  if (typeof v !== 'string') return null;
+  const t = v.trim().toLowerCase();
+  if (!t) return null;
+  if (t === 'daily') return 'Daily';
+  if (t === 'weekly') return 'Weekly';
+  if (t === 'monthly') return 'Monthly';
+  if (t === 'quarterly') return 'Quarterly';
+  if (t === 'yearly') return 'Yearly';
+  if (t === 'custom') return 'Custom';
+  return v.trim();
+};
+
+const normalizeRepeatConfig = (value: unknown) => {
+  if (!value || typeof value !== 'object') return value;
+  const rc = value as Record<string, unknown>;
   return {
-    ...b,
-    repeatConfig: normalizeRepeatConfig(parseJsonLikeField(b.repeatConfig)),
-    eventSession: normalizeEventSessionField(parseJsonLikeField(b.eventSession ?? b.eventSessions)),
-    currentEventSession: parseJsonLikeField(b.currentEventSession),
+    ...rc,
+    repeatFunction: rc.repeatFunction ?? rc.frequency,
+    startDate: rc.startDate ?? rc.startsOn,
   };
 };
+
+const normalizeEventSession = (value: unknown) => {
+  if (!value || typeof value !== 'object') return value;
+  const s = value as Record<string, unknown>;
+  const mappedSession = normalizeSessionType(s.session) ?? normalizeSessionType(s.sessionType);
+  const mappedSessionValue =
+    (s.sessionValue as string | undefined)?.trim() ||
+    (s.value as string | undefined)?.trim() ||
+    (s.label as string | undefined)?.trim() ||
+    null;
+  const mappedYear = typeof s.year === 'string' ? s.year.trim() : undefined;
+  let mappedLevel =
+    (s.sessionLevel as string | undefined)?.trim() ||
+    (s.sessionKey as string | undefined)?.trim() ||
+    (s.sessionIdentifier as string | undefined)?.trim();
+  if (!mappedLevel && mappedYear && mappedSessionValue) {
+    mappedLevel = `${mappedYear}-${mappedSessionValue}`;
+  }
+  return {
+    ...s,
+    ...(mappedSession ? { session: mappedSession } : {}),
+    ...(mappedSessionValue ? { sessionValue: mappedSessionValue } : {}),
+    ...(mappedLevel ? { sessionLevel: mappedLevel } : {}),
+  };
+};
+
+const normalizeEventSessionField = (value: unknown) => {
+  const parsed = parseJsonLikeField(value);
+  if (Array.isArray(parsed)) {
+    return parsed.map(item => normalizeEventSession(item));
+  }
+  return normalizeEventSession(parsed);
+};
+
+const mergeEventFormDataField = (raw: unknown) => {
+  if (typeof raw !== 'object' || raw === null) return raw;
+  const body = raw as Record<string, unknown>;
+
+  const parsedData =
+    typeof body.data === 'string' && body.data.trim()
+      ? (parseJsonLikeField(body.data) as Record<string, unknown>)
+      : null;
+
+  const { data: _omitData, ...rest } = body;
+  // Parsed payload should be the source of truth and should not be overwritten by duplicate form fields.
+  const merged = parsedData && typeof parsedData === 'object' ? { ...rest, ...parsedData } : rest;
+
+  const eventSessionSource =
+    (merged as Record<string, unknown>).eventSession ??
+    (merged as Record<string, unknown>).eventSessions;
+
+  return {
+    ...merged,
+    repeatConfig: normalizeRepeatConfig(parseJsonLikeField((merged as Record<string, unknown>).repeatConfig)),
+    eventSession: normalizeEventSessionField(eventSessionSource),
+    currentEventSession: parseJsonLikeField((merged as Record<string, unknown>).currentEventSession),
+  };
+};
+
+const nonNegativeNumber = z.coerce.number().finite().nonnegative();
 
 const repeatConfigBody = z
   .object({
@@ -127,10 +118,10 @@ const repeatConfigBody = z
 const eventRoundInput = z.object({
   roundType: z.nativeEnum(CompetitionLevel),
   deadline: z.coerce.date(),
-  cost: z.union([z.string(), z.number()]),
+  cost: nonNegativeNumber,
   hasFinalDeadline: z.boolean().optional(),
   finalDeadline: z.coerce.date().optional().nullable(),
-  lateFee: z.union([z.string(), z.number()]).optional(),
+  lateFee: nonNegativeNumber.optional(),
   description: z.string().max(2000).optional().nullable(),
 });
 
@@ -142,33 +133,49 @@ const eventGroupInput = z.object({
   rounds: z.array(eventRoundInput).optional(),
 });
 
+const baseEventSessionInput = z.object({
+  sessionId: z.string().min(1).optional(),
+  year: z.string().trim().min(2).max(16).optional(),
+  session: z.nativeEnum(SessionBucketType).optional(),
+  sessionValue: z.string().trim().min(1).max(120).optional(),
+  sessionLevel: z.string().trim().min(1).max(120).optional(),
+  competitionLevel: z.nativeEnum(CompetitionLevel),
+  eventType: z.nativeEnum(EventType),
+  registrationDate: z.coerce.date(),
+  deadline: z.coerce.date(),
+  cost: nonNegativeNumber,
+  hasFinalDeadline: z.boolean().optional(),
+  finalDeadline: z.coerce.date().optional().nullable(),
+  lateFee: nonNegativeNumber.optional(),
+  status: z.nativeEnum(SessionStatus).optional(),
+  isSharedToCommunity: z.boolean().optional(),
+  isUserAgreementAccepted: z.boolean().optional(),
+  groups: z.array(eventGroupInput).optional(),
+});
+
 const eventSessionInput = z
-  .object({
-    sessionId: z.string().min(1).optional(),
-    year: z.string().trim().min(2).max(16).optional(),
-    session: z.nativeEnum(SessionBucketType).optional(),
-    sessionValue: z.string().trim().min(1).max(120).optional(),
-    sessionLevel: z.string().trim().min(1).max(120).optional(),
-    competitionLevel: z.nativeEnum(CompetitionLevel),
-    eventType: z.nativeEnum(EventType),
-    registrationDate: z.coerce.date(),
-    deadline: z.coerce.date(),
-    cost: z.union([z.string(), z.number()]),
-    hasFinalDeadline: z.boolean().optional(),
-    finalDeadline: z.coerce.date().optional().nullable(),
-    lateFee: z.union([z.string(), z.number()]).optional(),
-    status: z.nativeEnum(SessionStatus).optional(),
-    isSharedToCommunity: z.boolean().optional(),
-    isUserAgreementAccepted: z.boolean().optional(),
-    groups: z.array(eventGroupInput).optional(),
-  })
+  .union([
+    baseEventSessionInput,
+    z
+      .array(baseEventSessionInput)
+      .length(1, 'eventSession must be a single object (or a one-item array).')
+      .transform(arr => arr[0]),
+  ])
   .superRefine((val, ctx) => {
     const hasSessionId = Boolean(val.sessionId);
-    const hasNewSession = Boolean(val.year);
-    if (hasSessionId && hasNewSession) {
+    const hasYear = Boolean(val.year?.trim());
+    if (hasSessionId && hasYear) {
       ctx.addIssue({
         code: 'custom',
+        path: ['sessionId'],
         message: 'eventSession cannot include both sessionId and year together.',
+      });
+    }
+    if (!hasSessionId && !hasYear) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['year'],
+        message: 'Either sessionId or year is required in eventSession.',
       });
     }
   });
@@ -225,23 +232,9 @@ const createEventBodySchema = z
       if (!data.eventSession.sessionLevel?.trim()) {
         ctx.addIssue({
           code: 'custom',
-          path: ['eventSession'],
+          path: ['eventSession', 'sessionLevel'],
           message: 'sessionLevel is required when repeatFunction is DontRepeat.',
         });
-      }
-      if (
-        data.eventSession.year?.trim() &&
-        data.eventSession.sessionValue?.trim() &&
-        data.eventSession.sessionLevel?.trim()
-      ) {
-        const expected = `${data.eventSession.year.trim()}-${data.eventSession.sessionValue.trim()}`;
-        if (data.eventSession.sessionLevel.trim() !== expected) {
-          ctx.addIssue({
-            code: 'custom',
-            path: ['eventSession', 'sessionLevel'],
-            message: `sessionLevel must be ${expected} when repeatFunction is DontRepeat.`,
-          });
-        }
       }
       return;
     }
@@ -312,10 +305,10 @@ const updateCurrentEventSessionBody = z.object({
   eventType: z.nativeEnum(EventType).optional(),
   registrationDate: z.coerce.date().optional(),
   deadline: z.coerce.date().optional(),
-  cost: z.union([z.string(), z.number()]).optional(),
+  cost: nonNegativeNumber.optional(),
   hasFinalDeadline: z.boolean().optional(),
   finalDeadline: z.coerce.date().optional().nullable(),
-  lateFee: z.union([z.string(), z.number()]).optional(),
+  lateFee: nonNegativeNumber.optional(),
   status: z.nativeEnum(SessionStatus).optional(),
   isSharedToCommunity: z.boolean().optional(),
   isUserAgreementAccepted: z.boolean().optional(),

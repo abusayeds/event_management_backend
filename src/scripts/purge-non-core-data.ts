@@ -32,7 +32,7 @@ const runPurge = async () => {
       deleted.familyMember = await tx.familyMember.deleteMany();
       deleted.family = await tx.family.deleteMany();
       deleted.connection = await tx.connection.deleteMany();
-      deleted.userApplied = await tx.userApplied.deleteMany();
+      deleted.eventApplied = await tx.eventApplied.deleteMany();
 
       return deleted;
     });

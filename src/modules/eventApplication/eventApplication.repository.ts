@@ -1,5 +1,5 @@
 import { Prisma } from '../../../prisma/generated/client';
-import { AppliedResourceType, UserAppliedStatus } from '../../../prisma/generated/enums';
+import { EventApplicationStatus } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import {
   createPaginationQuery,
@@ -18,8 +18,7 @@ import {
 export const eventApplicationSelect = {
   id: true,
   userId: true,
-  resourceType: true,
-  resourceId: true,
+  eventId: true,
   status: true,
   note: true,
   createdAt: true,
@@ -37,13 +36,12 @@ export const eventApplicationSelect = {
 
 const SORT_FIELDS = new Set(['createdAt', 'updatedAt', 'status']);
 
-// Create an event application row in user_applied (resourceType is always Event).
+// Create an event application row in event_applied.
 const createEventApplication = async (userId: string, payload: ICreateEventApplicationPayload) => {
-  return database.userApplied.create({
+  return database.eventApplied.create({
     data: {
       userId,
-      resourceType: AppliedResourceType.Event,
-      resourceId: payload.eventId,
+      eventId: payload.eventId,
       note: payload.note ?? null,
     },
     select: eventApplicationSelect,
@@ -52,7 +50,7 @@ const createEventApplication = async (userId: string, payload: ICreateEventAppli
 
 // Full row for GET by id (soft-deleted rows excluded).
 const getEventApplicationById = async (id: string) => {
-  return database.userApplied.findFirst({
+  return database.eventApplied.findFirst({
     where: { id, deletedAt: null },
     select: eventApplicationSelect,
   });
@@ -60,7 +58,7 @@ const getEventApplicationById = async (id: string) => {
 
 // Minimal row for auth checks before update/delete.
 const getEventApplicationBare = async (id: string) => {
-  return database.userApplied.findFirst({
+  return database.eventApplied.findFirst({
     where: { id, deletedAt: null },
     select: { id: true, userId: true, status: true },
   });
@@ -74,32 +72,31 @@ const getEventApplicationList = async (
   const pagination = parsePaginationOptions(options);
   const sortField = SORT_FIELDS.has(pagination.sortBy) ? pagination.sortBy : 'createdAt';
   const { skip, take } = createPaginationQuery({ ...pagination, sortBy: sortField });
-  const orderBy = { [sortField]: pagination.sortOrder } as Prisma.UserAppliedOrderByWithRelationInput;
+  const orderBy = { [sortField]: pagination.sortOrder } as Prisma.EventAppliedOrderByWithRelationInput;
 
-  const where: Prisma.UserAppliedWhereInput = {
+  const where: Prisma.EventAppliedWhereInput = {
     deletedAt: null,
-    resourceType: AppliedResourceType.Event,
   };
 
   if (filters.userId) {
     where.userId = filters.userId;
   }
   if (filters.eventId) {
-    where.resourceId = filters.eventId;
+    where.eventId = filters.eventId;
   }
   if (filters.status) {
     where.status = filters.status;
   }
 
   const [data, total] = await Promise.all([
-    database.userApplied.findMany({
+    database.eventApplied.findMany({
       where,
       select: eventApplicationSelect,
       skip,
       take,
       orderBy,
     }),
-    database.userApplied.count({ where }),
+    database.eventApplied.count({ where }),
   ]);
 
   return createPaginationResult(data, total, pagination);
@@ -107,11 +104,11 @@ const getEventApplicationList = async (
 
 // Patch status and/or note (same select shape as list).
 const updateEventApplicationById = async (id: string, payload: IUpdateEventApplicationPayload) => {
-  const data: Prisma.UserAppliedUpdateInput = {};
+  const data: Prisma.EventAppliedUpdateInput = {};
   if (payload.status !== undefined) data.status = payload.status;
   if (payload.note !== undefined) data.note = payload.note;
 
-  return database.userApplied.update({
+  return database.eventApplied.update({
     where: { id },
     data,
     select: eventApplicationSelect,
@@ -120,7 +117,7 @@ const updateEventApplicationById = async (id: string, payload: IUpdateEventAppli
 
 // Soft delete for user-initiated "remove" from the list.
 const softDeleteEventApplication = async (id: string) => {
-  return database.userApplied.update({
+  return database.eventApplied.update({
     where: { id },
     data: { deletedAt: new Date() },
     select: { id: true, deletedAt: true },
@@ -129,11 +126,10 @@ const softDeleteEventApplication = async (id: string) => {
 
 // Read one event-application row by event+user (used by apply/withdraw by event route).
 const getEventApplicationByEventIdAndUserId = async (eventId: string, userId: string) => {
-  return database.userApplied.findFirst({
+  return database.eventApplied.findFirst({
     where: {
       userId,
-      resourceType: AppliedResourceType.Event,
-      resourceId: eventId,
+      eventId,
       deletedAt: null,
     },
     select: eventApplicationSelect,
@@ -142,11 +138,10 @@ const getEventApplicationByEventIdAndUserId = async (eventId: string, userId: st
 
 // Read including soft-deleted row (used to revive a previously deleted application).
 const getAnyEventApplicationByEventIdAndUserId = async (eventId: string, userId: string) => {
-  return database.userApplied.findFirst({
+  return database.eventApplied.findFirst({
     where: {
       userId,
-      resourceType: AppliedResourceType.Event,
-      resourceId: eventId,
+      eventId,
     },
     select: { id: true, status: true, deletedAt: true },
   });
@@ -154,11 +149,11 @@ const getAnyEventApplicationByEventIdAndUserId = async (eventId: string, userId:
 
 // Restore a soft-deleted application back to Pending.
 const reviveEventApplication = async (id: string, note?: string | null) => {
-  return database.userApplied.update({
+  return database.eventApplied.update({
     where: { id },
     data: {
       deletedAt: null,
-      status: UserAppliedStatus.Pending,
+      status: EventApplicationStatus.Pending,
       ...(note !== undefined ? { note } : {}),
     },
     select: eventApplicationSelect,

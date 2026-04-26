@@ -1,4 +1,4 @@
-import { UserAppliedStatus } from '../../../prisma/generated/enums';
+import { EventApplicationStatus } from '../../../prisma/generated/enums';
 
 /** Create payload for event apply only. */
 export interface ICreateEventApplicationPayload {
@@ -6,9 +6,9 @@ export interface ICreateEventApplicationPayload {
   note?: string | null;
 }
 
-/** Allowed PATCH fields on `UserApplied` (rules enforced in service for non-admins). */
+/** Allowed PATCH fields on `EventApplied` (rules enforced in service for non-admins). */
 export interface IUpdateEventApplicationPayload {
-  status?: UserAppliedStatus;
+  status?: EventApplicationStatus;
   note?: string | null;
 }
 
@@ -16,5 +16,5 @@ export interface IUpdateEventApplicationPayload {
 export interface IEventApplicationFilters {
   userId?: string;
   eventId?: string;
-  status?: UserAppliedStatus;
+  status?: EventApplicationStatus;
 }

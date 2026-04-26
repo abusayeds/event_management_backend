@@ -1,19 +1,18 @@
-model UserApplied {
-    id           String              @id @default(uuid())
-    userId       String
-    user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-    resourceType AppliedResourceType
-    resourceId   String
-    status       UserAppliedStatus   @default(Pending)
-    note         String?
+model EventApplied {
+    id      String                 @id @default(uuid())
+    userId  String
+    user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    eventId String
+    event   Event                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    status  EventApplicationStatus @default(Pending)
+    note    String?
 
     deletedAt DateTime?
     createdAt DateTime  @default(now())
     updatedAt DateTime  @updatedAt
 
-    @@unique([userId, resourceType, resourceId])
+    @@unique([userId, eventId])
     @@index([userId])
-    @@index([resourceType, resourceId])
     @@index([status])
-    @@map("user_applied")
+    @@map("user_applieds")
 }
