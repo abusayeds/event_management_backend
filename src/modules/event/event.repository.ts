@@ -1,6 +1,5 @@
 import { Prisma } from '../../../prisma/generated/client';
 import {
-  PlacementType,
   RepeatFrequency,
   SessionStatus,
 } from '../../../prisma/generated/enums';
@@ -21,7 +20,6 @@ import {
   IUpdateCurrentEventSessionPayload,
 } from './event.interface';
 import {
-  addUtcDays,
   buildSessionIdentifier,
   defaultSessionBucketFormat,
   endOfUtcDay,
@@ -243,6 +241,7 @@ type EventSessionForActiveRow = Prisma.EventSessionGetPayload<{
   select: typeof eventSessionForActivePickSelect;
 }>;
 
+// Internal helper: loads EventSession rows for many events (used to compute `activeSession` on list/feed responses).
 async function sessionsByEventIdMap(eventIds: string[]) {
   const map = new Map<string, EventSessionForActiveRow[]>();
   if (!eventIds.length) return map;
@@ -259,6 +258,7 @@ async function sessionsByEventIdMap(eventIds: string[]) {
   return map;
 }
 
+// Internal helper: attaches `activeSession` to list rows (GET /events + feed endpoints).
 async function attachActiveSessions<T extends { id: string }>(events: T[]) {
   const map = await sessionsByEventIdMap(events.map(e => e.id));
   return events.map(e => ({
@@ -270,6 +270,7 @@ async function attachActiveSessions<T extends { id: string }>(events: T[]) {
   }));
 }
 
+// POST /events
 const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
   const coverImage = payload.coverImage?.trim();
   if (!coverImage) {
@@ -394,6 +395,7 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
   });
 };
 
+// GET /events/:eventId
 const getEventById = async (id: string) => {
   const event = await database.event.findFirst({
     where: { id, deletedAt: null },
@@ -478,6 +480,7 @@ const getEventById = async (id: string) => {
   };
 };
 
+// Internal: minimal event row for auth / guard checks (used by multiple service methods).
 const getEventBare = async (id: string) => {
   return database.event.findFirst({
     where: { id, deletedAt: null },
@@ -526,6 +529,7 @@ const eventAuditSnapshotSelect = {
   },
 } as const;
 
+// Internal: snapshot for EditLog diffing on PATCH /events/:eventId (before/after comparison).
 const getEventAuditSnapshot = async (id: string) => {
   return database.event.findFirst({
     where: { id, deletedAt: null },
@@ -535,6 +539,7 @@ const getEventAuditSnapshot = async (id: string) => {
 
 export type EventAuditSnapshot = NonNullable<Awaited<ReturnType<typeof getEventAuditSnapshot>>>;
 
+// Internal: persists edit history rows (written from EventService.updateEvent when changes are detected).
 const createEditLog = async (input: {
   eventId: string;
   version: number;
@@ -554,6 +559,7 @@ const createEditLog = async (input: {
   });
 };
 
+// GET /events
 const getEvents = async (
   filters: IEventFilters,
   options: PaginationOptions
@@ -624,6 +630,7 @@ const getEvents = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
+// GET /events/feed/active
 const getActiveEvents = async (
   options: PaginationOptions,
   price?: IFeedPriceFilters
@@ -657,6 +664,7 @@ const getActiveEvents = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
+// GET /events/feed/upcoming
 const getUpcomingEvents = async (
   options: PaginationOptions,
   price?: IFeedPriceFilters
@@ -693,6 +701,7 @@ const getUpcomingEvents = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
+// GET /events/feed/today
 const getFeedToday = async (
   options: PaginationOptions,
   price?: IFeedPriceFilters
@@ -730,6 +739,7 @@ const getFeedToday = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
+// GET /events/feed/history
 const getFeedHistory = async (
   options: PaginationOptions,
   price?: IFeedPriceFilters
@@ -760,6 +770,7 @@ const getFeedHistory = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
+// PATCH /events/:eventId (updates the `events` row; service may also update related tables)
 const updateEventById = async (id: string, data: Record<string, unknown>) => {
   return database.event.update({
     where: { id },
@@ -768,6 +779,7 @@ const updateEventById = async (id: string, data: Record<string, unknown>) => {
   });
 };
 
+// PATCH /events/:eventId (body.currentEventSession) — updates the single `event_sessions` row for this event.
 const updateCurrentEventSessionForEvent = async (
   eventId: string,
   patch: IUpdateCurrentEventSessionPayload
@@ -833,6 +845,7 @@ const updateCurrentEventSessionForEvent = async (
   return withEventSessionCostEstimation(updated);
 };
 
+// PATCH /events/:eventId (body.repeatConfig) — upserts `repeat_configs` for this event.
 const upsertRepeatConfig = async (eventId: string, input: IRepeatConfigInput) => {
   const fields = repeatConfigFields(input);
   return database.repeatConfig.upsert({
@@ -842,10 +855,12 @@ const upsertRepeatConfig = async (eventId: string, input: IRepeatConfigInput) =>
   });
 };
 
+// PATCH /events/:eventId (body.repeatConfig=null) — deletes `repeat_configs` for this event.
 const deleteRepeatConfigByEventId = async (eventId: string) => {
   return database.repeatConfig.deleteMany({ where: { eventId } });
 };
 
+// DELETE /events/:eventId
 const softDeleteEvent = async (id: string) => {
   return database.event.update({
     where: { id },
@@ -854,6 +869,7 @@ const softDeleteEvent = async (id: string) => {
   });
 };
 
+// POST /events/:eventId/verify — publishes the event’s single `event_sessions` row when it is Unverified.
 const verifyCurrentSessionForEvent = async (eventId: string) => {
   const current = await database.eventSession.findFirst({
     where: { eventId },
@@ -879,6 +895,7 @@ const verifyCurrentSessionForEvent = async (eventId: string) => {
   return withEventSessionCostEstimation(updated);
 };
 
+// Internal: validation helper for POST /events (programId must exist).
 const programExists = async (programId: string) => {
   return database.program.findFirst({
     where: { id: programId, isDeleted: false },
@@ -886,6 +903,7 @@ const programExists = async (programId: string) => {
   });
 };
 
+// Internal: validation helper for POST /events when linking an existing `sessions` row via eventSession.sessionId.
 const sessionsExist = async (sessionIds: string[]) => {
   const unique = [...new Set(sessionIds)];
   const rows = await database.session.findMany({

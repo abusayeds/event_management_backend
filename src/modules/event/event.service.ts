@@ -18,6 +18,7 @@ import {
 } from './event.helpers';
 import { EventRepository } from './event.repository';
 
+// POST /events
 const createEvent = async (
   userId: string,
   payload: ICreateEventPayload,
@@ -64,26 +65,32 @@ const createEvent = async (
   }
 };
 
+// GET /events
 const getEvents = async (filters: IEventFilters, options: PaginationOptions) => {
   return EventRepository.getEvents(filters, options);
 };
 
+// GET /events/feed/active
 const getActiveEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
   return EventRepository.getActiveEvents(options, price);
 };
 
+// GET /events/feed/upcoming
 const getUpcomingEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
   return EventRepository.getUpcomingEvents(options, price);
 };
 
+// GET /events/feed/today
 const getTodayEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
   return EventRepository.getFeedToday(options, price);
 };
 
+// GET /events/feed/history
 const getHistoryEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
   return EventRepository.getFeedHistory(options, price);
 };
 
+// GET /events/:eventId
 const getEventById = async (id: string) => {
   const event = await EventRepository.getEventById(id);
   if (!event) {
@@ -94,6 +101,7 @@ const getEventById = async (id: string) => {
   return { ...rest, eventSession: pickedEventSession };
 };
 
+// PATCH /events/:eventId (also writes EditLog when tracked fields change)
 const updateEvent = async (
   eventId: string,
   userId: string,
@@ -226,6 +234,7 @@ const updateEvent = async (
   }
 };
 
+// DELETE /events/:eventId
 const deleteEvent = async (eventId: string, userId: string, role: UserRole) => {
   const existing = await EventRepository.getEventBare(eventId);
   if (!existing) {
@@ -240,6 +249,7 @@ const deleteEvent = async (eventId: string, userId: string, role: UserRole) => {
   return EventRepository.softDeleteEvent(eventId);
 };
 
+// POST /events/:eventId/verify
 const verifyEvent = async (eventId: string, userId: string) => {
   const existing = await EventRepository.getEventBare(eventId);
   if (!existing) {

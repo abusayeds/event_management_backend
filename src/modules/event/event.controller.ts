@@ -7,6 +7,7 @@ import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
 import { EventService } from './event.service';
 
+// POST /events
 const createEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
   const result = await EventService.createEvent(userId, req.body, req.file);
@@ -19,6 +20,7 @@ const createEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   });
 });
 
+// GET /events
 const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const filters = pick(req.query, [
     'search',
@@ -45,6 +47,7 @@ const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
   });
 });
 
+// GET /events/feed/active
 const getActiveEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
@@ -59,6 +62,7 @@ const getActiveEvents = asyncHandler(async (req: AuthenticatedRequest, res: Resp
   });
 });
 
+// GET /events/feed/upcoming
 const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
@@ -73,6 +77,7 @@ const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Re
   });
 });
 
+// GET /events/feed/today
 const getTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
@@ -87,6 +92,7 @@ const getTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Respo
   });
 });
 
+// GET /events/feed/history
 const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
@@ -101,6 +107,7 @@ const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Res
   });
 });
 
+// GET /events/:eventId
 const getEventById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const result = await EventService.getEventById(req.params.eventId as string);
 
@@ -112,6 +119,7 @@ const getEventById = asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 });
 
+// PATCH /events/:eventId
 const updateEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
   const result = await EventService.updateEvent(
@@ -129,6 +137,7 @@ const updateEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   });
 });
 
+// DELETE /events/:eventId
 const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
   const role = req.user!.role as UserRole;
@@ -142,6 +151,7 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   });
 });
 
+// POST /events/:eventId/verify
 const verifyEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
   const result = await EventService.verifyEvent(req.params.eventId as string, userId);
