@@ -149,3 +149,26 @@ enum SettingsPageKey {
   PrivacyPolicy
   TermsCondition
 }
+
+enum DonationPlatform {
+  IOS
+  ANDROID
+}
+
+enum DonationType {
+  OneTime
+  Monthly
+}
+
+enum DonationProvider {
+  Stripe
+  Apple
+  Google
+}
+
+enum DonationPaymentStatus {
+  Pending
+  Succeeded
+  Failed
+  Refunded
+}

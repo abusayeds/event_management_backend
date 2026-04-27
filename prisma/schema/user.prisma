@@ -36,6 +36,7 @@ model User {
   eventsLastEdited    Event[]             @relation("EventLastEditor")
   eventEditLogs       EditLog[]
   eventApplieds       EventApplied[]
+  donations           DonationTransaction[]
 
   @@index([createdByOwner])
   @@map("users")

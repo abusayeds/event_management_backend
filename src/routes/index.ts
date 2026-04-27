@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuthRoutes } from '../modules/auth/auth.routes';
 import { CategoryRoutes } from '../modules/category/category.routes';
 import { ConnectionRoutes } from '../modules/connection/connection.routes';
+import { DonationRoutes } from '../modules/donation/donation.routes';
 import { EventRoutes } from '../modules/event/event.routes';
 import { FamilyRoutes } from '../modules/family/family.routes';
 import { FamilyMemberRoutes } from '../modules/familyMember/familyMember.routes';
@@ -26,6 +27,7 @@ router.get('/health', (req, res) => {
 router.use('/auth', AuthRoutes);
 router.use('/categories', CategoryRoutes);
 router.use('/connections', ConnectionRoutes);
+router.use('/donations', DonationRoutes);
 router.use('/subcategories', SubcategoryRoutes);
 router.use('/programs', ProgramRoutes);
 router.use('/settings', SettingsRoutes);

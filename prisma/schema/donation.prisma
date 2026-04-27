@@ -1,0 +1,21 @@
+model DonationTransaction {
+  id                  String                @id @default(uuid())
+  userId              String
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider            DonationProvider      @default(Stripe)
+  providerTransactionId String?
+  donationType        DonationType          @default(OneTime)
+  amount              Decimal               @db.Decimal(12, 2)
+  currency            String                @default("USD")
+  note                String?
+  paymentStatus       DonationPaymentStatus @default(Pending)
+  verifiedAt          DateTime?
+  rawPayload          Json?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([provider, providerTransactionId])
+  @@index([paymentStatus])
+  @@map("donation_transactions")
+}
