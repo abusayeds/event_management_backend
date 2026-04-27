@@ -107,7 +107,14 @@ export interface IUpdateEventPayload {
   /** When true, sets this event’s `isVerified` to true (idempotent). */
   isVerified?: boolean;
   repeatConfig?: IRepeatConfigInput | null;
-  currentSchedule?: IUpdateCurrentSchedulePayload;
+  sessionId?: string;
+  year?: string;
+  session?: SessionBucketType | null;
+  sessionValue?: string | null;
+  sessionLevel?: string | null;
+  /** Partial `EventSchedule` patch (same fields as create `schedule`). */
+  schedule?: IUpdateCurrentSchedulePayload;
+  groups?: IEventGroupInput[];
 }
 
 export interface IEventFilters {

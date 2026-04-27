@@ -226,7 +226,6 @@ export const eventListSelect = {
   createdAt: true,
   updatedAt: true,
   sessionId: true,
-  catalogSession: { select: sessionIncludeWithYearLevel },
   program: { select: { id: true, name: true, imageUrl: true } },
 } as const;
 
@@ -267,16 +266,13 @@ async function schedulesByEventIdMap(eventIds: string[]) {
   return map;
 }
 
-export async function attachActiveSchedules<
-  T extends { id: string; catalogSession?: unknown },
->(events: T[]) {
+export async function attachActiveSchedules<T extends { id: string }>(events: T[]) {
   const map = await schedulesByEventIdMap(events.map(e => e.id));
   return events.map(e => ({
     ...e,
     schedule: (() => {
       const picked = pickActiveScheduleForEvent(map.get(e.id) ?? []);
-      if (!picked) return null;
-      return { ...picked, catalogSession: e.catalogSession };
+      return picked ?? null;
     })(),
   }));
 }

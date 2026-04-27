@@ -11,7 +11,17 @@ import {
 
 const nonNegativeNumber = z.coerce.number().finite().nonnegative();
 
-/** Multipart: `body.data` JSON merge into body (optional). */
+const tryParseJsonString = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return value;
+  }
+};
+
 const mergeFormDataJson = (raw: unknown): unknown => {
   if (typeof raw !== 'object' || raw === null) return raw;
   const b = raw as Record<string, unknown>;
@@ -23,14 +33,21 @@ const mergeFormDataJson = (raw: unknown): unknown => {
     return raw;
   }
 };
+const parseKnownJsonFields = (input: Record<string, unknown>): Record<string, unknown> => {
+  const out = { ...input };
+  out.repeatConfig = tryParseJsonString(out.repeatConfig);
+  out.schedule = tryParseJsonString(out.schedule);
+  out.groups = tryParseJsonString(out.groups);
+  out.currentEventSession = tryParseJsonString(out.currentEventSession);
+  return out;
+};
 
-/** Purono payload: catalog/group/flag `schedule` er vitore thakle root e tulbo (Prisma `Event` moto). */
 const mergeAndHoistCreateBody = (raw: unknown): unknown => {
   const merged = mergeFormDataJson(raw);
   if (typeof merged !== 'object' || merged === null) return merged;
-  const b = merged as Record<string, unknown>;
+  const b = parseKnownJsonFields(merged as Record<string, unknown>);
   const sch = b.schedule;
-  if (!sch || typeof sch !== 'object' || Array.isArray(sch)) return merged;
+  if (!sch || typeof sch !== 'object' || Array.isArray(sch)) return b;
   const s = { ...(sch as Record<string, unknown>) };
   const hoist = [
     'sessionId',
@@ -49,6 +66,46 @@ const mergeAndHoistCreateBody = (raw: unknown): unknown => {
     }
   }
   b.schedule = s;
+  return b;
+};
+
+const mergeAndHoistUpdateBody = (raw: unknown): unknown => {
+  const merged = mergeFormDataJson(raw);
+  if (typeof merged !== 'object' || merged === null) return merged;
+  const b = parseKnownJsonFields(merged as Record<string, unknown>);
+  const legacy = b.currentEventSession;
+  if (legacy !== undefined) {
+    const cur =
+      typeof b.schedule === 'object' && b.schedule !== null && !Array.isArray(b.schedule)
+        ? { ...(b.schedule as Record<string, unknown>) }
+        : {};
+    const leg =
+      typeof legacy === 'object' && legacy !== null && !Array.isArray(legacy)
+        ? (legacy as Record<string, unknown>)
+        : {};
+    b.schedule = { ...cur, ...leg };
+  }
+  const sch = b.schedule;
+  if (sch && typeof sch === 'object' && !Array.isArray(sch)) {
+    const s = { ...(sch as Record<string, unknown>) };
+    const hoist = [
+      'sessionId',
+      'year',
+      'session',
+      'sessionValue',
+      'sessionLevel',
+      'groups',
+      'isSharedToCommunity',
+      'isUserAgreementAccepted',
+    ] as const;
+    for (const k of hoist) {
+      if (b[k] === undefined && s[k] !== undefined) {
+        b[k] = s[k];
+        delete s[k];
+      }
+    }
+    b.schedule = s;
+  }
   return b;
 };
 
@@ -154,13 +211,13 @@ const getEventsValidationSchema = z.object({
 const getEventsByFamilyRelationValidationSchema = z.object({
   query: z.object({
     relationShip: z.nativeEnum(FamilyRelationShip),
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+    priceMin: z.string().optional(),
+    priceMax: z.string().optional(),
   }),
-  page: z.coerce.number().int().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-  sortBy: z.string().optional(),
-  sortOrder: z.enum(['asc', 'desc']).optional(),
-  priceMin: z.string().optional(),
-  priceMax: z.string().optional(),
 });
 
 const getTodayEventsValidationSchema = z.object({
@@ -174,17 +231,19 @@ const getTodayEventsValidationSchema = z.object({
   }),
 });
 
-const getUpcomingEventsValidationSchema = z.object({  
+const getUpcomingEventsValidationSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
     sortBy: z.string().optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
+    priceMin: z.string().optional(),
+    priceMax: z.string().optional(),
   }),
 });
+
 const getHistoryEventsValidationSchema = z.object({
   query: z.object({
-    relationShip: z.nativeEnum(FamilyRelationShip),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
     sortBy: z.string().optional(),
@@ -198,36 +257,44 @@ const getEventByIdValidationSchema = z.object({
   params: eventIdParamsValidationSchema,
 });
 
-// ── PATCH /events/:eventId (body) ─────────────────────────────────────────
+// ── PATCH /events/:eventId (body) — same sections as create, fields optional / partial where needed ─
+
+const eventSchedulePatchValidationSchema = eventScheduleValidationSchema.partial();
 
 const updateEventBodyValidationSchema = z.object({
-  eventName: z.string().trim().optional(),
+  // Basic event info
+  eventName: z.string().trim().min(1).max(200).optional(),
   coverImage: z.string().min(1).optional(),
   programId: z.string().min(1).optional(),
-  organizer: z.string().trim().optional(),
+  organizer: z.string().trim().min(1).max(200).optional(),
   location: z.string().trim().max(300).optional().nullable(),
   eventPortal: z.string().min(1).optional(),
   registrationPortal: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
   note: z.string().max(2000).optional().nullable(),
   isPublished: z.coerce.boolean().optional(),
+  isActive: z.coerce.boolean().optional(),
+  isVerified: z.coerce.boolean().optional(),
+  // Repeat
   repeatConfig: repeatConfigValidationSchema.optional(),
+  // Session
   sessionId: z.string().min(1).optional(),
   year: z.string().trim().min(2).max(16).optional(),
   session: z.nativeEnum(SessionBucketType).optional(),
   sessionValue: z.string().trim().min(1).max(120).optional(),
   sessionLevel: z.string().trim().min(1).max(120).optional(),
-  schedule: eventScheduleValidationSchema.optional(),
+  // EventSchedule patch (same shape as create `schedule`, partial)
+  schedule: eventSchedulePatchValidationSchema.optional(),
+  // Event.groups
   groups: z.array(eventGroupValidationSchema).optional(),
+  // Community
   isSharedToCommunity: z.coerce.boolean().optional(),
   isUserAgreementAccepted: z.coerce.boolean().optional(),
-  isActive: z.coerce.boolean().optional(),
-  isVerified: z.coerce.boolean().optional(),
 });
 
 const updateEventValidationSchema = z.object({
   params: eventIdParamsValidationSchema,
-  body: z.preprocess(mergeFormDataJson, updateEventBodyValidationSchema),
+  body: z.preprocess(mergeAndHoistUpdateBody, updateEventBodyValidationSchema),
 });
 
 const deleteEventValidationSchema = z.object({

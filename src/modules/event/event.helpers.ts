@@ -91,8 +91,8 @@ export function diffEventForEditLog(args: {
   }
 
   if (args.sessionPatchRequested) {
-    changedFields.push('currentSchedule');
-    previousValues.currentSchedule = args.before.schedule ?? null;
+    changedFields.push('schedule');
+    previousValues.schedule = args.before.schedule ?? null;
   }
 
   if (!changedFields.length) return null;
@@ -200,7 +200,7 @@ export function priceRangeOnSchedule(
   return Object.keys(cost).length ? { cost } : null;
 }
 
-export function hasCurrentSchedulePatchBody(
+export function hasSchedulePatchBody(
   body: IUpdateCurrentSchedulePayload | undefined
 ): body is IUpdateCurrentSchedulePayload {
   return Boolean(body && typeof body === 'object' && Object.keys(body).length > 0);

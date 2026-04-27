@@ -1,0 +1,14 @@
+{
+  "year": "2026",
+  "session": "Yearly",
+  "sessionValue": "Year",
+  "sessionLevel": "2026",
+  "competitionLevel": "Preliminary",
+  "eventType": "Online",
+  "registrationDate": "2026-04-30T00:00:00.000Z",
+  "deadline": "2026-05-10T23:59:59.000Z",
+  "cost": "500",
+  "hasFinalDeadline": false,
+  "finalDeadline": null,
+  "lateFee": "0"
+}

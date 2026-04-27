@@ -13,7 +13,7 @@ import {
 } from './event.interface';
 import {
   diffEventForEditLog,
-  hasCurrentSchedulePatchBody,
+  hasSchedulePatchBody,
   pickScheduleForDetail,
 } from './event.helpers';
 import { FamilyMemberRepository } from '../familyMember/familyMember.repository';
@@ -151,6 +151,13 @@ const updateEvent = async (
     }
   }
 
+  if (payload.sessionId?.trim()) {
+    const ok = await EventRepository.sessionsExist([payload.sessionId]);
+    if (!ok) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'sessionId is invalid.');
+    }
+  }
+
   let uploadedCoverUrl: string | undefined;
   if (file) {
     const uploaded = await uploadSingleFileToS3(file, 'events');
@@ -161,19 +168,32 @@ const updateEvent = async (
     ? { ...payload, coverImage: uploadedCoverUrl }
     : payload;
 
-  const { repeatConfig, currentSchedule, isVerified: verifyRequest, ...rest } = mergedPayload;
+  const {
+    repeatConfig,
+    schedule,
+    isVerified: verifyRequest,
+    year: _omitYear,
+    session: _omitSession,
+    sessionValue: _omitSessionValue,
+    sessionLevel: _omitSessionLevel,
+    groups: _omitGroups,
+    ...rest
+  } = mergedPayload;
+
+  const schedulePatch = schedule;
+
   const cleaned = Object.fromEntries(
     Object.entries(rest).filter(([, value]) => value !== undefined)
   ) as Record<string, unknown>;
 
-  const hasSessionPatch = hasCurrentSchedulePatchBody(currentSchedule);
+  const hasSessionPatch = hasSchedulePatchBody(schedulePatch);
   const hasScalarUpdate = Object.keys(cleaned).length > 0;
   const hasRepeatUpdate = repeatConfig !== undefined;
   const hasVerifyRequest = verifyRequest === true;
   if (!hasScalarUpdate && !hasRepeatUpdate && !file && !hasSessionPatch && !hasVerifyRequest) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'At least one field (including isSharedToCommunity / isUserAgreementAccepted), repeatConfig, currentSchedule, isVerified, or a cover image file is required to update an event.'
+      'At least one field, repeatConfig, schedule, isVerified, or a cover image file is required to update an event.'
     );
   }
 
@@ -197,11 +217,8 @@ const updateEvent = async (
       }
     }
 
-    if (hasSessionPatch && currentSchedule) {
-      const scheduleRow = await EventRepository.updateCurrentScheduleForEvent(
-        eventId,
-        currentSchedule
-      );
+    if (hasSessionPatch && schedulePatch) {
+      const scheduleRow = await EventRepository.updateCurrentScheduleForEvent(eventId, schedulePatch);
       if (!scheduleRow) {
         throw new ApiError(
           StatusCodes.BAD_REQUEST,

@@ -266,16 +266,6 @@ const getEventById = async (id: string) => {
       isActive: true,
       isVerified: true,
       sessionId: true,
-      catalogSession: {
-        select: {
-          id: true,
-          session: true,
-          sessionValue: true,
-          sessionLevel: true,
-          year: true,
-          creationMode: true,
-        },
-      },
       isSharedToCommunity: true,
       isUserAgreementAccepted: true,
       groups: {
@@ -340,13 +330,11 @@ const getEventById = async (id: string) => {
     },
   });
   if (!event) return null;
-  const { schedule, groups, catalogSession, isSharedToCommunity, isUserAgreementAccepted, ...rest } =
-    event;
+  const { schedule, groups, isSharedToCommunity, isUserAgreementAccepted, ...rest } = event;
   const mergedSchedule =
     schedule &&
     withScheduleCostEstimation({
       ...schedule,
-      catalogSession,
       groups,
       isSharedToCommunity,
       isUserAgreementAccepted,
@@ -620,7 +608,7 @@ const updateEventById = async (id: string, data: Record<string, unknown>) => {
   });
 };
 
-// PATCH /events/:eventId (body.currentSchedule) — updates the single `event_sessions` row for this event.
+// PATCH /events/:eventId (body.schedule patch) — updates the single `event_sessions` row for this event.
 const updateCurrentScheduleForEvent = async (
   eventId: string,
   patch: IUpdateCurrentSchedulePayload
