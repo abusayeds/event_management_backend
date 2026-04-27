@@ -111,8 +111,6 @@ export interface IUpdateEventPayload {
   currentEventSession?: IUpdateCurrentEventSessionPayload;
 }
 
-export type EventSessionScopeFilter = 'today' | 'upcoming' | 'history';
-
 export interface IEventFilters {
   search?: string;
   programId?: string;
@@ -121,8 +119,6 @@ export interface IEventFilters {
   groupCriteria?: GroupCriteria;
   timeRangeFrom?: string;
   timeRangeTo?: string;
-  /** Filter events that have at least one session in this bucket (UTC); combine with priceMin/priceMax on sessions. */
-  sessionScope?: EventSessionScopeFilter;
   priceMin?: string;
   priceMax?: string;
 }

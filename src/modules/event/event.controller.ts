@@ -47,21 +47,6 @@ const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
   });
 });
 
-// GET /events/feed/active
-const getActiveEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.getActiveEvents(options, price);
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Active events fetched successfully.',
-    data: result.data,
-    meta: result.meta,
-  });
-});
-
 // GET /events/feed/upcoming
 const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
@@ -102,6 +87,21 @@ const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Res
     success: true,
     statusCode: StatusCodes.OK,
     message: 'History events fetched successfully.',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
+// GET /events/feed/family — optional memberUserId (omit = logged-in user’s created events)
+const getFamilyFeedEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.userId;
+  const filters = pick(req.query, ['action']);
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+  const result = await EventService.getFamilyFeedEvents(userId, filters, options);
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Family-scoped events fetched successfully.',
     data: result.data,
     meta: result.meta,
   });
@@ -154,7 +154,7 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
 export const EventController = {
   createEvent,
   getEvents,
-  getActiveEvents,
+  getFamilyFeedEvents,
   getUpcomingEvents,
   getTodayEvents,
   getHistoryEvents,

@@ -426,40 +426,6 @@ const getEvents = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
-// GET /events/feed/active
-const getActiveEvents = async (
-  options: PaginationOptions,
-  price?: IFeedPriceFilters
-): Promise<PaginationResult<unknown>> => {
-  const pagination = parsePaginationOptions(options);
-  const { skip, take, orderBy } = createPaginationQuery(pagination);
-  const priceWhere = priceRangeOnSession(price?.priceMin, price?.priceMax);
-  const where: Record<string, unknown> = {
-    ...publishedEventBaseWhere,
-    ...(priceWhere
-      ? {
-        eventSession: {
-          is: priceWhere,
-        },
-      }
-      : {}),
-  };
-
-  const [data, total] = await Promise.all([
-    database.event.findMany({
-      where: where as any,
-      select: eventListSelect,
-      skip,
-      take,
-      orderBy,
-    }),
-    database.event.count({ where: where as any }),
-  ]);
-
-  const enriched = await attachActiveSessions(data);
-  return createPaginationResult(enriched, total, pagination);
-};
-
 // GET /events/feed/upcoming
 const getUpcomingEvents = async (
   options: PaginationOptions,
@@ -560,6 +526,38 @@ const getFeedHistory = async (
       orderBy,
     }),
     database.event.count({ where }),
+  ]);
+
+  const enriched = await attachActiveSessions(data);
+  return createPaginationResult(enriched, total, pagination);
+};
+
+// GET /events/feed/family — published feed scoped to one creator (default: caller in service layer).
+const getFamilyFeedByCreator = async (
+  creatorId: string,
+  filters: IFamilyFeedFilters,
+  options: PaginationOptions,
+): Promise<PaginationResult<unknown>> => {
+  const pagination = parsePaginationOptions(options);
+  const { skip, take, orderBy } = createPaginationQuery(pagination);
+  const priceWhere = priceRangeOnSession(price?.priceMin, price?.priceMax);
+  const where: Record<string, unknown> = {
+    ...publishedEventBaseWhere,
+    creatorId,
+  };
+  if (priceWhere) {
+    where.eventSession = { is: priceWhere };
+  }
+
+  const [data, total] = await Promise.all([
+    database.event.findMany({
+      where: where as any,
+      select: eventListSelect,
+      skip,
+      take,
+      orderBy,
+    }),
+    database.event.count({ where: where as any }),
   ]);
 
   const enriched = await attachActiveSessions(data);
@@ -743,10 +741,10 @@ export const EventRepository = {
   getEventAuditSnapshot,
   createEditLog,
   getEvents,
-  getActiveEvents,
   getUpcomingEvents,
   getFeedToday,
   getFeedHistory,
+  getFamilyFeedByCreator,
   updateEventById,
   updateCurrentEventSessionForEvent,
   verifyEventSessionForEvent,

@@ -7,14 +7,6 @@ import { EventController } from './event.controller';
 import { EventValidation } from './event.validation';
 
 const router = Router();
-// GET /events/feed/active -> EventController.getActiveEvents -> EventService.getActiveEvents -> EventRepository.getActiveEvents
-router.get(
-  '/feed/active',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.listFeed),
-  EventController.getActiveEvents
-);
-
 // GET /events/feed/upcoming -> EventController.getUpcomingEvents -> EventService.getUpcomingEvents -> EventRepository.getUpcomingEvents
 router.get(
   '/feed/upcoming',
@@ -37,6 +29,14 @@ router.get(
   auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(EventValidation.listFeed),
   EventController.getHistoryEvents
+);
+
+// GET /events/feed/family — published events by creator (default: self; optional memberUserId for same-family)
+router.get(
+  '/feed/family',
+  auth(UserRole.ADMIN, UserRole.USER),
+  validateRequest(EventValidation.listFamilyFeed),
+  EventController.getFamilyFeedEvents
 );
 
 router

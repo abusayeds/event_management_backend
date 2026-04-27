@@ -40,12 +40,13 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
   let createdUser: Awaited<ReturnType<typeof UserService.createUser>> | null = null;
 
   try {
-    // Step:4 Create user first with isIndependent=false (forced dependent)
+    // Dependent family member (`isIndependent: false`); email verified so they can sign in without OTP.
     createdUser = await UserService.createUser(
       {
         ...userPayload,
         email: normalizedEmail,
         isIndependent: false,
+        isEmailVerified: true,
       },
       actorId
     );

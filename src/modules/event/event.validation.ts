@@ -296,6 +296,18 @@ const listFeed = z.object({
   }),
 });
 
+/** Family filter chips: omit `memberUserId` for self; pass another member’s user id when allowed. */
+const listFamilyFeed = z.object({
+  query: z.object({
+    memberUserId: z.string().uuid().optional(),
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+    ...priceQuery,
+  }),
+});
+
 const getEventById = z.object({
   params: eventIdParam,
 });
@@ -355,6 +367,7 @@ export const EventValidation = {
   createEvent,
   getEvents,
   listFeed,
+  listFamilyFeed,
   getEventById,
   updateEvent,
   deleteEvent,

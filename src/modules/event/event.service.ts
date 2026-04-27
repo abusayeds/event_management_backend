@@ -8,6 +8,7 @@ import {
   EVENT_CONTRIBUTION_SCORE,
   ICreateEventPayload,
   IEventFilters,
+  IFamilyFeedFilters,
   IFeedPriceFilters,
   IUpdateEventPayload,
 } from './event.interface';
@@ -16,6 +17,7 @@ import {
   hasCurrentSessionPatchBody,
   pickEventSessionForDetail,
 } from './event.helpers';
+import { FamilyMemberRepository } from '../familyMember/familyMember.repository';
 import { EventRepository } from './event.repository';
 
 // POST /events
@@ -70,9 +72,13 @@ const getEvents = async (filters: IEventFilters, options: PaginationOptions) => 
   return EventRepository.getEvents(filters, options);
 };
 
-// GET /events/feed/active
-const getActiveEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
-  return EventRepository.getActiveEvents(options, price);
+// GET /events/feed/family —
+const getFamilyFeedEvents = async (
+  userId: string,
+  filters: IFamilyFeedFilters,
+  options: PaginationOptions
+) => {
+  return EventRepository.getFamilyFeedByCreator(userId, filters, options);
 };
 
 // GET /events/feed/upcoming
@@ -250,7 +256,7 @@ const deleteEvent = async (eventId: string, userId: string, role: UserRole) => {
 export const EventService = {
   createEvent,
   getEvents,
-  getActiveEvents,
+  getFamilyFeedEvents,
   getUpcomingEvents,
   getTodayEvents,
   getHistoryEvents,

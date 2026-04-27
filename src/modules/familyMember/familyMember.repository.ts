@@ -126,6 +126,70 @@ const isOwnerOfMember = async (ownerUserId: string, memberUserId: string): Promi
   return !!membership;
 };
 
+/** True if both users belong to at least one non-deleted family (includes same user). */
+const areUsersInSameFamily = async (userA: string, userB: string): Promise<boolean> => {
+  if (userA === userB) {
+    return true;
+  }
+  const aFamilies = await database.familyMember.findMany({
+    where: { userId: userA, family: { isDeleted: false } },
+    select: { familyId: true },
+  });
+  if (aFamilies.length === 0) {
+    return false;
+  }
+  const familyIds = aFamilies.map(m => m.familyId);
+  const shared = await database.familyMember.findFirst({
+    where: { userId: userB, familyId: { in: familyIds }, family: { isDeleted: false } },
+    select: { id: true },
+  });
+  return !!shared;
+};
+
+export type CoMemberProfile = {
+  userId: string;
+  relationShip: string | null;
+  firstName: string;
+  lastName: string;
+};
+
+/** Other members in any non-deleted family the requester belongs to (deduped by userId). */
+const listCoMembersExcludingSelf = async (requesterId: string): Promise<CoMemberProfile[]> => {
+  const memberships = await database.familyMember.findMany({
+    where: { userId: requesterId, family: { isDeleted: false } },
+    select: { familyId: true },
+  });
+  const familyIds = [...new Set(memberships.map(m => m.familyId))];
+  if (familyIds.length === 0) {
+    return [];
+  }
+  const rows = await database.familyMember.findMany({
+    where: {
+      familyId: { in: familyIds },
+      userId: { not: requesterId },
+      family: { isDeleted: false },
+    },
+    include: {
+      user: {
+        select: { id: true, firstName: true, lastName: true },
+      },
+    },
+  });
+  const byUser = new Map<string, CoMemberProfile>();
+  for (const row of rows) {
+    const u = row.user;
+    if (!byUser.has(u.id)) {
+      byUser.set(u.id, {
+        userId: u.id,
+        relationShip: row.relationShip ?? null,
+        firstName: u.firstName,
+        lastName: u.lastName,
+      });
+    }
+  }
+  return [...byUser.values()];
+};
+
 export const FamilyMemberRepository = {
   addFamilyMember,
   getFamilyMemberByFamilyAndUser,
@@ -134,4 +198,6 @@ export const FamilyMemberRepository = {
   removeFamilyMember,
   getFamilyMembersByFamilyId,
   isOwnerOfMember,
+  areUsersInSameFamily,
+  listCoMembersExcludingSelf,
 };
