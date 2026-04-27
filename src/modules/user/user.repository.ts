@@ -106,49 +106,26 @@ const getAllUsers = async (
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
 
-  const where: any = {};
+  const where: any = {
+    status: { not: UserStatus.DELETED },
+  };
 
-  if (filters.status) {
-    where.status = filters.status;
-  } else {
-    where.status = { not: UserStatus.DELETED };
-  }
-
-  // Search filter
-  if (filters.search) {
-    where.OR = [
-      { firstName: { contains: filters.search, mode: 'insensitive' } },
-      { lastName: { contains: filters.search, mode: 'insensitive' } },
-      { username: { contains: filters.search, mode: 'insensitive' } },
-      { accountId: { contains: filters.search, mode: 'insensitive' } },
-      { email: { contains: filters.search, mode: 'insensitive' } },
-    ];
-  }
-
-  if (filters.fullName) {
-    where.OR = [
-      ...(where.OR || []),
-      { firstName: { contains: filters.fullName, mode: 'insensitive' } },
-      { lastName: { contains: filters.fullName, mode: 'insensitive' } },
-    ];
-  }
-  if (filters.email) {
-    where.email = { contains: filters.email, mode: 'insensitive' };
-  }
   if (filters.username) {
     where.username = { contains: filters.username, mode: 'insensitive' };
   }
-  if (filters.role) {
-    where.role = filters.role;
-  }
-  if (filters.roleId) {
-    where.role = filters.roleId;
-  }
-  if (filters.createdByOwner) {
-    where.createdByOwner = filters.createdByOwner;
-  }
-  if (filters.createdById) {
-    where.createdByOwner = filters.createdById;
+
+  if (filters.date) {
+    const parsedDate = new Date(filters.date);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      const start = new Date(parsedDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      where.createdAt = {
+        gte: start,
+        lt: end,
+      };
+    }
   }
 
   const [users, total] = await Promise.all([

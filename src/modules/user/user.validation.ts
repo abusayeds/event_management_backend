@@ -91,15 +91,8 @@ const createUser = z.object({
 // Get all users with filtering, pagination, and sorting
 const getAllUsers = z.object({
   query: z.object({
-    fullName: z.string().optional(),
     username: z.string().optional(),
-    email: z.string().optional(),
-    status: z.enum(Object.values(UserStatus) as [string, ...string[]]).optional(),
-    role: z.string().optional(),
-    roleId: z.string().optional(),
-    createdByOwner: z.string().optional(),
-    createdById: z.string().optional(),
-    search: z.string().optional(),
+    date: z.string().optional(),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
     sortBy: z.string().optional(),

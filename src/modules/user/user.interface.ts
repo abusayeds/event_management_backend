@@ -66,13 +66,6 @@ export interface IUpdateUserPayload {
 
 // User query filter parameters
 export interface IUserFilters {
-  fullName?: string;
   username?: string;
-  email?: string;
-  status?: UserStatus;
-  search?: string;
-  role?: string;
-  roleId?: string;
-  createdByOwner?: string;
-  createdById?: string;
+  date?: string;
 }

@@ -23,19 +23,7 @@ const createEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
 
 // GET /events
 const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const filters = pick(req.query, [
-    'search',
-    'programId',
-    'eventType',
-    'creationSource',
-    'location',
-    'groupCriteria',
-    'timeRangeFrom',
-    'timeRangeTo',
-    'sessionScope',
-    'priceMin',
-    'priceMax',
-  ]);
+  const filters = pick(req.query, ['eventName', 'filterType']);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
   const result = await EventService.getEvents(filters, options);
@@ -122,12 +110,28 @@ const getEventsByFamilyRelation = asyncHandler(async (req: AuthenticatedRequest,
 
 // GET /events/:eventId
 const getEventById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const result = await EventService.getEventById(req.params.eventId as string);
+  const role = req.user!.role as UserRole;
+  const result = await EventService.getEventById(req.params.eventId as string, role);
 
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Event fetched successfully.',
+    data: result,
+  });
+});
+
+// GET /events/:eventId/edit-logs/:editLogId
+const getEventEditLogById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const result = await EventService.getEventEditLogById(
+    req.params.eventId as string,
+    req.params.editLogId as string
+  );
+
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Event edit log fetched successfully.',
     data: result,
   });
 });
@@ -172,6 +176,7 @@ export const EventController = {
   getHistoryEvents,
   getEventsByFamilyRelation,
   getEventById,
+  getEventEditLogById,
   updateEvent,
   deleteEvent,
 };

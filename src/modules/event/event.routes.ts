@@ -39,6 +39,13 @@ router.get(
   EventController.getEventsByFamilyRelation
 );
 
+router.get(
+  '/:eventId/edit-logs/:editLogId',
+  auth(UserRole.ADMIN),
+  validateRequest(EventValidation.getEventEditLogByIdValidationSchema),
+  EventController.getEventEditLogById
+);
+
 router
   .route('/')
   // POST /events -> EventController.createEvent -> EventService.createEvent -> EventRepository.createEvent

@@ -20,14 +20,7 @@ const createUser = asyncHandler(async (req: AuthenticatedRequest, res: Response)
 
 // Get all users with filters and pagination
 const getAllUsers = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const filters = pick(req.query, [
-    'fullName',
-    'email',
-    'status',
-    'roleId',
-    'createdById',
-    'search',
-  ]);
+  const filters = pick(req.query, ['username', 'date']);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
   const result = await UserService.getAllUsers(filters, options);

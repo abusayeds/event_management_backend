@@ -118,14 +118,40 @@ const getEventsByFamilyRelation = async (
 };
 
 // GET /events/:eventId
-const getEventById = async (id: string) => {
-  const event = await EventRepository.getEventById(id);
+const getEventById = async (id: string, role: UserRole) => {
+  const event =
+    role === UserRole.ADMIN
+      ? await EventRepository.getEventByIdForAdmin(id)
+      : await EventRepository.getEventById(id);
   if (!event) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
   }
   const { schedule, ...rest } = event;
   const pickedSchedule = schedule ? pickScheduleForDetail([schedule]) : null;
   return { ...rest, schedule: pickedSchedule };
+};
+
+const getEventEditLogById = async (eventId: string, editLogId: string) => {
+  const eventSnapshot = await EventRepository.getEventAuditSnapshot(eventId);
+  if (!eventSnapshot) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
+  }
+  const editLog = await EventRepository.getEventEditLogById(eventId, editLogId);
+  if (!editLog) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Edit log not found.');
+  }
+  const previousValues =
+    typeof editLog.previousValues === 'object' && editLog.previousValues !== null
+      ? (editLog.previousValues as Record<string, unknown>)
+      : {};
+  const presentValues = Object.fromEntries(
+    editLog.changedFields.map(field => [field, (eventSnapshot as Record<string, unknown>)[field] ?? null])
+  );
+  return {
+    ...editLog,
+    previousValues,
+    presentValues,
+  };
 };
 
 // PATCH /events/:eventId (also writes EditLog when tracked fields change)
@@ -299,6 +325,7 @@ export const EventService = {
   getHistoryEvents,
   getEventsByFamilyRelation,
   getEventById,
+  getEventEditLogById,
   updateEvent,
   deleteEvent,
 };

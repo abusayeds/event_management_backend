@@ -113,6 +113,11 @@ const eventIdParamsValidationSchema = z.object({
   eventId: z.string().min(1, 'eventId is required'),
 });
 
+const editLogParamsValidationSchema = z.object({
+  eventId: z.string().min(1, 'eventId is required'),
+  editLogId: z.string().min(1, 'editLogId is required'),
+});
+
 const repeatConfigValidationSchema = z
   .object({
     repeatFunction: z.nativeEnum(RepeatFrequency).optional(),
@@ -182,31 +187,14 @@ const createEventValidationSchema = z.object({
 // ── GET /events (query) ───────────────────────────────────────────────────
 
 const getEventsValidationSchema = z.object({
-  query: z
-    .object({
-      search: z.string().optional(),
-      programId: z.string().optional(),
-      eventType: z.nativeEnum(EventType).optional(),
-      creationSource: z.enum(['all', 'manual', 'auto']).optional(),
-      location: z.string().optional(),
-      groupCriteria: z.nativeEnum(GroupCriteria).optional(),
-      timeRangeFrom: z.coerce.date().optional(),
-      timeRangeTo: z.coerce.date().optional(),
-      sessionScope: z.enum(['today', 'upcoming', 'history']).optional(),
-      priceMin: z.string().optional(),
-      priceMax: z.string().optional(),
-      page: z.coerce.number().int().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional(),
-      sortBy: z.string().optional(),
-      sortOrder: z.enum(['asc', 'desc']).optional(),
-    })
-    .refine(
-      q =>
-        !q.timeRangeFrom ||
-        !q.timeRangeTo ||
-        q.timeRangeFrom.getTime() <= q.timeRangeTo.getTime(),
-      { message: 'timeRangeFrom must be before or equal to timeRangeTo.' }
-    ),
+  query: z.object({
+    eventName: z.string().optional(),
+    filterType: z.enum(['today', 'upcoming', 'history']).optional(),
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+  }),
 });
 
 const getEventsByFamilyRelationValidationSchema = z.object({
@@ -256,6 +244,9 @@ const getHistoryEventsValidationSchema = z.object({
 
 const getEventByIdValidationSchema = z.object({
   params: eventIdParamsValidationSchema,
+});
+const getEventEditLogByIdValidationSchema = z.object({
+  params: editLogParamsValidationSchema,
 });
 
 // ── PATCH /events/:eventId (body) — same sections as create, fields optional / partial where needed ─
@@ -310,6 +301,7 @@ export const EventValidation = {
   getHistoryEventsValidationSchema,
   getEventsByFamilyRelationValidationSchema,
   getEventByIdValidationSchema,
+  getEventEditLogByIdValidationSchema,
   updateEventValidationSchema,
   deleteEventValidationSchema,
 };

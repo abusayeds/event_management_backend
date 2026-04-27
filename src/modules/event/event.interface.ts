@@ -121,17 +121,8 @@ export interface IUpdateEventPayload {
 }
 
 export interface IEventFilters {
-  search?: string;
-  programId?: string;
-  eventType?: EventType;
-  creationSource?: 'all' | 'manual' | 'auto';
-  location?: string;
-  groupCriteria?: GroupCriteria;
-  timeRangeFrom?: string;
-  timeRangeTo?: string;
-  sessionScope?: EventScheduleListScope;
-  priceMin?: string;
-  priceMax?: string;
+  eventName?: string;
+  filterType?: EventScheduleListScope;
 }
 
 export interface IFeedPriceFilters {
