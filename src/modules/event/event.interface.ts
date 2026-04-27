@@ -16,6 +16,8 @@ export const EVENT_CONTRIBUTION_SCORE = {
   APPLY: 3,
 } as const;
 
+export type EventSessionScopeFilter = 'today' | 'upcoming' | 'history';
+
 /** Matches Prisma model `RepeatConfig` */
 export interface IRepeatConfigInput {
   repeatFunction?: RepeatFrequency;
@@ -119,6 +121,7 @@ export interface IEventFilters {
   groupCriteria?: GroupCriteria;
   timeRangeFrom?: string;
   timeRangeTo?: string;
+  sessionScope?: EventSessionScopeFilter;
   priceMin?: string;
   priceMax?: string;
 }

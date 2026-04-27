@@ -296,15 +296,14 @@ const listFeed = z.object({
   }),
 });
 
-/** Family filter chips: omit `memberUserId` for self; pass another member’s user id when allowed. */
-const listFamilyFeed = z.object({
+/** GET /events/feed/member-events — only `action`: self | spouse | child_<name> (e.g. child_stephanie, child-sophia). */
+const listMemberEventsFeed = z.object({
   query: z.object({
-    memberUserId: z.string().uuid().optional(),
-    page: z.coerce.number().int().min(1).optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional(),
-    sortBy: z.string().optional(),
-    sortOrder: z.enum(['asc', 'desc']).optional(),
-    ...priceQuery,
+    action: z.preprocess(
+      val =>
+        typeof val === 'string' && val.trim() !== '' ? val.trim().toLowerCase() : 'self',
+      z.string().min(1)
+    ),
   }),
 });
 
@@ -367,7 +366,7 @@ export const EventValidation = {
   createEvent,
   getEvents,
   listFeed,
-  listFamilyFeed,
+  listMemberEventsFeed,
   getEventById,
   updateEvent,
   deleteEvent,

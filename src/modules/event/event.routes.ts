@@ -31,12 +31,12 @@ router.get(
   EventController.getHistoryEvents
 );
 
-// GET /events/feed/family — published events by creator (default: self; optional memberUserId for same-family)
+// GET /events/feed/member-events — `action` only (self | spouse | child_<name>); no price filter
 router.get(
-  '/feed/family',
+  '/feed/member-events',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.listFamilyFeed),
-  EventController.getFamilyFeedEvents
+  validateRequest(EventValidation.listMemberEventsFeed),
+  EventController.getMemberEventsByAction
 );
 
 router

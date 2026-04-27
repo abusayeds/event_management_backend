@@ -92,16 +92,15 @@ const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Res
   });
 });
 
-// GET /events/feed/family — optional memberUserId (omit = logged-in user’s created events)
-const getFamilyFeedEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+// GET /events/feed/member-events — query `action` only (self | spouse | child_<name>); uses logged-in user from auth.
+const getMemberEventsByAction = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
-  const filters = pick(req.query, ['action']);
-  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const result = await EventService.getFamilyFeedEvents(userId, filters, options);
+  const { action } = pick(req.query, ['action']);
+  const result = await EventService.getMemberEventsByAction(userId, action as string);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Family-scoped events fetched successfully.',
+    message: 'Member events fetched successfully.',
     data: result.data,
     meta: result.meta,
   });
@@ -154,7 +153,7 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
 export const EventController = {
   createEvent,
   getEvents,
-  getFamilyFeedEvents,
+  getMemberEventsByAction,
   getUpcomingEvents,
   getTodayEvents,
   getHistoryEvents,

@@ -532,22 +532,17 @@ const getFeedHistory = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
-// GET /events/feed/family — published feed scoped to one creator (default: caller in service layer).
-const getFamilyFeedByCreator = async (
+// GET /events/feed/member-events — published events for one creator (no price filter).
+const getMemberEventsFeedByCreator = async (
   creatorId: string,
-  filters: IFamilyFeedFilters,
-  options: PaginationOptions,
+  options: PaginationOptions
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
-  const priceWhere = priceRangeOnSession(price?.priceMin, price?.priceMax);
   const where: Record<string, unknown> = {
     ...publishedEventBaseWhere,
     creatorId,
   };
-  if (priceWhere) {
-    where.eventSession = { is: priceWhere };
-  }
 
   const [data, total] = await Promise.all([
     database.event.findMany({
@@ -744,7 +739,7 @@ export const EventRepository = {
   getUpcomingEvents,
   getFeedToday,
   getFeedHistory,
-  getFamilyFeedByCreator,
+  getMemberEventsFeedByCreator,
   updateEventById,
   updateCurrentEventSessionForEvent,
   verifyEventSessionForEvent,
