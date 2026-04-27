@@ -1,3 +1,7 @@
+import { App, cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
+import config from '../config';
+
 interface FcmPayload {
   token: string;
   title: string;
@@ -12,42 +16,82 @@ interface FcmResult {
   response?: unknown;
 }
 
-const FCM_ENDPOINT = 'https://fcm.googleapis.com/fcm/send';
+let firebaseApp: App | null = null;
 
-export const sendFcmPush = async (payload: FcmPayload): Promise<FcmResult> => {
-  const serverKey = process.env.FCM_SERVER_KEY;
-  if (!serverKey) {
-    return { success: false, response: 'FCM_SERVER_KEY not configured' };
+const getFirebaseApp = (): App | null => {
+  if (firebaseApp) return firebaseApp;
+  if (getApps().length > 0) {
+    firebaseApp = getApps()[0]!;
+    return firebaseApp;
   }
 
-  const body = {
-    to: payload.token,
-    priority: 'high',
-    notification: {
-      title: payload.title,
-      body: payload.body,
-      ...(payload.image ? { image: payload.image } : {}),
-    },
-    data: payload.data ?? {},
-  };
+  const projectId = config.firebase.projectId;
+  const clientEmail = config.firebase.clientEmail;
+  const privateKeyRaw = config.firebase.privateKey;
 
-  const res = await fetch(FCM_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `key=${serverKey}`,
-    },
-    body: JSON.stringify(body),
+  if (!projectId || !clientEmail || !privateKeyRaw) {
+    return null;
+  }
+
+  const privateKey = privateKeyRaw.replace(/\\n/g, '\n');
+  firebaseApp = initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    }),
   });
+  return firebaseApp;
+};
 
-  const json = (await res.json().catch(() => ({}))) as {
-    failure?: number;
-    results?: Array<{ error?: string }>;
+export const sendFcmPush = async (payload: FcmPayload): Promise<FcmResult> => {
+  const app = getFirebaseApp();
+  if (!app) {
+    return {
+      success: false,
+      response: 'Firebase admin credentials not configured',
+    };
+  }
+
+  const messageId = await getMessaging(app)
+    .send({
+      token: payload.token,
+      notification: {
+        title: payload.title,
+        body: payload.body,
+        ...(payload.image ? { imageUrl: payload.image } : {}),
+      },
+      data: payload.data ?? {},
+      android: {
+        priority: 'high',
+      },
+      apns: {
+        headers: {
+          'apns-priority': '10',
+        },
+        payload: {
+          aps: {
+            sound: 'default',
+            contentAvailable: true,
+          },
+        },
+      },
+    })
+    .catch(error => {
+      const code = String(error?.code ?? '');
+      const invalidToken =
+        code === 'messaging/registration-token-not-registered' ||
+        code === 'messaging/invalid-registration-token';
+      return { error, invalidToken };
+    });
+
+  if (typeof messageId === 'string') {
+    return { success: true, response: { messageId } };
+  }
+
+  return {
+    success: false,
+    invalidToken: Boolean(messageId.invalidToken),
+    response: messageId.error,
   };
-
-  const firstError = json.results?.[0]?.error;
-  const invalidToken = firstError === 'NotRegistered' || firstError === 'InvalidRegistration';
-  const success = res.ok && !firstError && (json.failure ?? 0) === 0;
-
-  return { success, invalidToken, response: json };
 };

@@ -7,6 +7,7 @@ import {
   NotificationMedium,
   NotificationType,
 } from '../../../prisma/generated/enums';
+import config from '../../config';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { NotificationService } from '../notification/notification.service';
@@ -72,7 +73,7 @@ const processStripeWebhook = async (
   rawBody: Buffer,
   signature: string | undefined
 ): Promise<IStripeWebhookResult> => {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = config.payment.stripeWebhookSecret;
 
   if (!webhookSecret) {
     throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Stripe webhook is not configured.');
@@ -184,8 +185,8 @@ const processStoreWebhook = async (
 ): Promise<IStripeWebhookResult> => {
   const envSecret =
     provider === DonationProvider.Apple
-      ? process.env.APPLE_DONATION_WEBHOOK_SECRET
-      : process.env.GOOGLE_DONATION_WEBHOOK_SECRET;
+      ? config.payment.appleDonationWebhookSecret
+      : config.payment.googleDonationWebhookSecret;
   const signature = getHeaderValue(headers['x-donation-webhook-secret']);
   if (envSecret && signature !== envSecret) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, `${provider} webhook signature invalid.`);

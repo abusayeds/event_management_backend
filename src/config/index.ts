@@ -160,6 +160,20 @@ const config = {
     anonKey: process.env.SUPABASE_ANON_KEY || '',
     serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
   },
+
+  // Firebase Admin (Push Notification)
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID || '',
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
+    privateKey: process.env.FIREBASE_PRIVATE_KEY || '',
+  },
+
+  // Payment Webhook Secrets
+  payment: {
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    appleDonationWebhookSecret: process.env.APPLE_DONATION_WEBHOOK_SECRET || '',
+    googleDonationWebhookSecret: process.env.GOOGLE_DONATION_WEBHOOK_SECRET || '',
+  },
 };
 
 // Validate critical configurations
