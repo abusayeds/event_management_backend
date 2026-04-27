@@ -143,3 +143,9 @@ enum SessionStatus {
   Completed
   Cancelled
 }
+
+enum SettingsPageKey {
+  About
+  PrivacyPolicy
+  TermsCondition
+}

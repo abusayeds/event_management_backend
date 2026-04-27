@@ -16,7 +16,6 @@ export const eventApplicationSelect = {
   id: true,
   userId: true,
   eventId: true,
-  status: true,
   note: true,
   createdAt: true,
   updatedAt: true,
