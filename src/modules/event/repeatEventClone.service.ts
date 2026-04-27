@@ -1,6 +1,6 @@
 import logger from '../../config/logger';
 import { database } from '../../config/database';
-import { RepeatFrequency } from '../../../prisma/generated/enums';
+import { EventCreationMode, RepeatFrequency } from '../../../prisma/generated/enums';
 import { EventRepository } from './event.repository';
 import type { ICreateEventPayload, IEventGroupInput } from './event.interface';
 import { addRepeatInterval, computeRepeatingEventNaming } from './event.utils';
@@ -99,7 +99,11 @@ const mapGroupsWithShift = (
   }));
 };
 
-const buildClonePayload = (source: RepeatSourceEvent, anchorDate: Date): ICreateEventPayload => {
+const buildClonePayload = (
+  source: RepeatSourceEvent,
+  sourceEventId: string,
+  anchorDate: Date
+): ICreateEventPayload => {
   if (!source.schedule || !source.repeatConfig) {
     throw new Error('Source event missing schedule or repeat configuration.');
   }
@@ -129,6 +133,8 @@ const buildClonePayload = (source: RepeatSourceEvent, anchorDate: Date): ICreate
     registrationPortal: source.registrationPortal,
     description: source.description,
     note: source.note,
+    creationMode: EventCreationMode.Auto,
+    sourceEventId,
     isPublished: source.isPublished,
     sessionId: undefined,
     year: naming.yearForEvent,
@@ -185,7 +191,7 @@ export async function generateNextRepeatedEvent(sourceEventId: string): Promise<
   });
 
   if (!existing) {
-    const payload = buildClonePayload(source, runAnchor);
+    const payload = buildClonePayload(source, sourceEventId, runAnchor);
     await EventRepository.createEvent(source.creatorId, payload);
     logger.info(
       `repeat-event cloned sourceEventId=${sourceEventId} generatedEventName=${naming.eventNameWithSuffix}`

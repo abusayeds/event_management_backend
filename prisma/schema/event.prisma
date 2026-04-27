@@ -33,6 +33,10 @@ model Event {
   registrationPortal      String
   description             String
   note                    String?
+  creationMode            EventCreationMode @default(Manual)
+  sourceEventId           String?
+  sourceEvent             Event?            @relation("EventAutoSource", fields: [sourceEventId], references: [id], onDelete: SetNull)
+  generatedEvents         Event[]           @relation("EventAutoSource")
   /// Catalog `Session` (year / bucket). Set when the event has a catalog bucket (normal create flow).
   sessionId               String?
   catalogSession          Session?       @relation("EventCatalogSession", fields: [sessionId], references: [id], onDelete: Restrict)
@@ -71,6 +75,8 @@ model Event {
   @@index([eventName])
   @@index([creatorId])
   @@index([lastEditorId])
+  @@index([creationMode])
+  @@index([sourceEventId])
   @@index([sessionId])
   @@map("events")
 }

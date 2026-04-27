@@ -1,9 +1,12 @@
 import { Prisma } from '../../../prisma/generated/client';
-import { RepeatFrequency, SessionBucketType } from '../../../prisma/generated/enums';
+import { EventCreationMode, RepeatFrequency, SessionBucketType } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import { IEventGroupInput, IRepeatConfigInput } from './event.interface';
 import { pickActiveScheduleForEvent } from './event.helpers';
 
+export const AUTO_GENERATED_NOTE_PREFIX = '[AUTO_GENERATED_FROM:'; // legacy fallback
+export const AUTO_EVENT_MODE = EventCreationMode.Auto;
+export const MANUAL_EVENT_MODE = EventCreationMode.Manual;
 export const toDecimal = (value: string | number | undefined | null): Prisma.Decimal => {
   if (value === undefined || value === null || value === '') {
     return new Prisma.Decimal(0);
@@ -240,6 +243,8 @@ export const eventListSelect = {
   isActive: true,
   isVerified: true,
   isDeleted: true,
+  creationMode: true,
+  sourceEventId: true,
   createdAt: true,
   updatedAt: true,
   sessionId: true,

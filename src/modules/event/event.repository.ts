@@ -1,5 +1,6 @@
 import { Prisma } from '../../../prisma/generated/client';
 import {
+  EventCreationMode,
   RepeatFrequency,
   SessionBucketType,
   SessionCreationMode,
@@ -27,6 +28,8 @@ import {
   withScheduleCostEstimation,
 } from './event.helpers';
 import {
+  AUTO_EVENT_MODE,
+  MANUAL_EVENT_MODE,
   attachActiveSchedules,
   eventGroupsToNestedCreate,
   eventListSelect,
@@ -110,6 +113,8 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
     isSharedToCommunity,
     isUserAgreementAccepted,
     groups,
+    creationMode: payloadCreationMode,
+    sourceEventId: payloadSourceEventId,
     ...eventScalarPayload
   } = payload;
   const repeatFrequency = resolveRepeatFrequency(repeatConfig);
@@ -209,6 +214,8 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
         ...eventScalarPayload,
         isVerified: false,
         isDeleted: false,
+        creationMode: payloadCreationMode ?? EventCreationMode.Manual,
+        sourceEventId: payloadSourceEventId ?? null,
         eventName: eventNameWithSuffix,
         baseEventName: payload.eventName.trim(),
         eventYear: eventNameParts.eventYear,
@@ -266,6 +273,8 @@ const getEventById = async (id: string) => {
       registrationPortal: true,
       description: true,
       note: true,
+      creationMode: true,
+      sourceEventId: true,
       isPublished: true,
       isActive: true,
       isVerified: true,
@@ -416,12 +425,24 @@ const getEvents = async (
     where.location = { contains: filters.location, mode: 'insensitive' };
   }
 
+  const andParts: Prisma.EventWhereInput[] = [];
+  if (filters.creationSource === 'auto') {
+    andParts.push({ creationMode: AUTO_EVENT_MODE });
+  } else if (filters.creationSource === 'manual') {
+    andParts.push({ creationMode: MANUAL_EVENT_MODE });
+  }
+
   if (filters.search) {
-    where.OR = [
-      { eventName: { contains: filters.search, mode: 'insensitive' } },
-      { description: { contains: filters.search, mode: 'insensitive' } },
-      { organizer: { contains: filters.search, mode: 'insensitive' } },
-    ];
+    andParts.push({
+      OR: [
+        { eventName: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search, mode: 'insensitive' } },
+        { organizer: { contains: filters.search, mode: 'insensitive' } },
+      ],
+    });
+  }
+  if (andParts.length) {
+    where.AND = andParts;
   }
 
   const sessionParts: Prisma.EventScheduleWhereInput[] = [];

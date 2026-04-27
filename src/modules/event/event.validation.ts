@@ -187,6 +187,7 @@ const getEventsValidationSchema = z.object({
       search: z.string().optional(),
       programId: z.string().optional(),
       eventType: z.nativeEnum(EventType).optional(),
+      creationSource: z.enum(['all', 'manual', 'auto']).optional(),
       location: z.string().optional(),
       groupCriteria: z.nativeEnum(GroupCriteria).optional(),
       timeRangeFrom: z.coerce.date().optional(),

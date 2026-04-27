@@ -102,6 +102,11 @@ enum SessionCreationMode {
   Auto
 }
 
+enum EventCreationMode {
+  Manual
+  Auto
+}
+
 enum SessionBucketType {
   Daily
   Weekly

@@ -1,6 +1,7 @@
 import { PaginationOptions } from '../../interfaces';
 import {
   CompetitionLevel,
+  EventCreationMode,
   EventType,
   GroupCriteria,
   RepeatFrequency,
@@ -65,6 +66,8 @@ export interface ICreateEventPayload {
   registrationPortal: string;
   description: string;
   note?: string | null;
+  creationMode?: EventCreationMode;
+  sourceEventId?: string | null;
   isPublished?: boolean;
   repeatConfig?: IRepeatConfigInput | null;
   sessionId?: string;
@@ -121,6 +124,7 @@ export interface IEventFilters {
   search?: string;
   programId?: string;
   eventType?: EventType;
+  creationSource?: 'all' | 'manual' | 'auto';
   location?: string;
   groupCriteria?: GroupCriteria;
   timeRangeFrom?: string;

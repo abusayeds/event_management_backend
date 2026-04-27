@@ -27,6 +27,7 @@ const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
     'search',
     'programId',
     'eventType',
+    'creationSource',
     'location',
     'groupCriteria',
     'timeRangeFrom',
