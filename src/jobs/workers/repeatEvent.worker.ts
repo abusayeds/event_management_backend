@@ -1,4 +1,3 @@
-import colors from 'colors';
 import { Worker } from 'bullmq';
 import logger from '../../config/logger';
 import { redisConnection } from '../../config/redis';
@@ -10,9 +9,9 @@ export const repeatEventWorker = new Worker('repeat-event', processRepeatEvent, 
 });
 
 repeatEventWorker.on('completed', job => {
-  logger.info(colors.green(`Repeat-event job ${job.id} completed successfully.`));
+  logger.info(`Repeat-event job ${job.id} completed successfully.`);
 });
 
 repeatEventWorker.on('failed', (job, err) => {
-  logger.error(colors.red(`Failed to process repeat-event job ${job?.id}: ${err.message}`), err);
+  logger.error(`Failed to process repeat-event job ${job?.id}: ${err.message}`, { error: err });
 });

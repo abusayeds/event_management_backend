@@ -8,7 +8,7 @@ export async function enqueueRepeatEventJob(eventId: string, runAt: Date): Promi
     { eventId },
     {
       delay,
-      jobId: `repeat-event:${eventId}:${runAt.toISOString()}`,
+      jobId: `repeat-event-${eventId}-${runAt.getTime()}`,
     }
   );
   logger.debug(

@@ -122,7 +122,11 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
   const manualSessionType = payloadSession ?? null;
   const manualSessionValue = payloadSessionValue?.trim() || '';
   const manualLevel = payloadSessionLevel?.trim() || '';
-  const autoValue = frequencySuffix(repeatFrequency, anchorDate);
+  const autoValue = frequencySuffix(
+    repeatFrequency,
+    anchorDate,
+    repeatConfig?.startDate ? new Date(repeatConfig.startDate) : anchorDate
+  );
   const yearForEvent =
     repeatFrequency === RepeatFrequency.DontRepeat
       ? (payloadYear?.trim() || String(anchorDate.getUTCFullYear()))
