@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { Socket } from 'socket.io';
 import config from '../config';
+import logger from '../config/logger';
 import { IDecodedToken } from '../interfaces/token.interface';
 import { ROOMS } from './constants';
-import { chatHandler } from './handlers/chat.handler';
 import { notificationHandler } from './handlers/notification.handler';
 import { SOCKET_ERRORS, SOCKET_EVENTS } from './socket.events';
 
@@ -13,7 +13,7 @@ export interface AuthenticatedSocket extends Socket {
 }
 
 export const socketHandler = (socket: AuthenticatedSocket) => {
-  console.log(`Socket connected: ${socket.id}`);
+  logger.info(`Socket connected: ${socket.id}`);
 
   // Handle authentication
   socket.on(SOCKET_EVENTS.AUTHENTICATE, async (token: string) => {
@@ -40,21 +40,18 @@ export const socketHandler = (socket: AuthenticatedSocket) => {
         email: decoded.email,
       });
 
-      console.log(`Socket authenticated: ${socket.id} for user: ${decoded.userId}`);
-
-      // Register event handlers
-      chatHandler(socket);
+      logger.info(`Socket authenticated`, { socketId: socket.id, userId: decoded.userId });
       notificationHandler(socket);
 
     } catch (error) {
-      console.error('Socket authentication error:', error);
+      logger.error('Socket authentication error', { error });
       socket.emit(SOCKET_EVENTS.AUTH_ERROR, { error: SOCKET_ERRORS.AUTHENTICATION_FAILED });
     }
   });
 
   // Handle disconnection
   socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
-    console.log(`Socket disconnected: ${socket.id}, reason: ${reason}`);
+    logger.info(`Socket disconnected`, { socketId: socket.id, reason });
 
     if (socket.user) {
       // Broadcast user offline status
@@ -67,7 +64,7 @@ export const socketHandler = (socket: AuthenticatedSocket) => {
 
   // Handle errors
   socket.on(SOCKET_EVENTS.ERROR, (error) => {
-    console.error(`Socket error for ${socket.id}:`, error);
+    logger.error(`Socket error`, { socketId: socket.id, error });
   });
 
   // Handle room joining

@@ -1,9 +1,12 @@
+import bcrypt from 'bcryptjs';
 import { StatusCodes } from 'http-status-codes';
 import { FamilyRole } from '../../../prisma/generated/enums';
+import { database } from '../../config/database';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { FamilyRepository } from '../family/family.repository';
-import { UserRepository } from '../user/user.repository';
+import { prepareCreateUserPayload } from '../user/user.helpers';
+import { UserRepository, userListSelect } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import {
   IAddFamilyMemberWithUserPayload,
@@ -14,11 +17,13 @@ import { FamilyMemberRepository } from './familyMember.repository';
 
 const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUserPayload) => {
   const { familyId, role, relationShip, ...userPayload } = payload;
+
   // Step:1 Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
   if (!family) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
   }
+
   // Step:2 Only family owner can add members
   const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
@@ -35,41 +40,44 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
     throw new ApiError(StatusCodes.CONFLICT, 'A user with this email already exists.');
   }
 
-  let createdUser: Awaited<ReturnType<typeof UserService.createUser>> | null = null;
+  // Step:4 Prepare all non-DB work before the transaction (username/accountId generation, hashing)
+  const preparedPayload = await prepareCreateUserPayload({
+    ...userPayload,
+    email: normalizedEmail,
+    isIndependent: false,
+    isEmailVerified: true,
+  });
+  const hashedPassword = await bcrypt.hash(preparedPayload.password, 12);
 
-  try {
-    // Dependent family member (`isIndependent: false`); email verified so they can sign in without OTP.
-    createdUser = await UserService.createUser(
-      {
-        ...userPayload,
-        email: normalizedEmail,
-        isIndependent: false,
-        isEmailVerified: true,
+  // Step:5 Atomically create user + family member in a single transaction
+  const { createdById: _createdById, accountId, username, birthDate, password: _plainPass, ...userRest } = preparedPayload;
+
+  const result = await database.$transaction(async tx => {
+    const createdUser = await tx.user.create({
+      data: {
+        ...userRest,
+        accountId: accountId!,
+        username: username!,
+        birthDate: new Date(birthDate),
+        createdByOwner: actorId,
+        password: hashedPassword,
       },
-      actorId
-    );
-
-    // Step:5 Add new user as family member
-    const familyMember = await FamilyMemberRepository.addFamilyMember({
-      familyId,
-      userId: createdUser.id,
-      role: role ?? FamilyRole.MEMBER,
-      relationShip,
+      select: userListSelect,
     });
 
-    // Step:6 Return both family member and user
-    return {
-      familyMember,
-      user: createdUser,
-    };
-  } catch (error) {
-    // Step:7 Best-effort rollback to avoid dangling users if member creation fails
-    if (createdUser) {
-      await UserRepository.deleteUserById(createdUser.id);
-    }
+    const familyMember = await tx.familyMember.create({
+      data: {
+        familyId,
+        userId: createdUser.id,
+        role: role ?? FamilyRole.MEMBER,
+        relationShip,
+      },
+    });
 
-    throw error;
-  }
+    return { familyMember, user: createdUser };
+  });
+
+  return result;
 };
 
 const getFamilyMembersByFamilyId = async (

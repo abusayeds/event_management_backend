@@ -139,7 +139,7 @@ const verifyEmail = async (sessionId: string, otp: string) => {
       );
     }
     // Step:5b Lock registration if max attempts exceeded
-    if (attempts >= 5) {
+    if (attempts >= config.auth.otpMaxAttempts) {
       await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION(normalizedEmail));
       await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_SESSION(sessionId));
       await cacheService.del(CACHE_KEYS.AUTH.REGISTRATION_ATTEMPTS(normalizedEmail));

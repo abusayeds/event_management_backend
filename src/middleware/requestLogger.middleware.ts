@@ -10,11 +10,6 @@ const morganFormat = ':method :url :status :res[content-length] - :response-time
 const requestLogger = morgan(morganFormat, {
   stream: {
     write: (message: string) => {
-      // Log to console in development
-      if (config.env === 'development') {
-        console.log(message.trim());
-      }
-      
       // Parse morgan output for structured logging
       const parts = message.trim().split(' ');
       if (parts.length >= 4) {

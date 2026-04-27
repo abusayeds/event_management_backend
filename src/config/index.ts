@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { StatusCodes } from 'http-status-codes';
 import ApiError from '../utils/apiError';
 import awsConfig from './aws';
+import logger from './logger';
 dotenv.config({ quiet: true });
 
 const requiredEnvVars = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
@@ -14,17 +15,13 @@ const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
   if (process.env.NODE_ENV === 'production') {
-    console.error(
-      colors.red(`Missing required environment variables: ${missingEnvVars.join(', ')}`)
-    );
+    logger.error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Missing required environment variables: ${missingEnvVars.join(', ')}`
     );
   } else {
-    console.warn(
-      colors.yellow(`Warning: Missing required environment variables: ${missingEnvVars.join(', ')}`)
-    );
+    logger.warn(`Warning: Missing required environment variables: ${missingEnvVars.join(', ')}`);
   }
 }
 
@@ -32,9 +29,7 @@ if (missingEnvVars.length > 0) {
 if (process.env.NODE_ENV === 'development') {
   const missingOptional = optionalEnvVars.filter(envVar => !process.env[envVar]);
   if (missingOptional.length > 0) {
-    console.warn(
-      colors.yellow(`Missing optional environment variables: ${missingOptional.join(', ')}`)
-    );
+    logger.warn(`Missing optional environment variables: ${missingOptional.join(', ')}`);
   }
 }
 
@@ -183,7 +178,7 @@ if (config.env === 'production') {
     );
   }
   if (!config.email.username || !config.email.password) {
-    console.warn(colors.yellow('WARNING: SMTP credentials not configured!'));
+    logger.warn('WARNING: SMTP credentials not configured!');
   }
 }
 

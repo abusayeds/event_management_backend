@@ -1,3 +1,4 @@
+import logger from '../config/logger';
 import { redisClient } from '../config/redis';
 
 interface CacheService {
@@ -20,7 +21,7 @@ class RedisCacheService implements CacheService {
       const value = await redisClient.get(key);
       return value ? JSON.parse(value as string) : null;
     } catch (error) {
-      console.error(`Cache get error for key ${key}:`, error);
+      logger.error(`Cache get error for key ${key}`, { error });
       return null;
     }
   }
@@ -38,7 +39,7 @@ class RedisCacheService implements CacheService {
         await redisClient.set(key, stringValue);
       }
     } catch (error) {
-      console.error(`Cache set error for key ${key}:`, error);
+      logger.error(`Cache set error for key ${key}`, { error });
       throw error;
     }
   }
@@ -51,7 +52,7 @@ class RedisCacheService implements CacheService {
     try {
       await redisClient.del(key);
     } catch (error) {
-      console.error(`Cache delete error for key ${key}:`, error);
+      logger.error(`Cache delete error for key ${key}`, { error });
       throw error;
     }
   }
@@ -65,7 +66,7 @@ class RedisCacheService implements CacheService {
       const result = await redisClient.exists(key);
       return result === 1;
     } catch (error) {
-      console.error(`Cache exists error for key ${key}:`, error);
+      logger.error(`Cache exists error for key ${key}`, { error });
       return false;
     }
   }
@@ -79,7 +80,7 @@ class RedisCacheService implements CacheService {
       const result = await redisClient.incr(key);
       return result;
     } catch (error) {
-      console.error(`Cache increment error for key ${key}:`, error);
+      logger.error(`Cache increment error for key ${key}`, { error });
       throw error;
     }
   }
@@ -92,7 +93,7 @@ class RedisCacheService implements CacheService {
     try {
       await redisClient.expire(key, ttlSeconds);
     } catch (error) {
-      console.error(`Cache setTTL error for key ${key}:`, error);
+      logger.error(`Cache setTTL error for key ${key}`, { error });
       throw error;
     }
   }
@@ -106,7 +107,7 @@ class RedisCacheService implements CacheService {
       const ttl = await redisClient.ttl(key);
       return ttl;
     } catch (error) {
-      console.error(`Cache getTTL error for key ${key}:`, error);
+      logger.error(`Cache getTTL error for key ${key}`, { error });
       return -1;
     }
   }

@@ -75,12 +75,10 @@ const getFamilyMembersByFamilyId = async (
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
 
-  const where: any = {
+  const where = {
     familyId,
+    ...(filters.role ? { role: filters.role } : {}),
   };
-  if (filters.role) {
-    where.role = filters.role;
-  }
 
   const [familyMembers, total] = await Promise.all([
     database.familyMember.findMany({
@@ -145,10 +143,6 @@ const areUsersInSameFamily = async (userA: string, userB: string): Promise<boole
   return !!shared;
 };
 
-/**
- * Creator user ids for the events feed: `Self` → viewer only; else co-members in viewer’s families
- * whose `relationShip` equals the filter (no family / no match → []).
- */
 const listCreatorUserIdsForFamilyRelationFeed = async (
   viewerId: string,
   relationShip: FamilyRelationShip

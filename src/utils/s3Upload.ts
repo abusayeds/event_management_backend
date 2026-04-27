@@ -10,6 +10,7 @@ import { StatusCodes } from 'http-status-codes';
 import path from 'path';
 import config from '../config';
 import awsConfig from '../config/aws';
+import logger from '../config/logger';
 import ApiError from './apiError';
 
 export interface UploadResult {
@@ -168,7 +169,7 @@ export const uploadSingleFileToS3 = async (
       extension,
     };
   } catch (error) {
-    console.error('Error uploading to S3:', error);
+    logger.error('Error uploading to S3', { error });
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Failed to upload image to S3: ${error instanceof Error ? error.message : 'Unknown error.'}`
@@ -212,7 +213,7 @@ export const deleteFileFromS3 = async (fileUrl: string): Promise<void> => {
       })
     );
   } catch (error) {
-    console.error('Error deleting from S3:', error);
+    logger.error('Error deleting from S3', { error });
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Failed to delete image from S3: ${error instanceof Error ? error.message : 'Unknown error.'}`
@@ -230,7 +231,7 @@ export const deleteImageFromS3 = async (key: string) => {
       })
     );
   } catch (error) {
-    console.error('Error deleting from S3:', error);
+    logger.error('Error deleting from S3', { error });
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Failed to delete image from S3: ${error instanceof Error ? error.message : 'Unknown error.'}`
@@ -288,7 +289,7 @@ export const replaceFileInS3 = async (
   try {
     await deleteFileFromS3(oldFileUrl);
   } catch (error) {
-    console.warn('Old file deletion failed (might not exist):', error);
+    logger.warn('Old file deletion failed (might not exist)', { error });
   }
 
   return newUploadResult;

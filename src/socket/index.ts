@@ -1,7 +1,7 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import config from '../config';
-import { chatHandler } from './handlers/chat.handler';
+import logger from '../config/logger';
 import { notificationHandler } from './handlers/notification.handler';
 import { socketHandler } from './socket.handler';
 
@@ -10,7 +10,7 @@ let io: SocketIOServer;
 export const initializeSocket = (server: HTTPServer): SocketIOServer => {
   io = new SocketIOServer(server, {
     cors: config.socket.cors,
-    transports: config.socket.transports as any,
+    transports: config.socket.transports as ('polling' | 'websocket')[],
     pingTimeout: config.socket.pingTimeout,
     pingInterval: config.socket.pingInterval,
     maxHttpBufferSize: config.socket.maxHttpBufferSize,
@@ -20,7 +20,7 @@ export const initializeSocket = (server: HTTPServer): SocketIOServer => {
   // Socket connection handler
   io.on('connection', socketHandler);
 
-  console.log('Socket.IO server initialized');
+  logger.info('Socket.IO server initialized');
   return io;
 };
 
@@ -32,4 +32,4 @@ export const getSocketIO = (): SocketIOServer => {
 };
 
 // Export handlers for use in other modules
-export { chatHandler, notificationHandler };
+export { notificationHandler };

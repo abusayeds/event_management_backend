@@ -1,6 +1,7 @@
 import colors from 'colors';
 import RedisIO from 'ioredis';
 import config from './index';
+import logger from './logger';
 const localRedisHosts = new Set(['localhost', '127.0.0.1', '::1', 'redis']);
 const redisOptions = {
   host: config.redis.host,
@@ -28,7 +29,7 @@ export const connectRedis = async (): Promise<void> => {
     }
     await redisClient.ping();
   } catch (error) {
-    console.error(colors.red(' Local Redis connection failed:'), error);
+    logger.error('Redis connection failed', { error });
     throw error;
   }
 };
@@ -37,8 +38,8 @@ export const connectRedis = async (): Promise<void> => {
 export const closeRedis = async (): Promise<void> => {
   try {
     await redisClient.quit();
-    console.log(colors.green(' Redis connections closed'));
+    logger.info('Redis connections closed');
   } catch (error) {
-    console.error(colors.red(' Error closing Redis:'), error);
+    logger.error('Error closing Redis', { error });
   }
 };

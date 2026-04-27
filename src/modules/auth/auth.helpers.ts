@@ -11,7 +11,12 @@ export const normalizeEmail = (email: string): string => email.toLowerCase().tri
 
 // Mask email for security logging (show first and last character)
 export const maskEmail = (email: string): string => {
-  const [name, domain] = email.split('@');
+  const atIndex = email.indexOf('@');
+  if (atIndex < 1) {
+    return '***';
+  }
+  const name = email.slice(0, atIndex);
+  const domain = email.slice(atIndex + 1);
   const maskedName =
     name.charAt(0) +
     '*'.repeat(Math.max(1, name.length - 2)) +

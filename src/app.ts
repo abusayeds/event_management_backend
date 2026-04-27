@@ -279,10 +279,8 @@ app.use(cors(corsOptions));
 // Serve static assets
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
-// CSRF Protection
-if (process.env.NODE_ENV === 'development') {
-  app.use(getCsrfProtection());
-}
+// CSRF Protection (ignoreMethods inside getCsrfProtection handles dev vs prod differences)
+app.use(getCsrfProtection());
 
 // Helmet security headers
 app.use(getHelmetConfig(allowedOrigins));

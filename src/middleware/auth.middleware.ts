@@ -35,8 +35,8 @@ const auth =
       // Verify token and get decoded user
       const verifiedUser = verifyAccessToken(token) as IDecodedToken;
 
-      // Always re-check live user status from DB for protected routes.
-      const currentUser = await UserRepository.getUserById(verifiedUser.userId);
+      // Always re-check live user status from DB for protected routes (no password needed here).
+      const currentUser = await UserRepository.getUserByIdPublic(verifiedUser.userId);
       if (!currentUser) {
         throw new ApiError(StatusCodes.UNAUTHORIZED, 'User not found or token is invalid');
       }

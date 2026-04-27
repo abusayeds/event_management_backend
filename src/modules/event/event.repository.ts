@@ -399,7 +399,7 @@ const getEvents = async (
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
 
-  const where: Record<string, unknown> = {
+  const where: Prisma.EventWhereInput = {
     deletedAt: null,
     isDeleted: false,
   };
@@ -425,9 +425,7 @@ const getEvents = async (
     sessionParts.push({ eventType: filters.eventType });
   }
   if (filters.groupCriteria) {
-    (where as Prisma.EventWhereInput).groups = {
-      some: { criteria: filters.groupCriteria },
-    };
+    where.groups = { some: { criteria: filters.groupCriteria } };
   }
   if (filters.timeRangeFrom && filters.timeRangeTo) {
     const from = new Date(filters.timeRangeFrom);
@@ -450,13 +448,13 @@ const getEvents = async (
 
   const [data, total] = await Promise.all([
     database.event.findMany({
-      where: where as any,
+      where,
       select: eventListSelect,
       skip,
       take,
       orderBy,
     }),
-    database.event.count({ where: where as any }),
+    database.event.count({ where }),
   ]);
 
   const enriched = await attachActiveSchedules(data);
@@ -475,7 +473,7 @@ const getUpcomingEvents = async (
   const sessionAnd: Prisma.EventScheduleWhereInput[] = [{ deadline: { gte: now } }];
   if (priceWhere) sessionAnd.push(priceWhere);
 
-  const where: Record<string, unknown> = {
+  const where: Prisma.EventWhereInput = {
     ...publishedEventBaseWhere,
     schedule: {
       is: { AND: sessionAnd },
@@ -484,13 +482,13 @@ const getUpcomingEvents = async (
 
   const [data, total] = await Promise.all([
     database.event.findMany({
-      where: where as any,
+      where,
       select: eventListSelect,
       skip,
       take,
       orderBy,
     }),
-    database.event.count({ where: where as any }),
+    database.event.count({ where }),
   ]);
 
   const enriched = await attachActiveSchedules(data);
@@ -600,10 +598,10 @@ const listPublishedEventsByCreatorIds = async (
 };
 
 // PATCH /events/:eventId (updates the `events` row; service may also update related tables)
-const updateEventById = async (id: string, data: Record<string, unknown>) => {
+const updateEventById = async (id: string, data: Prisma.EventUpdateInput) => {
   return database.event.update({
     where: { id },
-    data: data as any,
+    data,
     select: eventListSelect,
   });
 };

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { FamilyRelationShip, UserRole } from '../../../prisma/generated/enums';
 import { AuthenticatedRequest } from '../../interfaces/request.interface';
+import ApiError from '../../utils/apiError';
 import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
@@ -95,7 +96,16 @@ const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Res
 // GET /events/feed/by-family-relation
 const getEventsByFamilyRelation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
-  const relationShip = req.query.relationShip as FamilyRelationShip;
+  const rawRelationShip = req.query.relationShip as string;
+
+  if (!rawRelationShip || !Object.values(FamilyRelationShip).includes(rawRelationShip as FamilyRelationShip)) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `relationShip query parameter is required and must be one of: ${Object.values(FamilyRelationShip).join(', ')}`
+    );
+  }
+
+  const relationShip = rawRelationShip as FamilyRelationShip;
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const price = pick(req.query, ['priceMin', 'priceMax']);
   const result = await EventService.getEventsByFamilyRelation(userId, relationShip, options, price);

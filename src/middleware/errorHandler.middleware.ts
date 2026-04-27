@@ -1,6 +1,7 @@
 import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { ZodError } from 'zod';
+import logger from '../config/logger';
 import ApiError from '../utils/apiError';
 import { buildCombinedMessage, formatZodField, formatZodMessage } from '../utils/zodErrorFormatter';
 
@@ -58,9 +59,8 @@ const globalErrorHandler: ErrorRequestHandler = (
     message = error.message || 'Something went wrong!';
   }
 
-  // Log error in development
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error:', error);
+  if (statusCode >= 500) {
+    logger.error('Unhandled server error', { error, url: req.originalUrl, method: req.method });
   }
 
   // Send error response

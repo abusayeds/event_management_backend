@@ -4,30 +4,25 @@ export const SOCKET_EVENTS = {
   CONNECTION: 'connection',
   DISCONNECT: 'disconnect',
   ERROR: 'error',
-  
+
   // Authentication events
   AUTHENTICATE: 'authenticate',
   AUTH_SUCCESS: 'auth_success',
   AUTH_ERROR: 'auth_error',
-  
-  // Chat events
+
+  // Room events
   JOIN_ROOM: 'join_room',
   LEAVE_ROOM: 'leave_room',
-  SEND_MESSAGE: 'send_message',
-  NEW_MESSAGE: 'new_message',
-  MESSAGE_READ: 'message_read',
-  TYPING_START: 'typing_start',
-  TYPING_STOP: 'typing_stop',
-  
+
   // Notification events
   NOTIFICATION: 'notification',
   NOTIFICATION_READ: 'notification_read',
-  
+
   // User status events
   USER_ONLINE: 'user_online',
   USER_OFFLINE: 'user_offline',
   USER_STATUS_UPDATE: 'user_status_update',
-  
+
   // System events
   SYSTEM_MESSAGE: 'system_message',
   SERVER_SHUTDOWN: 'server_shutdown',
@@ -38,7 +33,6 @@ export const ROOMS = {
   GENERAL: 'general',
   NOTIFICATIONS: 'notifications',
   USER_PREFIX: 'user_',
-  CHAT_PREFIX: 'chat_',
 } as const;
 
 // Socket error types

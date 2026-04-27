@@ -1,4 +1,5 @@
 import { Socket } from 'socket.io';
+import logger from '../../config/logger';
 import { SOCKET_EVENTS } from '../socket.events';
 import { AuthenticatedSocket } from '../socket.handler';
 
@@ -45,7 +46,7 @@ export const notificationHandler = (socket: AuthenticatedSocket) => {
     // Send to specific user
     socket.to(`user_${data.userId}`).emit(SOCKET_EVENTS.NOTIFICATION, notification);
 
-    console.log(`Notification sent to user ${data.userId}: ${data.title}`);
+    logger.info('Notification sent', { targetUserId: data.userId, title: data.title });
   });
 
   // Mark notification as read
@@ -58,7 +59,7 @@ export const notificationHandler = (socket: AuthenticatedSocket) => {
     if (notification) {
       notification.read = true;
       socket.emit(SOCKET_EVENTS.NOTIFICATION_READ, { notificationId });
-      console.log(`Notification ${notificationId} marked as read by ${socket.user.email}`);
+      logger.info('Notification marked as read', { notificationId, userId: socket.user.userId });
     }
   });
 
@@ -76,7 +77,7 @@ export const notificationHandler = (socket: AuthenticatedSocket) => {
 
     userNotifications.set(socket.user.userId, []);
     socket.emit('notifications_cleared', { timestamp: new Date() });
-    console.log(`All notifications cleared for ${socket.user.email}`);
+    logger.info('All notifications cleared', { userId: socket.user.userId });
   });
 
   // Broadcast system notification
@@ -102,6 +103,6 @@ export const notificationHandler = (socket: AuthenticatedSocket) => {
     // Broadcast to all connected users
     socket.broadcast.emit(SOCKET_EVENTS.NOTIFICATION, notification);
 
-    console.log(`System notification broadcasted: ${data.title}`);
+    logger.info('System notification broadcasted', { title: data.title });
   });
 };
