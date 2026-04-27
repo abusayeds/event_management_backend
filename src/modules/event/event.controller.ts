@@ -151,19 +151,6 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
   });
 });
 
-// POST /events/:eventId/verify
-const verifyEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user!.userId;
-  const result = await EventService.verifyEvent(req.params.eventId as string, userId);
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Current event session verified successfully.',
-    data: result,
-  });
-});
-
 export const EventController = {
   createEvent,
   getEvents,
@@ -174,5 +161,4 @@ export const EventController = {
   getEventById,
   updateEvent,
   deleteEvent,
-  verifyEvent,
 };

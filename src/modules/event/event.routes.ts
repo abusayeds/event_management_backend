@@ -55,14 +55,6 @@ router
     EventController.getEvents
   );
 
-// POST /events/:eventId/verify -> EventController.verifyEvent -> EventService.verifyEvent -> EventRepository.verifyCurrentSessionForEvent
-router.post(
-  '/:eventId/verify',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.verifyEvent),
-  EventController.verifyEvent
-);
-
 router
   .route('/:eventId')
   // GET /events/:eventId -> EventController.getEventById -> EventService.getEventById -> EventRepository.getEventById

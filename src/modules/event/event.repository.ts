@@ -650,6 +650,50 @@ const updateCurrentEventSessionForEvent = async (
   return withEventSessionCostEstimation(updated);
 };
 
+// When PATCH body includes isVerified: true, publish the event’s `event_sessions` row (verified = published).
+const verifyEventSessionForEvent = async (eventId: string) => {
+  const current = await database.eventSession.findFirst({
+    where: { eventId },
+    include: {
+      session: {
+        select: {
+          id: true,
+          session: true,
+          sessionValue: true,
+          sessionLevel: true,
+          year: true,
+          creationMode: true,
+        },
+      },
+      groups: { include: { rounds: true } },
+    },
+  });
+  if (!current) {
+    return null;
+  }
+  if (current.status === SessionStatus.Published) {
+    return withEventSessionCostEstimation(current);
+  }
+  const updated = await database.eventSession.update({
+    where: { id: current.id },
+    data: { status: SessionStatus.Published },
+    include: {
+      session: {
+        select: {
+          id: true,
+          session: true,
+          sessionValue: true,
+          sessionLevel: true,
+          year: true,
+          creationMode: true,
+        },
+      },
+      groups: { include: { rounds: true } },
+    },
+  });
+  return withEventSessionCostEstimation(updated);
+};
+
 // PATCH /events/:eventId (body.repeatConfig) — upserts `repeat_configs` for this event.
 const upsertRepeatConfig = async (eventId: string, input: IRepeatConfigInput) => {
   const fields = repeatConfigFields(input);
@@ -672,50 +716,6 @@ const softDeleteEvent = async (id: string) => {
     data: { deletedAt: new Date(), isActive: false },
     select: { id: true, deletedAt: true },
   });
-};
-
-// POST /events/:eventId/verify — publishes the event’s single `event_sessions` row when it is Unverified.
-const verifyCurrentSessionForEvent = async (eventId: string) => {
-  const current = await database.eventSession.findFirst({
-    where: { eventId },
-    include: {
-      session: {
-        select: {
-          id: true,
-          session: true,
-          sessionValue: true,
-          sessionLevel: true,
-          year: true,
-          creationMode: true,
-        },
-      },
-      groups: { include: { rounds: true } },
-    },
-  });
-  if (!current) {
-    return null;
-  }
-  if (current.status !== SessionStatus.Unverified) {
-    return withEventSessionCostEstimation(current);
-  }
-  const updated = await database.eventSession.update({
-    where: { id: current.id },
-    data: { status: SessionStatus.Published },
-    include: {
-      session: {
-        select: {
-          id: true,
-          session: true,
-          sessionValue: true,
-          sessionLevel: true,
-          year: true,
-          creationMode: true,
-        },
-      },
-      groups: { include: { rounds: true } },
-    },
-  });
-  return withEventSessionCostEstimation(updated);
 };
 
 // Internal: validation helper for POST /events (programId must exist).
@@ -749,10 +749,10 @@ export const EventRepository = {
   getFeedHistory,
   updateEventById,
   updateCurrentEventSessionForEvent,
+  verifyEventSessionForEvent,
   upsertRepeatConfig,
   deleteRepeatConfigByEventId,
   softDeleteEvent,
-  verifyCurrentSessionForEvent,
   programExists,
   sessionsExist,
 };

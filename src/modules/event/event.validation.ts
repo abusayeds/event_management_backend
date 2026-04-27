@@ -328,7 +328,7 @@ const updateEventBodySchema = z
     note: z.string().max(2000).optional().nullable(),
     isPublished: z.coerce.boolean().optional(),
     isActive: z.coerce.boolean().optional(),
-    isVerifyActive: z.coerce.boolean().optional(),
+    isVerified: z.coerce.boolean().optional(),
     repeatConfig: repeatConfigBody,
     currentEventSession: updateCurrentEventSessionBody.optional(),
   })
@@ -351,10 +351,6 @@ const deleteEvent = z.object({
   params: eventIdParam,
 });
 
-const verifyEvent = z.object({
-  params: eventIdParam,
-});
-
 export const EventValidation = {
   createEvent,
   getEvents,
@@ -362,5 +358,4 @@ export const EventValidation = {
   getEventById,
   updateEvent,
   deleteEvent,
-  verifyEvent,
 };

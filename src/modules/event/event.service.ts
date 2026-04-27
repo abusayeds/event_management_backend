@@ -140,7 +140,7 @@ const updateEvent = async (
     ? { ...payload, coverImage: uploadedCoverUrl }
     : payload;
 
-  const { repeatConfig, currentEventSession, isVerifyActive, ...rest } = mergedPayload;
+  const { repeatConfig, currentEventSession, isVerified: verifyRequest, ...rest } = mergedPayload;
   const cleaned = Object.fromEntries(
     Object.entries(rest).filter(([, value]) => value !== undefined)
   ) as Record<string, unknown>;
@@ -148,11 +148,11 @@ const updateEvent = async (
   const hasSessionPatch = hasCurrentSessionPatchBody(currentEventSession);
   const hasScalarUpdate = Object.keys(cleaned).length > 0;
   const hasRepeatUpdate = repeatConfig !== undefined;
-  const hasVerifyActiveRequest = isVerifyActive === true;
-  if (!hasScalarUpdate && !hasRepeatUpdate && !file && !hasSessionPatch && !hasVerifyActiveRequest) {
+  const hasVerifyRequest = verifyRequest === true;
+  if (!hasScalarUpdate && !hasRepeatUpdate && !file && !hasSessionPatch && !hasVerifyRequest) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'At least one field, repeatConfig, currentEventSession, isVerifyActive=true, or a cover image file is required to update an event.'
+      'At least one field, repeatConfig, currentEventSession, isVerified, or a cover image file is required to update an event.'
     );
   }
 
@@ -162,6 +162,7 @@ const updateEvent = async (
     version: { increment: 1 },
   };
   delete data.eventName;
+  delete data.isVerified;
 
   try {
     const updated = await EventRepository.updateEventById(eventId, data);
@@ -187,8 +188,8 @@ const updateEvent = async (
         );
       }
     }
-    if (hasVerifyActiveRequest) {
-      const verified = await EventRepository.verifyCurrentSessionForEvent(eventId);
+    if (hasVerifyRequest) {
+      const verified = await EventRepository.verifyEventSessionForEvent(eventId);
       if (!verified) {
         throw new ApiError(
           StatusCodes.BAD_REQUEST,
@@ -246,23 +247,6 @@ const deleteEvent = async (eventId: string, userId: string, role: UserRole) => {
   return EventRepository.softDeleteEvent(eventId);
 };
 
-// POST /events/:eventId/verify
-const verifyEvent = async (eventId: string, userId: string) => {
-  const existing = await EventRepository.getEventBare(eventId);
-  if (!existing) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
-  }
-  const updated = await EventRepository.verifyCurrentSessionForEvent(eventId);
-  if (!updated) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'No event session found for this event. Create the event with eventSession or add session details first.'
-    );
-  }
-  await rewardUserContribution(userId, EVENT_CONTRIBUTION_SCORE.VERIFY);
-  return updated;
-};
-
 export const EventService = {
   createEvent,
   getEvents,
@@ -273,5 +257,4 @@ export const EventService = {
   getEventById,
   updateEvent,
   deleteEvent,
-  verifyEvent,
 };

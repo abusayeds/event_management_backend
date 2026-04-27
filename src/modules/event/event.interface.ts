@@ -105,9 +105,10 @@ export interface IUpdateEventPayload {
   note?: string | null;
   isPublished?: boolean;
   isActive?: boolean;
+  /** When true, marks the event’s single `event_sessions` row as verified (published). */
+  isVerified?: boolean;
   repeatConfig?: IRepeatConfigInput | null;
   currentEventSession?: IUpdateCurrentEventSessionPayload;
-  isVerifyActive?: boolean;
 }
 
 export type EventSessionScopeFilter = 'today' | 'upcoming' | 'history';
