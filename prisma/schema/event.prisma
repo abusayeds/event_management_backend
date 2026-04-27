@@ -98,7 +98,7 @@ model EventSchedule {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("event_sessions")
+  @@map("event_schedules")
 }
 
 model EventGroup {

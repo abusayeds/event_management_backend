@@ -3,7 +3,7 @@ import repeatEventQueue from './queues/repeatEvent.queue';
 
 export async function enqueueRepeatEventJob(eventId: string, runAt: Date): Promise<void> {
   const delay = Math.max(0, runAt.getTime() - Date.now());
-  await repeatEventQueue.add(
+  const job = await repeatEventQueue.add(
     'generate-next',
     { eventId },
     {
@@ -11,7 +11,7 @@ export async function enqueueRepeatEventJob(eventId: string, runAt: Date): Promi
       jobId: `repeat-event-${eventId}-${runAt.getTime()}`,
     }
   );
-  logger.debug(
-    `repeat-event job enqueued eventId=${eventId} runAt=${runAt.toISOString()} delayMs=${delay}`
+  logger.info(
+    `repeat-event job enqueued jobId=${job.id} eventId=${eventId} runAt=${runAt.toISOString()} delayMs=${delay}`
   );
 }
