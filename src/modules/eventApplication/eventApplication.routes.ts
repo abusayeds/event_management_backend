@@ -6,48 +6,27 @@ import { EventApplicationController } from './eventApplication.controller';
 import { EventApplicationValidation } from './eventApplication.validation';
 
 const router = Router();
-
-// Event-specific apply/withdraw endpoints.
-router.post(
-  '/events/:eventId/apply',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventApplicationValidation.applyToEvent),
-  EventApplicationController.applyToEvent
-);
-
-router.delete(
-  '/events/:eventId/apply',
-  auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventApplicationValidation.withdrawEventApplication),
-  EventApplicationController.withdrawEventApplication
-);
-
-// Event application list + by-id (mounted under /event-applications).
 router
   .route('/')
-  .get(
+  .post(
     auth(UserRole.ADMIN, UserRole.USER),
-    validateRequest(EventApplicationValidation.getEventApplicationList),
-    EventApplicationController.getEventApplicationList
+    validateRequest(EventApplicationValidation.createEventApplication),
+    EventApplicationController.createEventApplication
   );
 
-// Must stay after /events/... so `events` is not parsed as an appliedId.
+router.get(
+  '/my',
+  auth(UserRole.ADMIN, UserRole.USER),
+  validateRequest(EventApplicationValidation.getEventApplicationByUser),
+  EventApplicationController.getEventApplicationByUser
+);
+
 router
   .route('/:appliedId')
-  .get(
-    auth(UserRole.ADMIN, UserRole.USER),
-    validateRequest(EventApplicationValidation.getEventApplicationById),
-    EventApplicationController.getEventApplicationById
-  )
-  .patch(
-    auth(UserRole.ADMIN, UserRole.USER),
-    validateRequest(EventApplicationValidation.updateEventApplication),
-    EventApplicationController.updateEventApplication
-  )
   .delete(
     auth(UserRole.ADMIN, UserRole.USER),
-    validateRequest(EventApplicationValidation.deleteEventApplication),
-    EventApplicationController.deleteEventApplication
+    validateRequest(EventApplicationValidation.deleteApplication),
+    EventApplicationController.deleteApplication
   );
 
 export const EventApplicationRoutes: Router = router;

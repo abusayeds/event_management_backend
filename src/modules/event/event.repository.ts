@@ -339,7 +339,7 @@ const getEventById = async (id: string) => {
         },
         orderBy: { createdAt: 'desc' as const },
       },
-      _count: { select: { applications: true } },
+      _count: { select: { eventApplieds: true } },
     },
   });
   if (!event) return null;

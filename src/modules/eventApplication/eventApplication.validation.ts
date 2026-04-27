@@ -1,19 +1,15 @@
 import { z } from 'zod';
-import { EventApplicationStatus } from '../../../prisma/generated/enums';
 
-const appliedIdParam = z.object({
-  appliedId: z.string().min(1, 'appliedId is required'),
+const createEventApplication = z.object({
+  body: z.object({
+    eventId: z.string().min(1, 'eventId is required'),
+    note: z.string().max(1000).optional().nullable(),
+  }),
 });
 
-const eventIdParam = z.object({
-  eventId: z.string().min(1, 'eventId is required'),
-});
-
-const getEventApplicationList = z.object({
+const getEventApplicationByUser = z.object({
   query: z.object({
-    userId: z.string().min(1).optional(),
-    eventId: z.string().min(1).optional(),
-    status: z.nativeEnum(EventApplicationStatus).optional(),
+    search: z.string().optional(),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
     sortBy: z.string().optional(),
@@ -21,42 +17,14 @@ const getEventApplicationList = z.object({
   }),
 });
 
-const getEventApplicationById = z.object({
-  params: appliedIdParam,
-});
-
-const updateEventApplication = z.object({
-  params: appliedIdParam,
-  body: z
-    .object({
-      status: z.nativeEnum(EventApplicationStatus).optional(),
-      note: z.string().max(2000).optional().nullable(),
-    })
-    .refine(data => Object.keys(data).length > 0, 'At least one field is required.'),
-});
-
-const deleteEventApplication = z.object({
-  params: appliedIdParam,
-});
-
-const applyToEvent = z.object({
-  params: eventIdParam,
-  body: z
-    .object({
-      note: z.string().max(1000).optional().nullable(),
-    })
-    .default({}),
-});
-
-const withdrawEventApplication = z.object({
-  params: eventIdParam,
+const deleteApplication = z.object({
+  params: z.object({
+    appliedId: z.string().min(1, 'appliedId is required'),
+  }),
 });
 
 export const EventApplicationValidation = {
-  getEventApplicationList,
-  getEventApplicationById,
-  updateEventApplication,
-  deleteEventApplication,
-  applyToEvent,
-  withdrawEventApplication,
+  createEventApplication,
+  getEventApplicationByUser,
+  deleteApplication,
 };

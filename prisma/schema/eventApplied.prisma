@@ -4,7 +4,6 @@ model EventApplied {
   user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   eventId String
   event   Event                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  status  EventApplicationStatus @default(Pending)
   note    String?
 
   deletedAt DateTime?
@@ -13,6 +12,5 @@ model EventApplied {
 
   @@unique([userId, eventId])
   @@index([userId])
-  @@index([status])
-  @@map("user_applieds")
+  @@map("event_applieds")
 }

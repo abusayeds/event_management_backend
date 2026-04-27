@@ -143,11 +143,3 @@ enum SessionStatus {
   Completed
   Cancelled
 }
-
-// ========================== Event Application Related Enums ==========================
-enum EventApplicationStatus {
-  Pending
-  Withdrawn
-  Approved
-  Rejected
-}

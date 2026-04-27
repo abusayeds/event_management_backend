@@ -1,77 +1,31 @@
 import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { UserRole } from '../../../prisma/generated/enums';
 import { AuthenticatedRequest } from '../../interfaces/request.interface';
 import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
 import { EventApplicationService } from './eventApplication.service';
 
-const getEventApplicationList = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const requesterId = req.user!.userId;
-  const role = req.user!.role as UserRole;
-  const filters = pick(req.query, ['userId', 'eventId', 'status']);
+const getEventApplicationByUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.userId;
+  const search = pick(req.query, ['search']);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-
-  const result = await EventApplicationService.getEventApplicationList(
-    requesterId,
-    role,
-    filters,
-    options
-  );
+  const result = await EventApplicationService.getEventApplicationByUser(userId, {
+    search: search.search as string | undefined,
+    options,
+  });
 
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Applications fetched successfully.',
+    message: 'User applications fetched successfully.',
     data: result.data,
     meta: result.meta,
   });
 });
-
-const getEventApplicationById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const requesterId = req.user!.userId;
-  const role = req.user!.role as UserRole;
-  const result = await EventApplicationService.getEventApplicationById(
-    req.params.appliedId as string,
-    requesterId,
-    role
-  );
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Application fetched successfully.',
-    data: result,
-  });
-});
-
-const updateEventApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const requesterId = req.user!.userId;
-  const role = req.user!.role as UserRole;
-  const result = await EventApplicationService.updateEventApplication(
-    req.params.appliedId as string,
-    requesterId,
-    role,
-    req.body
-  );
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Application updated successfully.',
-    data: result,
-  });
-});
-
-const deleteEventApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const requesterId = req.user!.userId;
-  const role = req.user!.role as UserRole;
-  const result = await EventApplicationService.deleteEventApplication(
-    req.params.appliedId as string,
-    requesterId,
-    role
-  );
+const deleteApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.userId;
+  const result = await EventApplicationService.deleteApplication(req.params.appliedId as string, userId);
 
   apiResponse(res, {
     success: true,
@@ -81,12 +35,11 @@ const deleteEventApplication = asyncHandler(async (req: AuthenticatedRequest, re
   });
 });
 
-const applyToEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+const createEventApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
-  const result = await EventApplicationService.applyToEvent(
-    req.params.eventId as string,
+  const result = await EventApplicationService.createEventApplication(
     userId,
-    req.body?.note
+    req.body
   );
 
   apiResponse(res, {
@@ -97,26 +50,8 @@ const applyToEvent = asyncHandler(async (req: AuthenticatedRequest, res: Respons
   });
 });
 
-const withdrawEventApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user!.userId;
-  const result = await EventApplicationService.withdrawEventApplication(
-    req.params.eventId as string,
-    userId
-  );
-
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Application withdrawn successfully.',
-    data: result,
-  });
-});
-
 export const EventApplicationController = {
-  getEventApplicationList,
-  getEventApplicationById,
-  updateEventApplication,
-  deleteEventApplication,
-  applyToEvent,
-  withdrawEventApplication,
+  createEventApplication,
+  getEventApplicationByUser,
+  deleteApplication,
 };

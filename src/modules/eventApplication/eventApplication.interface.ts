@@ -1,4 +1,4 @@
-import { EventApplicationStatus } from '../../../prisma/generated/enums';
+import { PaginationOptions } from '../../interfaces';
 
 /** Create payload for event apply only. */
 export interface ICreateEventApplicationPayload {
@@ -6,15 +6,7 @@ export interface ICreateEventApplicationPayload {
   note?: string | null;
 }
 
-/** Allowed PATCH fields on `EventApplied` (rules enforced in service for non-admins). */
-export interface IUpdateEventApplicationPayload {
-  status?: EventApplicationStatus;
-  note?: string | null;
-}
-
-/** Query filters for listing event applications. */
-export interface IEventApplicationFilters {
-  userId?: string;
-  eventId?: string;
-  status?: EventApplicationStatus;
+export interface IGetEventApplicationByUserQuery {
+  search?: string;
+  options: PaginationOptions;
 }

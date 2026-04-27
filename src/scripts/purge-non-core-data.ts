@@ -17,7 +17,6 @@ const runPurge = async () => {
 
       // Event module (children -> parents)
       deleted.editLog = await tx.editLog.deleteMany();
-      deleted.eventApplication = await tx.eventApplication.deleteMany();
       deleted.eventResult = await tx.eventResult.deleteMany();
       deleted.eventRound = await tx.eventRound.deleteMany();
       deleted.eventGroup = await tx.eventGroup.deleteMany();
