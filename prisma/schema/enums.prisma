@@ -38,6 +38,14 @@ enum FamilyRole {
     MEMBER
 }
 
+enum FamilyRelationShip {
+    Self
+    Spous
+    ChildStephanie
+    ChildSophia
+    Other
+}
+
 // ========================== Event Related Enums ==========================
 enum CompetitionLevel {
     Preliminary

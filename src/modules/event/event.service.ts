@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import { UserRole } from '../../../prisma/generated/enums';
+import { FamilyRelationShip, UserRole } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { deleteFileFromS3, uploadSingleFileToS3 } from '../../utils/s3Upload';
@@ -16,10 +16,7 @@ import {
   hasCurrentSessionPatchBody,
   pickEventSessionForDetail,
 } from './event.helpers';
-import {
-  CoMemberProfile,
-  FamilyMemberRepository,
-} from '../familyMember/familyMember.repository';
+import { FamilyMemberRepository } from '../familyMember/familyMember.repository';
 import { EventRepository } from './event.repository';
 
 // POST /events
@@ -74,70 +71,6 @@ const getEvents = async (filters: IEventFilters, options: PaginationOptions) => 
   return EventRepository.getEvents(filters, options);
 };
 
-const normalizeNameKey = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]+/g, '');
-
-const resolveFamilyFeedCreatorId = (
-  requesterId: string,
-  actionRaw: string,
-  coMembers: CoMemberProfile[]
-): string => {
-  const action = actionRaw.trim().toLowerCase();
-  if (!action || action === 'self') {
-    return requesterId;
-  }
-  if (action === 'spouse' || action === 'spous') {
-    const spouse = coMembers.find(m => {
-      const r = (m.relationShip || '').toLowerCase();
-      return /spous|partner|husband|wife/.test(r);
-    });
-    if (!spouse) {
-      throw new ApiError(
-        StatusCodes.NOT_FOUND,
-        'No spouse is linked in your family (set relationShip on the family member, e.g. Spouse).'
-      );
-    }
-    return spouse.userId;
-  }
-  const childMatch = action.match(/^child(?:[-_\s]+)(.+)$/);
-  if (childMatch) {
-    const wanted = normalizeNameKey(childMatch[1]);
-    if (!wanted) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Child action must include a name, e.g. child_stephanie.');
-    }
-    const matches = coMembers.filter(m => {
-      const fn = normalizeNameKey(m.firstName || '');
-      const ln = normalizeNameKey(m.lastName || '');
-      const full = `${fn}${ln}`;
-      return fn === wanted || full === wanted || full.includes(wanted);
-    });
-    if (matches.length === 0) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'No family member matched that child name.');
-    }
-    if (matches.length > 1) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        'Multiple family members match that name; use a more specific spelling.'
-      );
-    }
-    return matches[0].userId;
-  }
-  throw new ApiError(
-    StatusCodes.BAD_REQUEST,
-    'Invalid action. Use self, spouse, or child_<name> (e.g. child_stephanie, child-sophia).'
-  );
-};
-
-// GET /events/feed/member-events — query `action` only: self | spouse | child_<name> (no price filter)
-const getMemberEventsByAction = async (requesterId: string, action: string) => {
-  const coMembers = await FamilyMemberRepository.listCoMembersExcludingSelf(requesterId);
-  const creatorId = resolveFamilyFeedCreatorId(requesterId, action, coMembers);
-  return EventRepository.getMemberEventsFeedByCreator(creatorId, {});
-};
-
 // GET /events/feed/upcoming
 const getUpcomingEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
   return EventRepository.getUpcomingEvents(options, price);
@@ -151,6 +84,20 @@ const getTodayEvents = async (options: PaginationOptions, price?: IFeedPriceFilt
 // GET /events/feed/history
 const getHistoryEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
   return EventRepository.getFeedHistory(options, price);
+};
+
+// GET /events/feed/by-family-relation
+const getEventsByFamilyRelation = async (
+  viewerId: string,
+  relationShip: FamilyRelationShip,
+  options: PaginationOptions,
+  price?: IFeedPriceFilters
+) => {
+  const creatorIds = await FamilyMemberRepository.listCreatorUserIdsForFamilyRelationFeed(
+    viewerId,
+    relationShip
+  );
+  return EventRepository.listPublishedEventsByCreatorIds(creatorIds, options, price);
 };
 
 // GET /events/:eventId
@@ -313,10 +260,10 @@ const deleteEvent = async (eventId: string, userId: string, role: UserRole) => {
 export const EventService = {
   createEvent,
   getEvents,
-  getMemberEventsByAction,
   getUpcomingEvents,
   getTodayEvents,
   getHistoryEvents,
+  getEventsByFamilyRelation,
   getEventById,
   updateEvent,
   deleteEvent,

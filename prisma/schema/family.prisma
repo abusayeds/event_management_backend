@@ -17,15 +17,15 @@ model Family {
 }
 
 model FamilyMember {
-    id           String     @id @default(uuid())
+    id           String              @id @default(uuid())
     familyId     String
     userId       String
-    role         FamilyRole @default(MEMBER)
-    relationShip String?
-    family       Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
-    user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-    createdAt    DateTime   @default(now())
-    updatedAt    DateTime   @updatedAt
+    role         FamilyRole          @default(MEMBER)
+    relationShip FamilyRelationShip?
+    family       Family              @relation(fields: [familyId], references: [id], onDelete: Cascade)
+    user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt    DateTime            @default(now())
+    updatedAt    DateTime            @updatedAt
 
     @@unique([familyId, userId])
     @@index([userId])

@@ -1,4 +1,4 @@
-import { FamilyRole } from '../../../prisma/generated/enums';
+import { FamilyRelationShip, FamilyRole } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import { PaginationOptions } from '../../interfaces';
 import { createPaginationQuery, createPaginationResult, parsePaginationOptions } from '../../utils';
@@ -126,7 +126,6 @@ const isOwnerOfMember = async (ownerUserId: string, memberUserId: string): Promi
   return !!membership;
 };
 
-/** True if both users belong to at least one non-deleted family (includes same user). */
 const areUsersInSameFamily = async (userA: string, userB: string): Promise<boolean> => {
   if (userA === userB) {
     return true;
@@ -146,48 +145,38 @@ const areUsersInSameFamily = async (userA: string, userB: string): Promise<boole
   return !!shared;
 };
 
-export type CoMemberProfile = {
-  userId: string;
-  relationShip: string | null;
-  firstName: string;
-  lastName: string;
-};
+/**
+ * Creator user ids for the events feed: `Self` → viewer only; else co-members in viewer’s families
+ * whose `relationShip` equals the filter (no family / no match → []).
+ */
+const listCreatorUserIdsForFamilyRelationFeed = async (
+  viewerId: string,
+  relationShip: FamilyRelationShip
+): Promise<string[]> => {
+  if (relationShip === FamilyRelationShip.Self) {
+    return [viewerId];
+  }
 
-/** Other members in any non-deleted family the requester belongs to (deduped by userId). */
-const listCoMembersExcludingSelf = async (requesterId: string): Promise<CoMemberProfile[]> => {
-  const memberships = await database.familyMember.findMany({
-    where: { userId: requesterId, family: { isDeleted: false } },
+  const myFamilies = await database.familyMember.findMany({
+    where: { userId: viewerId, family: { isDeleted: false } },
     select: { familyId: true },
   });
-  const familyIds = [...new Set(memberships.map(m => m.familyId))];
+  const familyIds = [...new Set(myFamilies.map(m => m.familyId))];
   if (familyIds.length === 0) {
     return [];
   }
+
   const rows = await database.familyMember.findMany({
     where: {
       familyId: { in: familyIds },
-      userId: { not: requesterId },
+      userId: { not: viewerId },
+      relationShip,
       family: { isDeleted: false },
     },
-    include: {
-      user: {
-        select: { id: true, firstName: true, lastName: true },
-      },
-    },
+    select: { userId: true },
   });
-  const byUser = new Map<string, CoMemberProfile>();
-  for (const row of rows) {
-    const u = row.user;
-    if (!byUser.has(u.id)) {
-      byUser.set(u.id, {
-        userId: u.id,
-        relationShip: row.relationShip ?? null,
-        firstName: u.firstName,
-        lastName: u.lastName,
-      });
-    }
-  }
-  return [...byUser.values()];
+
+  return [...new Set(rows.map(r => r.userId))];
 };
 
 export const FamilyMemberRepository = {
@@ -199,5 +188,5 @@ export const FamilyMemberRepository = {
   getFamilyMembersByFamilyId,
   isOwnerOfMember,
   areUsersInSameFamily,
-  listCoMembersExcludingSelf,
+  listCreatorUserIdsForFamilyRelationFeed,
 };

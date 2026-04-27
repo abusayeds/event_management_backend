@@ -6,21 +6,19 @@ import { FamilyRepository } from '../family/family.repository';
 import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import {
-    IAddFamilyMemberWithUserPayload,
-    IAddFamilyOwnerPayload,
-    IFamilyMemberFilters,
+  IAddFamilyMemberWithUserPayload,
+  IAddFamilyOwnerPayload,
+  IFamilyMemberFilters,
 } from './familyMember.interface';
 import { FamilyMemberRepository } from './familyMember.repository';
 
 const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUserPayload) => {
   const { familyId, role, relationShip, ...userPayload } = payload;
-
   // Step:1 Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
   if (!family) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
   }
-
   // Step:2 Only family owner can add members
   const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
@@ -144,7 +142,6 @@ const addFamilyOwner = async (actorId: string, payload: IAddFamilyOwnerPayload) 
   if (!family) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Family not found.');
   }
-
   // Step:2 Ensure requester is current owner
   const actorMembership = await FamilyMemberRepository.getFamilyMemberByFamilyAndUser(
     familyId,
@@ -207,7 +204,7 @@ const updateOwnerIndependentStatus = async (
   if (!targetMembership) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Target user is not a family member.');
   }
-  
+
   // Step:4 Ensure target is an OWNER (only owners can have independence status changed)
   if (targetMembership.role !== FamilyRole.OWNER) {
     throw new ApiError(

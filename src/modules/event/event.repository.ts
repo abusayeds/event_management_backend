@@ -532,27 +532,34 @@ const getFeedHistory = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
-// GET /events/feed/member-events — published events for one creator (no price filter).
-const getMemberEventsFeedByCreator = async (
-  creatorId: string,
-  options: PaginationOptions
+const listPublishedEventsByCreatorIds = async (
+  creatorIds: string[],
+  options: PaginationOptions,
+  price?: IFeedPriceFilters
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
+  if (creatorIds.length === 0) {
+    return createPaginationResult([], 0, pagination);
+  }
   const { skip, take, orderBy } = createPaginationQuery(pagination);
-  const where: Record<string, unknown> = {
+  const priceWhere = priceRangeOnSession(price?.priceMin, price?.priceMax);
+  const where: Prisma.EventWhereInput = {
     ...publishedEventBaseWhere,
-    creatorId,
+    creatorId: { in: creatorIds },
   };
+  if (priceWhere) {
+    where.eventSession = { is: priceWhere };
+  }
 
   const [data, total] = await Promise.all([
     database.event.findMany({
-      where: where as any,
+      where,
       select: eventListSelect,
       skip,
       take,
       orderBy,
     }),
-    database.event.count({ where: where as any }),
+    database.event.count({ where }),
   ]);
 
   const enriched = await attachActiveSessions(data);
@@ -739,7 +746,7 @@ export const EventRepository = {
   getUpcomingEvents,
   getFeedToday,
   getFeedHistory,
-  getMemberEventsFeedByCreator,
+  listPublishedEventsByCreatorIds,
   updateEventById,
   updateCurrentEventSessionForEvent,
   verifyEventSessionForEvent,

@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { UserRole } from '../../../prisma/generated/enums';
+import { FamilyRelationShip, UserRole } from '../../../prisma/generated/enums';
 import { AuthenticatedRequest } from '../../interfaces/request.interface';
 import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
@@ -92,15 +92,18 @@ const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Res
   });
 });
 
-// GET /events/feed/member-events — query `action` only (self | spouse | child_<name>); uses logged-in user from auth.
-const getMemberEventsByAction = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+// GET /events/feed/by-family-relation
+const getEventsByFamilyRelation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
-  const { action } = pick(req.query, ['action']);
-  const result = await EventService.getMemberEventsByAction(userId, action as string);
+  const relationShip = req.query.relationShip as FamilyRelationShip;
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+  const price = pick(req.query, ['priceMin', 'priceMax']);
+  const result = await EventService.getEventsByFamilyRelation(userId, relationShip, options, price);
+
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Member events fetched successfully.',
+    message: 'Events fetched successfully.',
     data: result.data,
     meta: result.meta,
   });
@@ -153,10 +156,10 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
 export const EventController = {
   createEvent,
   getEvents,
-  getMemberEventsByAction,
   getUpcomingEvents,
   getTodayEvents,
   getHistoryEvents,
+  getEventsByFamilyRelation,
   getEventById,
   updateEvent,
   deleteEvent,

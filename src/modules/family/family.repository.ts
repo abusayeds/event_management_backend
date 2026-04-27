@@ -1,3 +1,4 @@
+import { FamilyRelationShip } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import { PaginationOptions } from '../../interfaces';
 import { createPaginationQuery, createPaginationResult, parsePaginationOptions } from '../../utils';
@@ -12,6 +13,7 @@ const createFamily = async (payload: ICreateFamilyPayload) => {
       familyMembers: {
         create: {
           userId: payload.familyMembers.userId,
+          relationShip: FamilyRelationShip.Self,
           role: payload.familyMembers.role,
         },
       },

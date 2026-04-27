@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FamilyRole, UserGender } from '../../../prisma/generated/enums';
+import { FamilyRelationShip, FamilyRole, UserGender } from '../../../prisma/generated/enums';
 import { strongPasswordSchema } from '../../utils/passwordPolicy';
 
 // Family ID parameter validation for routes
@@ -28,7 +28,7 @@ const addFamilyMember = z.object({
     city: z.string().trim().min(1, 'city is required'),
     email: z.string().email('Invalid email address'),
     password: strongPasswordSchema,
-    relationShip: z.string().optional(),
+    relationShip: z.nativeEnum(FamilyRelationShip),
     skills: z.array(z.string()).optional(),
     role: z.enum(Object.values(FamilyRole) as [string, ...string[]]).optional(),
   }),
