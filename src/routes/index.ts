@@ -7,6 +7,7 @@ import { DashboardRoutes } from '../modules/dashboard/dashboard.routes';
 import { EventRoutes } from '../modules/event/event.routes';
 import { FamilyRoutes } from '../modules/family/family.routes';
 import { FamilyMemberRoutes } from '../modules/familyMember/familyMember.routes';
+import { NotificationRoutes } from '../modules/notification/notification.routes';
 import { ProgramRoutes } from '../modules/program/program.routes';
 import { SettingsRoutes } from '../modules/settings/settings.routes';
 import { SubcategoryRoutes } from '../modules/subcategory/subcategory.routes';
@@ -38,5 +39,6 @@ router.use('/users', UserRoutes);
 router.use('/event-applications', EventApplicationRoutes);
 router.use('/families', FamilyRoutes);
 router.use('/family-members', FamilyMemberRoutes);
+router.use('/notifications', NotificationRoutes);
 
 export default router;

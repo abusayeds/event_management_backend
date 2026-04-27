@@ -17,6 +17,7 @@ export const SOCKET_EVENTS = {
   // Notification events
   NOTIFICATION: 'notification',
   NOTIFICATION_READ: 'notification_read',
+  NOTIFICATION_UNREAD_COUNT: 'notification_unread_count',
 
   // User status events
   USER_ONLINE: 'user_online',

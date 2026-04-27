@@ -24,6 +24,7 @@ model User {
   owner               User?               @relation("OwnerCreatedUsers", fields: [createdByOwner], references: [id], onDelete: SetNull)
   createdUsers        User[]              @relation("OwnerCreatedUsers")
   contributionScore   Int                 @default(0)
+  fcmToken            String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   families            Family[]            @relation("FamilyCreator")
@@ -37,8 +38,11 @@ model User {
   eventEditLogs       EditLog[]
   eventApplieds       EventApplied[]
   donations           DonationTransaction[]
+  notifications       Notification[]      @relation("NotificationRecipient")
+  sentNotifications   Notification[]      @relation("NotificationSender")
 
   @@index([createdByOwner])
+  @@index([fcmToken])
   @@map("users")
 }
 

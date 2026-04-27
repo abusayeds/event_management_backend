@@ -1,5 +1,11 @@
 import { StatusCodes } from 'http-status-codes';
-import { FamilyRelationShip, RepeatFrequency, UserRole } from '../../../prisma/generated/enums';
+import {
+  FamilyRelationShip,
+  NotificationMedium,
+  NotificationType,
+  RepeatFrequency,
+  UserRole,
+} from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces';
 import logger from '../../config/logger';
 import ApiError from '../../utils/apiError';
@@ -21,6 +27,7 @@ import { FamilyMemberRepository } from '../familyMember/familyMember.repository'
 import { EventRepository } from './event.repository';
 import { repeatConfigFields, resolveRepeatFrequency } from './event.utils';
 import { enqueueRepeatEventJob } from '../../jobs/repeatEvent.schedule';
+import { NotificationService } from '../notification/notification.service';
 
 // POST /events
 const createEvent = async (
@@ -57,6 +64,15 @@ const createEvent = async (
   try {
     const event = await EventRepository.createEvent(userId, fullPayload);
     await rewardUserContribution(userId, EVENT_CONTRIBUTION_SCORE.CREATE);
+    await NotificationService.notifyAdmins({
+      senderId: userId,
+      type: NotificationType.Event,
+      medium: [NotificationMedium.InApp, NotificationMedium.Push],
+      title: 'New event submitted',
+      message: `A new event "${event.eventName}" needs review.`,
+      linkId: event.id,
+      linkType: 'event',
+    });
 
     const rf = resolveRepeatFrequency(fullPayload.repeatConfig);
     if (rf !== RepeatFrequency.DontRepeat && fullPayload.repeatConfig) {
@@ -266,6 +282,16 @@ const updateEvent = async (
           'Event not found or could not be marked verified.'
         );
       }
+      await NotificationService.createNotification({
+        recipientId: existing.creatorId,
+        senderId: userId,
+        type: NotificationType.Event,
+        medium: [NotificationMedium.InApp, NotificationMedium.Push],
+        title: 'Event verified',
+        message: `Your event "${existing.eventName}" was verified by admin.`,
+        linkId: existing.id,
+        linkType: 'event',
+      });
     }
     if (uploadedCoverUrl && existing.coverImage) {
       await deleteFileFromS3(existing.coverImage);

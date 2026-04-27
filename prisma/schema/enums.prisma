@@ -172,3 +172,15 @@ enum DonationPaymentStatus {
   Failed
   Refunded
 }
+
+enum NotificationType {
+  System
+  Event
+  EventApplication
+  Donation
+}
+
+enum NotificationMedium {
+  InApp
+  Push
+}

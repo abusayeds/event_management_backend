@@ -1,8 +1,9 @@
 import logger from '../config/logger';
 import { emailWorker } from './workers/email.worker';
+import { notificationWorker } from './workers/notification.worker';
 import { repeatEventWorker } from './workers/repeatEvent.worker';
 
-const workers = [emailWorker, repeatEventWorker];
+const workers = [emailWorker, repeatEventWorker, notificationWorker];
 // Initialize workers
 export const initializeWorkers = () => {
   workers.forEach(worker => {

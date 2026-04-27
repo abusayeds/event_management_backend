@@ -1,9 +1,15 @@
 import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import { Prisma } from '../../../prisma/generated/client';
-import { DonationPaymentStatus, DonationProvider } from '../../../prisma/generated/enums';
+import {
+  DonationPaymentStatus,
+  DonationProvider,
+  NotificationMedium,
+  NotificationType,
+} from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
+import { NotificationService } from '../notification/notification.service';
 import {
   ICreateDonationPayload,
   IDonationFilters,
@@ -31,7 +37,17 @@ const createDonation = async (userId: string, payload: ICreateDonationPayload) =
   }
 
   try {
-    return await DonationRepository.createDonation(userId, payload);
+    const created = await DonationRepository.createDonation(userId, payload);
+    await NotificationService.notifyAdmins({
+      senderId: userId,
+      type: NotificationType.Donation,
+      medium: [NotificationMedium.InApp, NotificationMedium.Push],
+      title: 'New donation initiated',
+      message: `A donation was created via ${payload.provider}.`,
+      linkId: created.id,
+      linkType: 'donation',
+    });
+    return created;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       const row = await DonationRepository.getByProviderAndTransactionId(
@@ -135,6 +151,18 @@ const processStripeWebhook = async (
     rawPayload: event as unknown as Prisma.InputJsonValue,
   });
 
+  if (nextStatus === DonationPaymentStatus.Succeeded) {
+    await NotificationService.createNotification({
+      recipientId: matched.userId,
+      type: NotificationType.Donation,
+      medium: [NotificationMedium.InApp, NotificationMedium.Push],
+      title: 'Donation successful',
+      message: 'Your donation payment was completed successfully.',
+      linkId: matched.id,
+      linkType: 'donation',
+    });
+  }
+
   return {
     accepted: true,
     provider: DonationProvider.Stripe,
@@ -186,6 +214,18 @@ const processStoreWebhook = async (
     verifiedAt: nextStatus === DonationPaymentStatus.Succeeded ? new Date() : matched.verifiedAt,
     rawPayload: payload as Prisma.InputJsonValue,
   });
+
+  if (nextStatus === DonationPaymentStatus.Succeeded) {
+    await NotificationService.createNotification({
+      recipientId: matched.userId,
+      type: NotificationType.Donation,
+      medium: [NotificationMedium.InApp, NotificationMedium.Push],
+      title: 'Donation successful',
+      message: 'Your donation payment was completed successfully.',
+      linkId: matched.id,
+      linkType: 'donation',
+    });
+  }
 
   return { accepted: true, provider, eventType, providerTransactionId, message: `${provider} webhook processed.` };
 };
