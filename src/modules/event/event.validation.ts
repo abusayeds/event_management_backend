@@ -7,108 +7,56 @@ import {
   RepeatFrequency,
   RoundCondition,
   SessionBucketType,
-  SessionStatus,
 } from '../../../prisma/generated/enums';
-
-const eventIdParam = z.object({
-  eventId: z.string().min(1, 'eventId is required'),
-});
-
-const parseJsonLikeField = (value: unknown) => {
-  if (typeof value !== 'string') return value;
-  const trimmed = value.trim();
-  if (!trimmed) return value;
-  try {
-    return JSON.parse(trimmed) as unknown;
-  } catch {
-    return value;
-  }
-};
-
-const normalizeSessionType = (v: unknown): string | null => {
-  if (typeof v !== 'string') return null;
-  const t = v.trim().toLowerCase();
-  if (!t) return null;
-  if (t === 'daily') return 'Daily';
-  if (t === 'weekly') return 'Weekly';
-  if (t === 'monthly') return 'Monthly';
-  if (t === 'quarterly') return 'Quarterly';
-  if (t === 'yearly') return 'Yearly';
-  if (t === 'custom') return 'Custom';
-  return v.trim();
-};
-
-const normalizeRepeatConfig = (value: unknown) => {
-  if (!value || typeof value !== 'object') return value;
-  const rc = value as Record<string, unknown>;
-  return {
-    ...rc,
-    repeatFunction: rc.repeatFunction ?? rc.frequency,
-    startDate: rc.startDate ?? rc.startsOn,
-  };
-};
-
-const normalizeEventSession = (value: unknown) => {
-  if (!value || typeof value !== 'object') return value;
-  const s = value as Record<string, unknown>;
-  const mappedSession = normalizeSessionType(s.session) ?? normalizeSessionType(s.sessionType);
-  const mappedSessionValue =
-    (s.sessionValue as string | undefined)?.trim() ||
-    (s.value as string | undefined)?.trim() ||
-    (s.label as string | undefined)?.trim() ||
-    null;
-  const mappedYear = typeof s.year === 'string' ? s.year.trim() : undefined;
-  let mappedLevel =
-    (s.sessionLevel as string | undefined)?.trim() ||
-    (s.sessionKey as string | undefined)?.trim() ||
-    (s.sessionIdentifier as string | undefined)?.trim();
-  if (!mappedLevel && mappedYear && mappedSessionValue) {
-    mappedLevel = `${mappedYear}-${mappedSessionValue}`;
-  }
-  return {
-    ...s,
-    ...(mappedSession ? { session: mappedSession } : {}),
-    ...(mappedSessionValue ? { sessionValue: mappedSessionValue } : {}),
-    ...(mappedLevel ? { sessionLevel: mappedLevel } : {}),
-  };
-};
-
-const normalizeEventSessionField = (value: unknown) => {
-  const parsed = parseJsonLikeField(value);
-  if (Array.isArray(parsed)) {
-    return parsed.map(item => normalizeEventSession(item));
-  }
-  return normalizeEventSession(parsed);
-};
-
-const mergeEventFormDataField = (raw: unknown) => {
-  if (typeof raw !== 'object' || raw === null) return raw;
-  const body = raw as Record<string, unknown>;
-
-  const parsedData =
-    typeof body.data === 'string' && body.data.trim()
-      ? (parseJsonLikeField(body.data) as Record<string, unknown>)
-      : null;
-
-  const { data: _omitData, ...rest } = body;
-  // Parsed payload should be the source of truth and should not be overwritten by duplicate form fields.
-  const merged = parsedData && typeof parsedData === 'object' ? { ...rest, ...parsedData } : rest;
-
-  const eventSessionSource =
-    (merged as Record<string, unknown>).eventSession ??
-    (merged as Record<string, unknown>).eventSessions;
-
-  return {
-    ...merged,
-    repeatConfig: normalizeRepeatConfig(parseJsonLikeField((merged as Record<string, unknown>).repeatConfig)),
-    eventSession: normalizeEventSessionField(eventSessionSource),
-    currentEventSession: parseJsonLikeField((merged as Record<string, unknown>).currentEventSession),
-  };
-};
 
 const nonNegativeNumber = z.coerce.number().finite().nonnegative();
 
-const repeatConfigBody = z
+/** Multipart: `body.data` JSON merge into body (optional). */
+const mergeFormDataJson = (raw: unknown): unknown => {
+  if (typeof raw !== 'object' || raw === null) return raw;
+  const b = raw as Record<string, unknown>;
+  if (typeof b.data !== 'string' || !b.data.trim()) return raw;
+  try {
+    const parsed = JSON.parse(b.data) as Record<string, unknown>;
+    return typeof parsed === 'object' && parsed !== null ? { ...b, ...parsed } : raw;
+  } catch {
+    return raw;
+  }
+};
+
+/** Purono payload: catalog/group/flag `schedule` er vitore thakle root e tulbo (Prisma `Event` moto). */
+const mergeAndHoistCreateBody = (raw: unknown): unknown => {
+  const merged = mergeFormDataJson(raw);
+  if (typeof merged !== 'object' || merged === null) return merged;
+  const b = merged as Record<string, unknown>;
+  const sch = b.schedule;
+  if (!sch || typeof sch !== 'object' || Array.isArray(sch)) return merged;
+  const s = { ...(sch as Record<string, unknown>) };
+  const hoist = [
+    'sessionId',
+    'year',
+    'session',
+    'sessionValue',
+    'sessionLevel',
+    'groups',
+    'isSharedToCommunity',
+    'isUserAgreementAccepted',
+  ] as const;
+  for (const k of hoist) {
+    if (b[k] === undefined && s[k] !== undefined) {
+      b[k] = s[k];
+      delete s[k];
+    }
+  }
+  b.schedule = s;
+  return b;
+};
+
+const eventIdParamsValidationSchema = z.object({
+  eventId: z.string().min(1, 'eventId is required'),
+});
+
+const repeatConfigValidationSchema = z
   .object({
     repeatFunction: z.nativeEnum(RepeatFrequency).optional(),
     startDate: z.coerce.date().optional().nullable(),
@@ -116,7 +64,7 @@ const repeatConfigBody = z
   .optional()
   .nullable();
 
-const eventRoundInput = z.object({
+const eventRoundValidationSchema = z.object({
   roundType: z.nativeEnum(CompetitionLevel),
   deadline: z.coerce.date(),
   cost: nonNegativeNumber,
@@ -126,20 +74,15 @@ const eventRoundInput = z.object({
   description: z.string().max(2000).optional().nullable(),
 });
 
-const eventGroupInput = z.object({
+const eventGroupValidationSchema = z.object({
   name: z.string().trim().min(1).max(200),
   criteria: z.nativeEnum(GroupCriteria),
   condition: z.nativeEnum(RoundCondition),
   value: z.coerce.number().int(),
-  rounds: z.array(eventRoundInput).optional(),
+  rounds: z.array(eventRoundValidationSchema).optional(),
 });
 
-const baseEventSessionInput = z.object({
-  sessionId: z.string().min(1).optional(),
-  year: z.string().trim().min(2).max(16).optional(),
-  session: z.nativeEnum(SessionBucketType).optional(),
-  sessionValue: z.string().trim().min(1).max(120).optional(),
-  sessionLevel: z.string().trim().min(1).max(120).optional(),
+const eventScheduleValidationSchema = z.object({
   competitionLevel: z.nativeEnum(CompetitionLevel),
   eventType: z.nativeEnum(EventType),
   registrationDate: z.coerce.date(),
@@ -148,119 +91,40 @@ const baseEventSessionInput = z.object({
   hasFinalDeadline: z.boolean().optional(),
   finalDeadline: z.coerce.date().optional().nullable(),
   lateFee: nonNegativeNumber.optional(),
-  status: z.nativeEnum(SessionStatus).optional(),
-  isSharedToCommunity: z.boolean().optional(),
-  isUserAgreementAccepted: z.boolean().optional(),
-  groups: z.array(eventGroupInput).optional(),
 });
 
-const eventSessionInput = z
-  .union([
-    baseEventSessionInput,
-    z
-      .array(baseEventSessionInput)
-      .length(1, 'eventSession must be a single object (or a one-item array).')
-      .transform(arr => arr[0]),
-  ])
-  .superRefine((val, ctx) => {
-    const hasSessionId = Boolean(val.sessionId);
-    const hasYear = Boolean(val.year?.trim());
-    if (hasSessionId && hasYear) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['sessionId'],
-        message: 'eventSession cannot include both sessionId and year together.',
-      });
-    }
-    if (!hasSessionId && !hasYear) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['year'],
-        message: 'Either sessionId or year is required in eventSession.',
-      });
-    }
-  });
+// ── POST /events (body) ─────────────────────────────────────────────────────
 
-const createEventBodySchema = z
-  .object({
-    eventName: z.string().trim().min(1).max(200),
-    coverImage: z.string().min(1).optional(),
-    programId: z.string().min(1),
-    organizer: z.string().trim().min(1).max(200),
-    location: z.string().trim().max(300).optional().nullable(),
-    eventPortal: z.string().min(1),
-    registrationPortal: z.string().min(1),
-    description: z.string().min(1),
-    note: z.string().max(2000).optional().nullable(),
-    isPublished: z.coerce.boolean().optional(),
-    repeatConfig: repeatConfigBody,
-    eventSession: eventSessionInput.optional(),
-  })
-  .superRefine((data, ctx) => {
-    const repeatFunction = data.repeatConfig?.repeatFunction ?? RepeatFrequency.DontRepeat;
-    if (!data.eventSession) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['eventSession'],
-        message: 'eventSession is required.',
-      });
-      return;
-    }
-
-    if (repeatFunction === RepeatFrequency.DontRepeat) {
-      if (!data.eventSession.year?.trim()) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['eventSession', 'year'],
-          message: 'year is required when repeatFunction is DontRepeat.',
-        });
-      }
-      if (!data.eventSession.session) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['eventSession', 'session'],
-          message: 'session is required when repeatFunction is DontRepeat.',
-        });
-      }
-      if (!data.eventSession.sessionValue?.trim()) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['eventSession', 'sessionValue'],
-          message: 'sessionValue is required when repeatFunction is DontRepeat.',
-        });
-      }
-      if (!data.eventSession.sessionLevel?.trim()) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['eventSession', 'sessionLevel'],
-          message: 'sessionLevel is required when repeatFunction is DontRepeat.',
-        });
-      }
-      return;
-    }
-
-    if (data.eventSession.sessionId) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['eventSession', 'sessionId'],
-        message:
-          'sessionId cannot be provided when repeatFunction is Daily/Monthly/Quarterly/Yearly/Custom.',
-      });
-    }
-  });
-
-const createEvent = z.object({
-  body: z.preprocess(mergeEventFormDataField, createEventBodySchema),
+const createEventBodyValidationSchema = z.object({
+  eventName: z.string().trim().min(1).max(200),
+  coverImage: z.string().min(1).optional(),
+  programId: z.string().min(1),
+  organizer: z.string().trim().min(1).max(200),
+  location: z.string().trim().max(300).optional().nullable(),
+  eventPortal: z.string().min(1),
+  registrationPortal: z.string().min(1),
+  description: z.string().min(1),
+  note: z.string().max(2000).optional().nullable(),
+  isPublished: z.coerce.boolean().optional(),
+  repeatConfig: repeatConfigValidationSchema,
+  sessionId: z.string().min(1).optional(),
+  year: z.string().trim().min(2).max(16).optional(),
+  session: z.nativeEnum(SessionBucketType).optional(),
+  sessionValue: z.string().trim().min(1).max(120).optional(),
+  sessionLevel: z.string().trim().min(1).max(120).optional(),
+  schedule: eventScheduleValidationSchema,
+  groups: z.array(eventGroupValidationSchema).optional(),
+  isSharedToCommunity: z.coerce.boolean().optional(),
+  isUserAgreementAccepted: z.coerce.boolean().optional(),
 });
 
-const sessionScopeEnum = z.enum(['today', 'upcoming', 'history']);
+const createEventValidationSchema = z.object({
+  body: z.preprocess(mergeAndHoistCreateBody, createEventBodyValidationSchema),
+});
 
-const priceQuery = {
-  priceMin: z.string().optional(),
-  priceMax: z.string().optional(),
-} as const;
+// ── GET /events (query) ───────────────────────────────────────────────────
 
-const getEvents = z.object({
+const getEventsValidationSchema = z.object({
   query: z
     .object({
       search: z.string().optional(),
@@ -270,8 +134,9 @@ const getEvents = z.object({
       groupCriteria: z.nativeEnum(GroupCriteria).optional(),
       timeRangeFrom: z.coerce.date().optional(),
       timeRangeTo: z.coerce.date().optional(),
-      sessionScope: sessionScopeEnum.optional(),
-      ...priceQuery,
+      sessionScope: z.enum(['today', 'upcoming', 'history']).optional(),
+      priceMin: z.string().optional(),
+      priceMax: z.string().optional(),
       page: z.coerce.number().int().min(1).optional(),
       limit: z.coerce.number().int().min(1).max(100).optional(),
       sortBy: z.string().optional(),
@@ -286,73 +151,97 @@ const getEvents = z.object({
     ),
 });
 
-const listFeed = z.object({
+const getEventsByFamilyRelationValidationSchema = z.object({
+  query: z.object({
+    relationShip: z.nativeEnum(FamilyRelationShip),
+  }),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
+  priceMin: z.string().optional(),
+  priceMax: z.string().optional(),
+});
+
+const getTodayEventsValidationSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
     sortBy: z.string().optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
-    ...priceQuery,
+    priceMin: z.string().optional(),
+    priceMax: z.string().optional(),
   }),
 });
 
-const listFamilyRelationFeed = z.object({
+const getUpcomingEventsValidationSchema = z.object({  
+  query: z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+  }),
+});
+const getHistoryEventsValidationSchema = z.object({
   query: z.object({
     relationShip: z.nativeEnum(FamilyRelationShip),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
     sortBy: z.string().optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
-    ...priceQuery,
+    priceMin: z.string().optional(),
+    priceMax: z.string().optional(),
   }),
 });
 
-const getEventById = z.object({
-  params: eventIdParam,
+const getEventByIdValidationSchema = z.object({
+  params: eventIdParamsValidationSchema,
 });
 
-const updateEventBodySchema = z
-  .object({
-    eventName: z.string().trim().min(1).max(200).optional(),
-    coverImage: z.string().min(1).optional(),
-    programId: z.string().min(1).optional(),
-    organizer: z.string().trim().min(1).max(200).optional(),
-    location: z.string().trim().max(300).optional().nullable(),
-    eventPortal: z.string().min(1).optional(),
-    registrationPortal: z.string().min(1).optional(),
-    description: z.string().min(1).optional(),
-    note: z.string().max(2000).optional().nullable(),
-    isPublished: z.coerce.boolean().optional(),
-    isActive: z.coerce.boolean().optional(),
-    isVerified: z.coerce.boolean().optional(),
-    repeatConfig: repeatConfigBody,
-    eventSession: eventSessionInput.optional(),
-  })
-  .superRefine((data, ctx) => {
-    const cs = data.eventSession;
-    if (cs != null && typeof cs === 'object' && Object.keys(cs).length === 0) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'currentEventSession cannot be an empty object; omit the key or send at least one field.',
-      });
-    }
-  });
+// ── PATCH /events/:eventId (body) ─────────────────────────────────────────
 
-const updateEvent = z.object({
-  params: eventIdParam,
-  body: z.preprocess(mergeEventFormDataField, updateEventBodySchema),
+const updateEventBodyValidationSchema = z.object({
+  eventName: z.string().trim().optional(),
+  coverImage: z.string().min(1).optional(),
+  programId: z.string().min(1).optional(),
+  organizer: z.string().trim().optional(),
+  location: z.string().trim().max(300).optional().nullable(),
+  eventPortal: z.string().min(1).optional(),
+  registrationPortal: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  note: z.string().max(2000).optional().nullable(),
+  isPublished: z.coerce.boolean().optional(),
+  repeatConfig: repeatConfigValidationSchema.optional(),
+  sessionId: z.string().min(1).optional(),
+  year: z.string().trim().min(2).max(16).optional(),
+  session: z.nativeEnum(SessionBucketType).optional(),
+  sessionValue: z.string().trim().min(1).max(120).optional(),
+  sessionLevel: z.string().trim().min(1).max(120).optional(),
+  schedule: eventScheduleValidationSchema.optional(),
+  groups: z.array(eventGroupValidationSchema).optional(),
+  isSharedToCommunity: z.coerce.boolean().optional(),
+  isUserAgreementAccepted: z.coerce.boolean().optional(),
+  isActive: z.coerce.boolean().optional(),
+  isVerified: z.coerce.boolean().optional(),
 });
 
-const deleteEvent = z.object({
-  params: eventIdParam,
+const updateEventValidationSchema = z.object({
+  params: eventIdParamsValidationSchema,
+  body: z.preprocess(mergeFormDataJson, updateEventBodyValidationSchema),
+});
+
+const deleteEventValidationSchema = z.object({
+  params: eventIdParamsValidationSchema,
 });
 
 export const EventValidation = {
-  createEvent,
-  getEvents,
-  listFeed,
-  listFamilyRelationFeed,
-  getEventById,
-  updateEvent,
-  deleteEvent,
+  createEventValidationSchema,
+  getEventsValidationSchema,
+  getTodayEventsValidationSchema,
+  getUpcomingEventsValidationSchema,
+  getHistoryEventsValidationSchema,
+  getEventsByFamilyRelationValidationSchema,
+  getEventByIdValidationSchema,
+  updateEventValidationSchema,
+  deleteEventValidationSchema,
 };

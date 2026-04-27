@@ -21,7 +21,7 @@ const runPurge = async () => {
       deleted.eventResult = await tx.eventResult.deleteMany();
       deleted.eventRound = await tx.eventRound.deleteMany();
       deleted.eventGroup = await tx.eventGroup.deleteMany();
-      deleted.eventSession = await tx.eventSession.deleteMany();
+      deleted.eventSchedule = await tx.eventSchedule.deleteMany();
       deleted.repeatConfig = await tx.repeatConfig.deleteMany();
       deleted.event = await tx.event.deleteMany();
       deleted.session = await tx.session.deleteMany();

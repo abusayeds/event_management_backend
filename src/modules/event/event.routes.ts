@@ -11,7 +11,7 @@ const router = Router();
 router.get(
   '/feed/upcoming',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.listFeed),
+  validateRequest(EventValidation.getUpcomingEventsValidationSchema),
   EventController.getUpcomingEvents
 );
 
@@ -19,7 +19,7 @@ router.get(
 router.get(
   '/feed/today',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.listFeed),
+  validateRequest(EventValidation.getTodayEventsValidationSchema),
   EventController.getTodayEvents
 );
 
@@ -27,7 +27,7 @@ router.get(
 router.get(
   '/feed/history',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.listFeed),
+  validateRequest(EventValidation.getHistoryEventsValidationSchema),
   EventController.getHistoryEvents
 );
 
@@ -35,7 +35,7 @@ router.get(
 router.get(
   '/feed/by-family-relation',
   auth(UserRole.ADMIN, UserRole.USER),
-  validateRequest(EventValidation.listFamilyRelationFeed),
+  validateRequest(EventValidation.getEventsByFamilyRelationValidationSchema),
   EventController.getEventsByFamilyRelation
 );
 
@@ -45,13 +45,13 @@ router
   .post(
     auth(UserRole.ADMIN, UserRole.USER),
     upload.single('coverImage'),
-    validateRequest(EventValidation.createEvent),
+    validateRequest(EventValidation.createEventValidationSchema),
     EventController.createEvent
   )
   // GET /events -> EventController.getEvents -> EventService.getEvents -> EventRepository.getEvents
   .get(
     auth(UserRole.ADMIN, UserRole.USER),
-    validateRequest(EventValidation.getEvents),
+    validateRequest(EventValidation.getEventsValidationSchema),
     EventController.getEvents
   );
 
@@ -60,20 +60,20 @@ router
   // GET /events/:eventId -> EventController.getEventById -> EventService.getEventById -> EventRepository.getEventById
   .get(
     auth(UserRole.ADMIN, UserRole.USER),
-    validateRequest(EventValidation.getEventById),
+    validateRequest(EventValidation.getEventByIdValidationSchema),
     EventController.getEventById
   )
   // PATCH /events/:eventId -> EventController.updateEvent -> EventService.updateEvent -> EventRepository.update* + createEditLog
   .patch(
     auth(UserRole.ADMIN, UserRole.USER),
     upload.single('coverImage'),
-    validateRequest(EventValidation.updateEvent),
+    validateRequest(EventValidation.updateEventValidationSchema),
     EventController.updateEvent
   )
   // DELETE /events/:eventId -> EventController.deleteEvent -> EventService.deleteEvent -> EventRepository.softDeleteEvent
   .delete(
     auth(UserRole.ADMIN, UserRole.USER),
-    validateRequest(EventValidation.deleteEvent),
+    validateRequest(EventValidation.deleteEventValidationSchema),
     EventController.deleteEvent
 );
 

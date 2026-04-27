@@ -1,145 +1,148 @@
 // ========================== User Related Enums ==========================
 enum UserRole {
-    ADMIN
-    USER
+  ADMIN
+  USER
 }
 
 enum UserStatus {
-    ACTIVE
-    BANNED
-    DELETED
+  ACTIVE
+  BANNED
+  DELETED
 }
 
 enum UserGender {
-    MALE
-    FEMALE
-    OTHER
+  MALE
+  FEMALE
+  OTHER
 }
 
 // ========================== Invitation Related Enums ==========================
 enum InvitationStatus {
-    PENDING
-    ACCEPTED
-    DECLINED
-    EXPIRED
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
 }
 
 // ========================== Connection Related Enums ==========================
 enum ConnectionStatus {
-    PENDING
-    ACCEPTED
-    REJECTED
-    CANCELED
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELED
 }
 
 // ========================== Family Related Enums ==========================
 enum FamilyRole {
-    OWNER
-    MEMBER
+  OWNER
+  MEMBER
 }
 
 enum FamilyRelationShip {
-    Self
-    Spous
-    ChildStephanie
-    ChildSophia
-    Other
+  Self
+  Spous
+  ChildStephanie
+  ChildSophia
+  Other
 }
 
 // ========================== Event Related Enums ==========================
 enum CompetitionLevel {
-    Preliminary
-    SemiFinal
-    Final
+  Preliminary
+  SemiFinal
+  Final
 }
 
 enum EventType {
-    Onsite
-    Online
-    Hybrid
+  Onsite
+  Online
+  Hybrid
 }
 
 enum GroupCriteria {
-    Age
-    Score
+  Age
+  Score
 }
 
 enum RoundCondition {
-    UpTo
-    DownTo
-    Greater
-    GreaterAndEqual
-    Lower
-    LowerAndEqual
+  UpTo
+  DownTo
+  Greater
+  GreaterAndEqual
+  Lower
+  LowerAndEqual
 }
 
 enum PlacementType {
-    First
-    Second
-    Third
-    Fourth
-    Gold
-    Silver
-    Bronze
-    Finalist
-    HonorableMention
-    Participation
+  First
+  Second
+  Third
+  Fourth
+  Gold
+  Silver
+  Bronze
+  Finalist
+  HonorableMention
+  Participation
 }
+
 // ========================== Repeat Configuration Related Enums ==========================
 enum RepeatFrequency {
-    DontRepeat
-    Daily
-    Weekly
-    Monthly
-    Quarterly
-    Yearly
-    Custom
+  DontRepeat
+  Daily
+  Weekly
+  Monthly
+  Quarterly
+  Yearly
+  Custom
 }
 
 enum SessionCreationMode {
-    Manual
-    Auto
+  Manual
+  Auto
 }
 
 enum SessionBucketType {
-    Daily
-    Weekly
-    Monthly
-    Quarterly
-    Yearly
-    Custom
+  Daily
+  Weekly
+  Monthly
+  Quarterly
+  Yearly
+  Custom
 }
 
 enum WeekDay {
-    Mon
-    Tue
-    Wed
-    Thu
-    Fri
-    Sat
-    Sun
+  Mon
+  Tue
+  Wed
+  Thu
+  Fri
+  Sat
+  Sun
 }
 
 enum MonthWeek {
-    First
-    Second
-    Third
-    Fourth
-    Last
+  First
+  Second
+  Third
+  Fourth
+  Last
 }
+
 // ========================== Session Related Enums ==========================
 enum SessionStatus {
-    Unverified
-    Published
-    Ongoing
-    Completed
-    Cancelled
+  Unverified
+  Verified
+  Published
+  Ongoing
+  Completed
+  Cancelled
 }
 
 // ========================== Event Application Related Enums ==========================
 enum EventApplicationStatus {
-    Pending
-    Withdrawn
-    Approved
-    Rejected
+  Pending
+  Withdrawn
+  Approved
+  Rejected
 }
