@@ -76,13 +76,13 @@ const updateOwnerIndependentStatus = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const actorId = req.user!.userId;
     const familyId = req.params.familyId as string;
-    const { targetUserId, isIndependent } = req.body;
+    const { targetUserId, hasSeparateAccount } = req.body;
 
     const result = await FamilyMemberService.updateOwnerIndependentStatus(
       actorId,
       familyId,
       targetUserId,
-      isIndependent
+      hasSeparateAccount
     );
 
     apiResponse(res, {

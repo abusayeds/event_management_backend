@@ -44,7 +44,7 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
   const preparedPayload = await prepareCreateUserPayload({
     ...userPayload,
     email: normalizedEmail,
-    isIndependent: false,
+    hasSeparateAccount: false,
     isEmailVerified: true,
   });
   const hashedPassword = await bcrypt.hash(preparedPayload.password, 12);
@@ -187,7 +187,7 @@ const updateOwnerIndependentStatus = async (
   actorId: string,
   familyId: string,
   targetUserId: string,
-  isIndependent: boolean
+  hasSeparateAccount: boolean
 ) => {
   // Step:1 Ensure family exists
   const family = await FamilyRepository.getFamily(familyId);
@@ -213,16 +213,13 @@ const updateOwnerIndependentStatus = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Target user is not a family member.');
   }
 
-  // Step:4 Ensure target is an OWNER (only owners can have independence status changed)
-  if (targetMembership.role !== FamilyRole.OWNER) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Independence status can only be updated for family owners.'
-    );
+  // Step:4 Prevent owner from activating themselves
+  if (actorId === targetUserId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot change your own independence status here.');
   }
 
-  // Step:5 Update owner's independence status via UserService
-  return UserService.updateUserIndependentStatus(targetUserId, isIndependent, actorId, {
+  // Step:5 Update member's independence status via UserService
+  return UserService.updateUserIndependentStatus(targetUserId, hasSeparateAccount, actorId, {
     allowOwnerOverride: true,
   });
 };

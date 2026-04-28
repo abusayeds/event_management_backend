@@ -81,7 +81,15 @@ const updateMyProfile = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
 
-  // ✅ Step:2 Check email uniqueness (নিজেকে exclude করে)
+  // Step:2 Block family-managed members from editing their own profile
+  if (!user.hasSeparateAccount) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Your profile is managed by your family owner. You cannot edit it until your account is activated.'
+    );
+  }
+
+  // ✅ Step:3 Check email uniqueness
   if (payload.email) {
     const normalizedEmail = payload.email.trim().toLowerCase();
     const emailExists = await UserRepository.isEmailExists(normalizedEmail, userId);
@@ -91,7 +99,7 @@ const updateMyProfile = async (
     payload.email = normalizedEmail;
   }
 
-  // ✅ Step:3 Check username uniqueness (নিজেকে exclude করে)
+  // ✅ Step:4 Check username uniqueness
   if (payload.username) {
     const normalizedUsername = normalizeUsername(payload.username);
     if (!normalizedUsername) {
@@ -104,29 +112,29 @@ const updateMyProfile = async (
     payload.username = normalizedUsername;
   }
 
-  // ✅ Step:4 Normalize skills
+  // ✅ Step:5 Normalize skills
   if (payload.skills) {
     payload.skills = normalizeSkills(payload.skills);
   }
 
-  // Step:5 Handle profile picture upload
-
+  // Step:6 Handle profile picture upload
   let profilePictureUrl: string | undefined;
   if (file) {
     const uploaded = await uploadSingleFileToS3(file, 'profiles');
     profilePictureUrl = uploaded?.url;
-    // Step:6 Delete old profile picture from S3 if exists
+    // Step:7 Delete old profile picture from S3 if exists
     if (user?.profilePicture) {
       await deleteFileFromS3(user.profilePicture);
     }
   }
-  // Step:7 Prepare update payload with profile picture URL
+
+  // Step:8 Prepare update payload with profile picture URL
   payload = {
     ...payload,
     profilePicture: profilePictureUrl,
   };
 
-  // Step:6 Update user in database
+  // Step:9 Update user in database
   return UserRepository.updateUserById(userId, payload);
 };
 
@@ -165,7 +173,7 @@ const updateUser = async (
     }
 
     // Step:5 Prevent owner from updating independent users
-    if (existing.isIndependent) {
+    if (existing.hasSeparateAccount) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
         'Independent users can only update their own profile.'
@@ -174,7 +182,7 @@ const updateUser = async (
   }
 
   // Step:6 Prevent non-admin/self from changing independence status
-  if (payload.isIndependent !== undefined && !isAdmin && !isSelfUpdate) {
+  if (payload.hasSeparateAccount !== undefined && !isAdmin && !isSelfUpdate) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Only the user or an admin can change independent status.'
@@ -246,9 +254,20 @@ const updateUserStatus = async (id: string, status: UserStatus, actorId: string)
   return updated;
 };
 
+const calculateAge = (birthDate: Date): number => {
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 const updateUserIndependentStatus = async (
   userId: string,
-  isIndependent: boolean,
+  hasSeparateAccount: boolean,
   actorId: string,
   options?: {
     allowOwnerOverride?: boolean;
@@ -263,8 +282,18 @@ const updateUserIndependentStatus = async (
   // Step:2 Determine if update is self or owner override
   const isSelfUpdate = userId === actorId;
 
-  // Step:3 If not self update, check owner authorization
-  if (!isSelfUpdate) {
+  if (isSelfUpdate) {
+    // Step:3 Self-activation requires user to be 18 or older
+    if (hasSeparateAccount) {
+      const age = calculateAge(existing.birthDate);
+      if (age < 18) {
+        throw new ApiError(
+          StatusCodes.FORBIDDEN,
+          'You must be 18 or older to activate your independent account.'
+        );
+      }
+    }
+  } else {
     // Step:4 Verify owner override is allowed
     if (!options?.allowOwnerOverride) {
       throw new ApiError(
@@ -273,7 +302,7 @@ const updateUserIndependentStatus = async (
       );
     }
 
-    // Step:5 Check if actor is family owner
+    // Step:5 Check if actor is family owner of target
     const ownerControlsTarget = await FamilyMemberRepository.isOwnerOfMember(actorId, userId);
     if (!ownerControlsTarget) {
       throw new ApiError(
@@ -282,8 +311,8 @@ const updateUserIndependentStatus = async (
       );
     }
 
-    // Step:6 Prevent owner from making already-independent user independent
-    if (existing.isIndependent) {
+    // Step:6 Prevent owner from re-controlling an already-independent user
+    if (existing.hasSeparateAccount) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
         'User is already independent and cannot be controlled by owner.'
@@ -292,7 +321,7 @@ const updateUserIndependentStatus = async (
   }
 
   // Step:7 Update independence status in database
-  return UserRepository.updateUserIndependentStatus(userId, isIndependent);
+  return UserRepository.updateUserIndependentStatus(userId, hasSeparateAccount);
 };
 
 // Delete User

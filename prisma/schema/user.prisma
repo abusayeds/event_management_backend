@@ -18,7 +18,7 @@ model User {
   skills              String[]
   role                UserRole            @default(USER)
   status              UserStatus          @default(ACTIVE)
-  isIndependent       Boolean             @default(false)
+  hasSeparateAccount  Boolean             @default(false)
   isEmailVerified     Boolean             @default(false)
   createdByOwner      String?
   owner               User?               @relation("OwnerCreatedUsers", fields: [createdByOwner], references: [id], onDelete: SetNull)

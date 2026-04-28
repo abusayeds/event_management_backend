@@ -27,7 +27,7 @@ export const userFullSelect = {
   skills: true,
   role: true,
   status: true,
-  isIndependent: true,
+  hasSeparateAccount: true,
   createdByOwner: true,
   contributionScore: true,
 };
@@ -164,16 +164,16 @@ const updateUserStatus = async (id: string, status: UserStatus) => {
   });
 };
 
-const updateUserIndependentStatus = async (id: string, isIndependent: boolean) => {
+const updateUserIndependentStatus = async (id: string, hasSeparateAccount: boolean) => {
   return database.user.update({
     where: { id, status: { not: UserStatus.DELETED } },
-    data: { isIndependent },
+    data: { hasSeparateAccount },
     select: {
       id: true,
       firstName: true,
       lastName: true,
       email: true,
-      isIndependent: true,
+      hasSeparateAccount: true,
       status: true,
       role: true,
     },

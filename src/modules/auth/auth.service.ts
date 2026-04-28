@@ -172,7 +172,7 @@ const verifyEmail = async (sessionId: string, otp: string) => {
     city: pendingEmailVerificationData.city,
     email: pendingEmailVerificationData.email,
     isEmailVerified: true,
-    isIndependent: true,
+    hasSeparateAccount: true,
     password: pendingEmailVerificationData.password,
     username: pendingEmailVerificationData.username,
   });
@@ -242,34 +242,42 @@ const login = async (payload: ILoginPayload) => {
   // Step:4 Validate user account status (not banned or deleted)
   validateUserStatus(existingUser.status);
 
-  // Step:5 Verify password hash
+  // Step:5 [OPTION 1 — Full login block — commented out, pending client confirmation]
+  // if (!existingUser.hasSeparateAccount) {
+  //   throw new ApiError(
+  //     StatusCodes.FORBIDDEN,
+  //     'Your account is managed by your family. Ask your parent to activate a separate account for you, or you can activate it yourself once you are 18 or older.'
+  //   );
+  // }
+
+  // Step:6 Verify password hash
   const isPasswordValid = await bcrypt.compare(payload.password, existingUser.password);
   if (!isPasswordValid) {
     securityLogger.loginAttempt(normalizedEmail, 'unknown', false);
     await failLoginAttempt(normalizedEmail);
   }
 
-  // Step:6 Clear attempt counter and lock on successful login
+  // Step:7 Clear attempt counter and lock on successful login
   await cacheService.del(CACHE_KEYS.AUTH.ATTEMPTS(normalizedEmail));
   await cacheService.del(CACHE_KEYS.AUTH.LOCK(normalizedEmail));
 
-  // Step:7 Generate tokens in parallel
+  // Step:8 Generate tokens in parallel
   const [accessToken, refreshToken] = await Promise.all([
     generateAccessToken(existingUser.id, existingUser.email, existingUser.role),
     generateRefreshToken(existingUser.id, existingUser.email, existingUser.role),
   ]);
 
-  // Step:8 Store refresh token in cache with TTL
+  // Step:9 Store refresh token in cache with TTL
   await cacheService.set(
     CACHE_KEYS.AUTH.REFRESH_TOKEN(existingUser.id),
     refreshToken,
     CACHE_KEYS.TTL.WEEK
   );
 
-  // Step:9 Log successful login
+  // Step:10 Log successful login
   securityLogger.loginAttempt(normalizedEmail, 'unknown', true);
 
-  // Step:10 Return user and tokens
+  // Step:11 Return user and tokens
   return {
     user: {
       id: existingUser.id,
@@ -342,20 +350,25 @@ const refresh = async (refreshToken: string) => {
   // Step:4 Validate user account status
   validateUserStatus(user.status);
 
-  // Step:5 Generate new tokens in parallel
+  // Step:5 [OPTION 1 — Full refresh block — commented out, pending client confirmation]
+  // if (!user.hasSeparateAccount) {
+  //   throw new ApiError(StatusCodes.FORBIDDEN, 'Account access has been revoked by family owner.');
+  // }
+
+  // Step:7 Generate new tokens in parallel
   const [newAccessToken, newRefreshToken] = await Promise.all([
     generateAccessToken(user.id, user.email, user.role),
     generateRefreshToken(user.id, user.email, user.role),
   ]);
 
-  // Step:6 Store new refresh token in cache with TTL
+  // Step:8 Store new refresh token in cache with TTL
   await cacheService.set(
     CACHE_KEYS.AUTH.REFRESH_TOKEN(user.id),
     newRefreshToken,
     CACHE_KEYS.TTL.WEEK // 7 days in seconds
   );
 
-  // Step:7 Return new tokens
+  // Step:9 Return new tokens
   return {
     accessToken: newAccessToken,
     refreshToken: newRefreshToken,

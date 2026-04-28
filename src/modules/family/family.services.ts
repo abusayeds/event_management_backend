@@ -12,7 +12,16 @@ const createFamily = async (userId: string, payload: Partial<ICreateFamilyPayloa
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
-  // Step:2 Check if a family with the same name already exists
+
+  // Step:2 Block family-managed members from creating a family
+  if (!user.hasSeparateAccount) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Your account is managed by your family. You cannot create a family until your account is activated.'
+    );
+  }
+
+  // Step:4 Check if a family with the same name already exists
   const existingFamily = await FamilyRepository.getFamilyByName(payload.name!);
   if (existingFamily) {
     throw new ApiError(
@@ -20,7 +29,8 @@ const createFamily = async (userId: string, payload: Partial<ICreateFamilyPayloa
       'Family with this name already exists! Please choose a different name.'
     );
   }
-  //   Step:3 Create family body with creator as owner
+
+  // Step:5 Create family body with creator as owner
   const familyBody = {
     name: payload.name || 'My Family',
     description: payload.description,
@@ -30,9 +40,10 @@ const createFamily = async (userId: string, payload: Partial<ICreateFamilyPayloa
       role: FamilyRole.OWNER,
     },
   };
-  // Step:4 Create family in database
+
+  // Step:6 Create family in database
   const result = await FamilyRepository.createFamily(familyBody);
-  // Step:5 Return created family
+  // Step:7 Return created family
   return result;
 };
 

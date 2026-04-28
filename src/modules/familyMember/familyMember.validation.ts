@@ -64,7 +64,7 @@ const updateOwnerIndependentStatus = z.object({
   params: familyIdParamSchema,
   body: z.object({
     targetUserId: z.string().min(1, 'targetUserId is required'),
-    isIndependent: z.boolean(),
+    hasSeparateAccount: z.boolean(),
   }),
 });
 

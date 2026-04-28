@@ -57,7 +57,7 @@ const updateUserBodySchema = z
     state: z.string().trim().min(1, 'state cannot be empty').optional(),
     city: z.string().trim().min(1, 'city cannot be empty').optional(),
     email: z.string().email('Invalid email address').optional(),
-    isIndependent: z.boolean().optional(),
+    hasSeparateAccount: z.boolean().optional(),
     profilePicture: z.string().trim().min(1).optional(),
     skills: z
       .union([z.array(z.string().trim().min(1, 'Each skill must be non-empty')), z.string().trim()])
@@ -83,7 +83,7 @@ const createUser = z.object({
     email: z.string().email('Invalid email address'),
     password: strongPasswordSchema,
     skills: z.array(z.string()).optional(),
-    isIndependent: z.boolean().optional(),
+    hasSeparateAccount: z.boolean().optional(),
     createdById: z.string().optional(),
   }),
 });

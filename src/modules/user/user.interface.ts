@@ -18,7 +18,7 @@ export interface IUser {
   skills: string[];
   role: UserRole;
   status: UserStatus;
-  isIndependent: boolean;
+  hasSeparateAccount: boolean;
   isEmailVerified: boolean;
   createdByOwner?: string | null;
   contributionScore: number;
@@ -43,7 +43,7 @@ export interface ICreateUserPayload {
   password: string;
   // Optional fields for  Owner create family members
   skills?: string[];
-  isIndependent?: boolean;
+  hasSeparateAccount?: boolean;
   createdById?: string;
 }
 
@@ -60,7 +60,7 @@ export interface IUpdateUserPayload {
   city?: string;
   email?: string;
   skills?: string[];
-  isIndependent?: boolean;
+  hasSeparateAccount?: boolean;
   profilePicture?: string;
 }
 
