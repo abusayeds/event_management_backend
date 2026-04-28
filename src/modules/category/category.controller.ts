@@ -33,10 +33,11 @@ const getAllCategories = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-// Get category by id
+// Get category by id with events
 const getCategoryById = asyncHandler(async (req: Request, res: Response) => {
   const categoryId = req.params.id as string;
-  const result = await CategoryService.getCategoryById(categoryId);
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+  const result = await CategoryService.getCategoryById(categoryId, options);
 
   apiResponse(res, {
     success: true,
@@ -59,6 +60,21 @@ const updateCategory = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+// Get paginated events under a category
+const getCategoryEvents = asyncHandler(async (req: Request, res: Response) => {
+  const categoryId = req.params.id as string;
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+  const result = await CategoryService.getCategoryEvents(categoryId, options);
+
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Category events fetched successfully.',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 // Soft delete category by id
 const deleteCategory = asyncHandler(async (req: Request, res: Response) => {
   const categoryId = req.params.id as string;
@@ -76,6 +92,7 @@ export const CategoryController = {
   createCategory,
   getAllCategories,
   getCategoryById,
+  getCategoryEvents,
   updateCategory,
   deleteCategory,
 };

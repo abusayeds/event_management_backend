@@ -13,6 +13,22 @@ import {
     IUpdateCategoryPayload,
 } from './category.interface';
 
+// Event select for category events list
+const categoryEventSelect = {
+  id: true,
+  eventName: true,
+  coverImage: true,
+  organizer: true,
+  location: true,
+  isPublished: true,
+  isActive: true,
+  isVerified: true,
+  createdAt: true,
+  updatedAt: true,
+  schedule:true,
+  results:true,
+} as const;
+
 // Category list select
 export const categoryListSelect = {
   id: true,
@@ -136,6 +152,49 @@ const softDeleteCategoryById = async (id: string) => {
   });
 };
 
+// Count all events under a category (via programs)
+const getCategoryEventCount = async (categoryId: string): Promise<number> => {
+  return database.event.count({
+    where: {
+      isDeleted: false,
+      program: {
+        categoryId,
+        isDeleted: false,
+      },
+    },
+  });
+};
+
+// Get paginated events under a category (via programs)
+const getCategoryEvents = async (
+  categoryId: string,
+  options: PaginationOptions
+): Promise<PaginationResult<unknown>> => {
+  const pagination = parsePaginationOptions(options);
+  const { skip, take, orderBy } = createPaginationQuery(pagination);
+
+  const where = {
+    isDeleted: false,
+    program: {
+      categoryId,
+      isDeleted: false,
+    },
+  };
+
+  const [events, total] = await Promise.all([
+    database.event.findMany({
+      where,
+      select: categoryEventSelect,
+      skip,
+      take,
+      orderBy,
+    }),
+    database.event.count({ where }),
+  ]);
+
+  return createPaginationResult(events, total, pagination);
+};
+
 export const CategoryRepository = {
   createCategory,
   getCategoryById,
@@ -143,4 +202,6 @@ export const CategoryRepository = {
   getAllCategories,
   updateCategoryById,
   softDeleteCategoryById,
+  getCategoryEventCount,
+  getCategoryEvents,
 };

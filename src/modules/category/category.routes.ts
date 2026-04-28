@@ -41,4 +41,11 @@ router
     CategoryController.deleteCategory
   );
 
+router.get(
+  '/events/:id',
+  auth(UserRole.ADMIN, UserRole.USER),
+  validateRequest(CategoryValidation.getCategoryEvents),
+  CategoryController.getCategoryEvents
+);
+
 export const CategoryRoutes: Router = router;

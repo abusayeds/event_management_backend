@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
+import { PaginationResult } from '../../utils/paginate';
 import { deleteFileFromS3, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import {
   ICategoryFilters,
@@ -48,17 +49,42 @@ const getAllCategories = async (filters: ICategoryFilters, options: PaginationOp
   return CategoryRepository.getAllCategories(filters, options);
 };
 
-const getCategoryById = async (id: string) => {
-  // Step:1 Fetch category by id
-  const category = await CategoryRepository.getCategoryById(id);
+const getCategoryById = async (id: string, options: PaginationOptions) => {
+  // Step:1 Fetch category details, total event count, and paginated events in parallel
+  const [category, eventCount, events] = await Promise.all([
+    CategoryRepository.getCategoryById(id),
+    CategoryRepository.getCategoryEventCount(id),
+    CategoryRepository.getCategoryEvents(id, options),
+  ]);
 
   // Step:2 Throw not found when category does not exist or deleted
   if (!category) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Category not found.');
   }
 
-  // Step:3 Return category details
-  return category;
+  // Step:3 Return category details with event count and paginated events
+  return {
+    ...category,
+    eventCount,
+    events: {
+      data: events.data,
+      meta: events.meta,
+    },
+  };
+};
+
+const getCategoryEvents = async (
+  id: string,
+  options: PaginationOptions
+): Promise<PaginationResult<unknown>> => {
+  // Step:1 Ensure category exists
+  const category = await CategoryRepository.getCategoryById(id);
+  if (!category) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Category not found.');
+  }
+
+  // Step:2 Return paginated events under this category
+  return CategoryRepository.getCategoryEvents(id, options);
 };
 
 const updateCategory = async (
@@ -144,6 +170,7 @@ export const CategoryService = {
   createCategory,
   getAllCategories,
   getCategoryById,
+  getCategoryEvents,
   updateCategory,
   deleteCategory,
 };

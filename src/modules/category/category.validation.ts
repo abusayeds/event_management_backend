@@ -26,9 +26,15 @@ const getAllCategories = z.object({
   }),
 });
 
-// Get single category by ID validation
+// Get single category by ID with paginated events
 const getCategoryById = z.object({
   params: idParamSchema,
+  query: z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+  }),
 });
 
 // Update category payload validation
@@ -41,6 +47,17 @@ const updateCategory = z.object({
   params: idParamSchema,
 });
 
+// Get events under a category with pagination
+const getCategoryEvents = z.object({
+  params: idParamSchema,
+  query: z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+  }),
+});
+
 // Delete category by ID validation
 const deleteCategory = z.object({
   params: idParamSchema,
@@ -50,6 +67,7 @@ export const CategoryValidation = {
   createCategory,
   getAllCategories,
   getCategoryById,
+  getCategoryEvents,
   updateCategory,
   deleteCategory,
 };
