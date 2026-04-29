@@ -9,7 +9,7 @@ const imageFileFilter = (
   const allowedMimeTypes = ['image/jpg', 'image/heic', 'image/jpeg', 'image/png', 'image/webp'];
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    cb(new Error('Invalid file type. Only JPG, HEIC, PNG, and WEBP are allowed.'));
+    cb(new Error('Invalid file type. Only JPEG, HEIC, PNG, and WEBP are allowed.'));
     return;
   }
 

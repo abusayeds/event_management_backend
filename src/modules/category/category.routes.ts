@@ -31,7 +31,7 @@ router
   )
   .patch(
     auth(UserRole.ADMIN),
-    upload.single('image'),
+    upload.single('imageUrl'),
     validateRequest(CategoryValidation.updateCategory),
     CategoryController.updateCategory
   )

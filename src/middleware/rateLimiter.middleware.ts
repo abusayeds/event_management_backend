@@ -91,7 +91,7 @@ export const rateLimiters = {
   // Password reset rate limiters
   forgotPasswordRateLimiter: createRateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 3,
+    maxRequests: 10, //3
     message: 'Too many password reset requests, please try again after 15 minutes.',
     keyGenerator: (req: Request) => `forgot-password:${req.body?.email || 'unknown'}`,
   }),

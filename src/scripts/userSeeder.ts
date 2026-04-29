@@ -15,6 +15,7 @@ type SeedUser = {
   gender: UserGender;
   birthDate: string;
   location: string;
+  hasSeparateAccount: boolean;
   country: string;
   state: string;
   city: string;
@@ -39,6 +40,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Dhaka',
     city: 'Dhaka',
+    hasSeparateAccount: true,
     skills: ['leadership', 'project-management', 'event-planning'],
     role: UserRole.ADMIN,
   },
@@ -51,6 +53,7 @@ const seedUsers: SeedUser[] = [
     phoneNumber: '+8801711000002',
     gender: UserGender.FEMALE,
     birthDate: '1998-03-08',
+    hasSeparateAccount: true,
     location: 'Dhanmondi, Dhaka',
     country: 'Bangladesh',
     state: 'Dhaka',
@@ -70,6 +73,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Chattogram',
     city: 'Chattogram',
+    hasSeparateAccount: true,
     skills: ['marketing', 'sponsorship'],
   },
   {
@@ -85,6 +89,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Chattogram',
     city: 'Chattogram',
+    hasSeparateAccount: true,
     skills: ['coordination', 'public-speaking'],
   },
   {
@@ -100,6 +105,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Dhaka',
     city: 'Dhaka',
+    hasSeparateAccount: true,
     skills: ['logistics', 'operations'],
   },
   {
@@ -115,6 +121,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Sylhet',
     city: 'Sylhet',
+    hasSeparateAccount: true,
     skills: ['community-engagement', 'networking'],
   },
   {
@@ -130,6 +137,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Khulna',
     city: 'Khulna',
+    hasSeparateAccount: true,
     skills: ['video-editing', 'social-media'],
   },
   {
@@ -145,6 +153,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Rajshahi',
     city: 'Rajshahi',
+    hasSeparateAccount: true,
     skills: ['creative-writing', 'content-planning'],
   },
   {
@@ -160,6 +169,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Chattogram',
     city: 'Cumilla',
+    hasSeparateAccount: true,
     skills: ['vendor-management', 'budgeting'],
   },
   {
@@ -175,6 +185,8 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Mymensingh',
     city: 'Mymensingh',
+    hasSeparateAccount: true,
+
     skills: ['registration-management', 'helpdesk'],
   },
   {
@@ -190,6 +202,7 @@ const seedUsers: SeedUser[] = [
     country: 'Bangladesh',
     state: 'Barishal',
     city: 'Barishal',
+    hasSeparateAccount: true,
     skills: ['audio-visual', 'stage-management'],
   },
 ];
