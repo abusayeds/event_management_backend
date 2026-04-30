@@ -227,12 +227,7 @@ const updateUser = async (
     }
   }
 
-  // Step:12 Validate at least one field is provided
-  if (Object.keys(payload).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update user.');
-  }
-
-  // Step:13 Update user in database
+  // Step:12 Update user in database
   const updated = await UserRepository.updateUserById(id, payload);
   return updated;
 };

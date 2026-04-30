@@ -64,9 +64,7 @@ const updateUserBodySchema = z
       .optional()
       .transform(value => parseSkillsInput(value)),
   })
-  .refine(value => Object.keys(value).length > 0, {
-    message: 'At least one field is required to update user',
-  });
+
 
 // Create user validation with profile and authentication fields
 const createUser = z.object({
