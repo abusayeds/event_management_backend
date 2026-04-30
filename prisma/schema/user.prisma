@@ -40,6 +40,7 @@ model User {
   donations           DonationTransaction[]
   notifications       Notification[]      @relation("NotificationRecipient")
   sentNotifications   Notification[]      @relation("NotificationSender")
+  feedbacks           UserFeedback[]
 
   @@index([createdByOwner])
   @@index([fcmToken])

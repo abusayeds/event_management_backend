@@ -184,3 +184,17 @@ enum NotificationMedium {
   InApp
   Push
 }
+
+// ========================== User feedback (to admin) ==========================
+enum UserFeedbackCategory {
+  GENERAL
+  BUG_REPORT
+  FEATURE_REQUEST
+  OTHER
+}
+
+enum UserFeedbackStatus {
+  NEW
+  READ
+  ARCHIVED
+}

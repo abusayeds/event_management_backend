@@ -13,6 +13,7 @@ import { SettingsRoutes } from '../modules/settings/settings.routes';
 import { SubcategoryRoutes } from '../modules/subcategory/subcategory.routes';
 import { UserRoutes } from '../modules/user/user.routes';
 import { EventApplicationRoutes } from '../modules/eventApplication/eventApplication.routes';
+import { FeedbackRoutes } from '../modules/feedback/feedback.routes';
 
 const router: Router = Router();
 
@@ -40,5 +41,6 @@ router.use('/event-applications', EventApplicationRoutes);
 router.use('/families', FamilyRoutes);
 router.use('/family-members', FamilyMemberRoutes);
 router.use('/notifications', NotificationRoutes);
+router.use('/feedbacks', FeedbackRoutes);
 
 export default router;
