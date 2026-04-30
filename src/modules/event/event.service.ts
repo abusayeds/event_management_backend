@@ -179,6 +179,30 @@ const getEventEditLogById = async (eventId: string, editLogId: string) => {
   };
 };
 
+const getEventEditLogsByEventId = async (
+  eventId: string,
+  filters: { searchTerm?: string; date?: string },
+  options: PaginationOptions
+) => {
+  const existing = await EventRepository.getEventBare(eventId);
+  if (!existing) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
+  }
+  return EventRepository.getEventEditLogsByEventId(eventId, filters, options);
+};
+
+const getAppliedEventsByEventId = async (
+  eventId: string,
+  filters: { searchTerm?: string; date?: string },
+  options: PaginationOptions
+) => {
+  const existing = await EventRepository.getEventBare(eventId);
+  if (!existing) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
+  }
+  return EventRepository.getAppliedEventsByEventId(eventId, filters, options);
+};
+
 // PATCH /events/:eventId (also writes EditLog when tracked fields change)
 const updateEvent = async (
   eventId: string,
@@ -375,6 +399,8 @@ export const EventService = {
   getEventsByFamilyRelation,
   getEventById,
   getEventEditLogById,
+  getEventEditLogsByEventId,
+  getAppliedEventsByEventId,
   updateEvent,
   setEventDisabledByAdmin,
   deleteEvent,

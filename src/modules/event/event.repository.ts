@@ -439,45 +439,6 @@ const getEventByIdForAdmin = async (id: string) => {
           lateFee: true,
         },
       },
-      eventApplieds: {
-        where: { deletedAt: null },
-        select: {
-          id: true,
-          userId: true,
-          note: true,
-          createdAt: true,
-          updatedAt: true,
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              username: true,
-              email: true,
-              contributionScore: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' as const },
-      },
-      editLogs: {
-        select: {
-          id: true,
-          version: true,
-          changedFields: true,
-          createdAt: true,
-          editor: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              username: true,
-              contributionScore: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' as const },
-      },
       _count: { select: { eventApplieds: true } },
     },
   });
@@ -518,6 +479,135 @@ const getEventEditLogById = async (eventId: string, editLogId: string) => {
       },
     },
   });
+};
+
+const getEventEditLogsByEventId = async (
+  eventId: string,
+  filters: { searchTerm?: string; date?: string },
+  options: PaginationOptions
+): Promise<PaginationResult<unknown>> => {
+  const pagination = parsePaginationOptions(options);
+  const { skip, take, orderBy } = createPaginationQuery(pagination);
+  const where: Prisma.EditLogWhereInput = { eventId };
+
+  if (filters.searchTerm) {
+    where.OR = [
+      { changedFields: { has: filters.searchTerm } },
+      { editor: { firstName: { contains: filters.searchTerm, mode: 'insensitive' } } },
+      { editor: { lastName: { contains: filters.searchTerm, mode: 'insensitive' } } },
+      { editor: { username: { contains: filters.searchTerm, mode: 'insensitive' } } },
+    ];
+  }
+
+  if (filters.date) {
+    const parsedDate = new Date(filters.date);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      const start = new Date(parsedDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      where.createdAt = {
+        gte: start,
+        lt: end,
+      };
+    }
+  }
+
+  const [rows, total] = await Promise.all([
+    database.editLog.findMany({
+      where,
+      select: {
+        id: true,
+        eventId: true,
+        version: true,
+        changedFields: true,
+        previousValues: true,
+        createdAt: true,
+        editor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            contributionScore: true,
+          },
+        },
+      },
+      skip,
+      take,
+      orderBy,
+    }),
+    database.editLog.count({ where }),
+  ]);
+
+  return createPaginationResult(rows, total, pagination);
+};
+
+const getAppliedEventsByEventId = async (
+  eventId: string,
+  filters: { searchTerm?: string; date?: string },
+  options: PaginationOptions
+): Promise<PaginationResult<unknown>> => {
+  const pagination = parsePaginationOptions(options);
+  const { skip, take, orderBy } = createPaginationQuery(pagination);
+  const where: Prisma.EventAppliedWhereInput = {
+    eventId,
+    deletedAt: null,
+  };
+
+  if (filters.searchTerm) {
+    where.OR = [
+      { note: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { user: { firstName: { contains: filters.searchTerm, mode: 'insensitive' } } },
+      { user: { lastName: { contains: filters.searchTerm, mode: 'insensitive' } } },
+      { user: { username: { contains: filters.searchTerm, mode: 'insensitive' } } },
+      { user: { email: { contains: filters.searchTerm, mode: 'insensitive' } } },
+    ];
+  }
+
+  if (filters.date) {
+    const parsedDate = new Date(filters.date);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      const start = new Date(parsedDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      where.createdAt = {
+        gte: start,
+        lt: end,
+      };
+    }
+  }
+
+  const [rows, total] = await Promise.all([
+    database.eventApplied.findMany({
+      where,
+      select: {
+        id: true,
+        eventId: true,
+        userId: true,
+        note: true,
+        createdAt: true,
+        updatedAt: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            email: true,
+            contributionScore: true,
+          },
+        },
+      },
+      skip,
+      take,
+      orderBy,
+    }),
+    database.eventApplied.count({ where }),
+  ]);
+
+  return createPaginationResult(rows, total, pagination);
 };
 
 // Internal: minimal event row for auth / guard checks (used by multiple service methods).
@@ -919,6 +1009,8 @@ export const EventRepository = {
   getEventById,
   getEventByIdForAdmin,
   getEventEditLogById,
+  getEventEditLogsByEventId,
+  getAppliedEventsByEventId,
   getEventBare,
   getEventAuditSnapshot,
   createEditLog,

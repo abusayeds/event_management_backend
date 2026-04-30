@@ -249,6 +249,25 @@ const getEventEditLogByIdValidationSchema = z.object({
   params: editLogParamsValidationSchema,
 });
 
+const eventHistoryListQueryValidationSchema = z.object({
+  searchTerm: z.string().optional(),
+  date: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
+});
+
+const getEventEditLogsByEventIdValidationSchema = z.object({
+  params: eventIdParamsValidationSchema,
+  query: eventHistoryListQueryValidationSchema,
+});
+
+const getAppliedEventsByEventIdValidationSchema = z.object({
+  params: eventIdParamsValidationSchema,
+  query: eventHistoryListQueryValidationSchema,
+});
+
 // ── PATCH /events/:eventId (body) — same sections as create, fields optional / partial where needed ─
 
 const eventSchedulePatchValidationSchema = eventScheduleValidationSchema.partial();
@@ -309,6 +328,8 @@ export const EventValidation = {
   getEventsByFamilyRelationValidationSchema,
   getEventByIdValidationSchema,
   getEventEditLogByIdValidationSchema,
+  getEventEditLogsByEventIdValidationSchema,
+  getAppliedEventsByEventIdValidationSchema,
   updateEventValidationSchema,
   deleteEventValidationSchema,
   patchEventDisabledValidationSchema,

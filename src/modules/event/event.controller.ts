@@ -137,6 +137,36 @@ const getEventEditLogById = asyncHandler(async (req: AuthenticatedRequest, res: 
   });
 });
 
+// GET /events/:eventId/edit-logs
+const getEventEditLogsByEventId = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const filters = pick(req.query, ['searchTerm', 'date']);
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+  const result = await EventService.getEventEditLogsByEventId(req.params.eventId as string, filters, options);
+
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Event edit logs fetched successfully.',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
+// GET /events/:eventId/applied-events
+const getAppliedEventsByEventId = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const filters = pick(req.query, ['searchTerm', 'date']);
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+  const result = await EventService.getAppliedEventsByEventId(req.params.eventId as string, filters, options);
+
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Event applications fetched successfully.',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 // PATCH /events/:eventId/disabled
 const setEventDisabled = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const adminUserId = req.user!.userId;
@@ -196,6 +226,8 @@ export const EventController = {
   getEventsByFamilyRelation,
   getEventById,
   getEventEditLogById,
+  getEventEditLogsByEventId,
+  getAppliedEventsByEventId,
   setEventDisabled,
   updateEvent,
   deleteEvent,

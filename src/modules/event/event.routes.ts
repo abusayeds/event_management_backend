@@ -46,6 +46,20 @@ router.get(
   EventController.getEventEditLogById
 );
 
+router.get(
+  '/edit-logs/:eventId',
+  auth(UserRole.ADMIN),
+  validateRequest(EventValidation.getEventEditLogsByEventIdValidationSchema),
+  EventController.getEventEditLogsByEventId
+);
+
+router.get(
+  '/applied-events/:eventId',
+  auth(UserRole.ADMIN),
+  validateRequest(EventValidation.getAppliedEventsByEventIdValidationSchema),
+  EventController.getAppliedEventsByEventId
+);
+
 router.patch(
   '/disabled/:eventId',
   auth(UserRole.ADMIN),
