@@ -242,6 +242,7 @@ export const eventListSelect = {
   isPublished: true,
   isActive: true,
   isVerified: true,
+  isDisabled: true,
   isDeleted: true,
   creationMode: true,
   sourceEventId: true,
@@ -254,6 +255,7 @@ export const eventListSelect = {
 export const publishedEventBaseWhere = {
   deletedAt: null,
   isDeleted: false,
+  isDisabled: false,
   isActive: true,
   isPublished: true,
 } as const;

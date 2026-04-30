@@ -25,7 +25,11 @@ import {
 } from './event.helpers';
 import { FamilyMemberRepository } from '../familyMember/familyMember.repository';
 import { EventRepository } from './event.repository';
-import { repeatConfigFields, resolveRepeatFrequency } from './event.utils';
+import {
+  attachActiveSchedules,
+  repeatConfigFields,
+  resolveRepeatFrequency,
+} from './event.utils';
 import { enqueueRepeatEventJob } from '../../jobs/repeatEvent.schedule';
 import { NotificationService } from '../notification/notification.service';
 
@@ -100,8 +104,13 @@ const createEvent = async (
 };
 
 // GET /events
-const getEvents = async (filters: IEventFilters, options: PaginationOptions) => {
-  return EventRepository.getEvents(filters, options);
+const getEvents = async (
+  filters: IEventFilters,
+  options: PaginationOptions,
+  viewerRole: UserRole
+) => {
+  const includeDisabledForAdmin = viewerRole === UserRole.ADMIN;
+  return EventRepository.getEvents(filters, options, includeDisabledForAdmin);
 };
 
 // GET /events/feed/upcoming
@@ -328,6 +337,20 @@ const updateEvent = async (
   }
 };
 
+// PATCH /events/:eventId/disabled (admin)
+const setEventDisabledByAdmin = async (
+  eventId: string,
+  adminUserId: string,
+  isDisabled: boolean
+) => {
+  const updated = await EventRepository.setEventDisabledById(eventId, isDisabled, adminUserId);
+  if (!updated) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
+  }
+  const [withSchedule] = await attachActiveSchedules([updated]);
+  return withSchedule;
+};
+
 // DELETE /events/:eventId
 const deleteEvent = async (eventId: string, userId: string, role: UserRole) => {
   const existing = await EventRepository.getEventBare(eventId);
@@ -353,5 +376,6 @@ export const EventService = {
   getEventById,
   getEventEditLogById,
   updateEvent,
+  setEventDisabledByAdmin,
   deleteEvent,
 };

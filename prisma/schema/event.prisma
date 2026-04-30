@@ -57,6 +57,7 @@ model Event {
   isPublished  Boolean   @default(true)
   isActive     Boolean   @default(true)
   isVerified   Boolean   @default(false)
+  isDisabled   Boolean   @default(false) // admin: hide event from feeds / public detail without soft-delete
   isDeleted    Boolean   @default(false)
   deletedAt    DateTime? // soft delete timestamp
 
@@ -70,6 +71,7 @@ model Event {
   @@index([creationMode])
   @@index([sourceEventId])
   @@index([sessionId])
+  @@index([isDisabled])
   @@map("events")
 }
 

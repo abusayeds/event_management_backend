@@ -26,7 +26,8 @@ const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
   const filters = pick(req.query, ['eventName', 'filterType']);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
-  const result = await EventService.getEvents(filters, options);
+  const role = req.user!.role as UserRole;
+  const result = await EventService.getEvents(filters, options, role);
 
   apiResponse(res, {
     success: true,
@@ -136,6 +137,24 @@ const getEventEditLogById = asyncHandler(async (req: AuthenticatedRequest, res: 
   });
 });
 
+// PATCH /events/:eventId/disabled
+const setEventDisabled = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const adminUserId = req.user!.userId;
+  const { isDisabled } = req.body as { isDisabled: boolean };
+  const result = await EventService.setEventDisabledByAdmin(
+    req.params.eventId as string,
+    adminUserId,
+    isDisabled
+  );
+
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: isDisabled ? 'Event disabled successfully.' : 'Event enabled successfully.',
+    data: result,
+  });
+});
+
 // PATCH /events/:eventId
 const updateEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
@@ -177,6 +196,7 @@ export const EventController = {
   getEventsByFamilyRelation,
   getEventById,
   getEventEditLogById,
+  setEventDisabled,
   updateEvent,
   deleteEvent,
 };

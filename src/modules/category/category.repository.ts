@@ -23,10 +23,11 @@ const categoryEventSelect = {
   isPublished: true,
   isActive: true,
   isVerified: true,
+  isDisabled: true,
   createdAt: true,
   updatedAt: true,
-  schedule:true,
-  results:true,
+  schedule: true,
+  results: true,
 } as const;
 
 // Category list select
@@ -157,6 +158,7 @@ const getCategoryEventCount = async (categoryId: string): Promise<number> => {
   return database.event.count({
     where: {
       isDeleted: false,
+      isDisabled: false,
       program: {
         categoryId,
         isDeleted: false,
@@ -175,6 +177,7 @@ const getCategoryEvents = async (
 
   const where = {
     isDeleted: false,
+    isDisabled: false,
     program: {
       categoryId,
       isDeleted: false,

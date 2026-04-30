@@ -18,6 +18,12 @@ const createEventApplication = async (userId: string, payload: ICreateEventAppli
   if (!event) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
   }
+  if (event.isDisabled) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'This event is not accepting applications at the moment.'
+    );
+  }
 
   try {
     const created = await EventApplicationRepository.createEventApplication(userId, payload);

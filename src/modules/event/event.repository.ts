@@ -53,6 +53,7 @@ const eventAuditSnapshotSelect = {
   isPublished: true,
   isActive: true,
   isVerified: true,
+  isDisabled: true,
   isDeleted: true,
   coverImage: true,
   repeatConfig: true,
@@ -261,7 +262,7 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
 // GET /events/:eventId
 const getEventById = async (id: string) => {
   const event = await database.event.findFirst({
-    where: { id, deletedAt: null, isDeleted: false },
+    where: { id, deletedAt: null, isDeleted: false, isDisabled: false },
     select: {
       id: true,
       eventName: true,
@@ -278,6 +279,7 @@ const getEventById = async (id: string) => {
       isPublished: true,
       isActive: true,
       isVerified: true,
+      isDisabled: true,
       sessionId: true,
       isSharedToCommunity: true,
       isUserAgreementAccepted: true,
@@ -377,6 +379,7 @@ const getEventByIdForAdmin = async (id: string) => {
       isPublished: true,
       isActive: true,
       isVerified: true,
+      isDisabled: true,
       sessionId: true,
       isSharedToCommunity: true,
       isUserAgreementAccepted: true,
@@ -528,6 +531,7 @@ const getEventBare = async (id: string) => {
       deletedAt: true,
       coverImage: true,
       version: true,
+      isDisabled: true,
     },
   });
 };
@@ -566,7 +570,8 @@ const createEditLog = async (input: {
 // GET /events
 const getEvents = async (
   filters: IEventFilters,
-  options: PaginationOptions
+  options: PaginationOptions,
+  includeDisabledForAdmin = false
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
@@ -574,6 +579,7 @@ const getEvents = async (
   const where: Prisma.EventWhereInput = {
     deletedAt: null,
     isDeleted: false,
+    ...(!includeDisabledForAdmin ? { isDisabled: false } : {}),
   };
 
   if (filters.eventName) {
@@ -740,6 +746,26 @@ const listPublishedEventsByCreatorIds = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
+// PATCH /events/:eventId/disabled (admin) — toggle visibility without soft-delete
+const setEventDisabledById = async (eventId: string, isDisabled: boolean, adminUserId: string) => {
+  const existing = await database.event.findFirst({
+    where: { id: eventId, deletedAt: null, isDeleted: false },
+    select: { id: true },
+  });
+  if (!existing) {
+    return null;
+  }
+  return database.event.update({
+    where: { id: eventId },
+    data: {
+      isDisabled,
+      lastEditorId: adminUserId,
+      version: { increment: 1 },
+    },
+    select: eventListSelect,
+  });
+};
+
 // PATCH /events/:eventId (updates the `events` row; service may also update related tables)
 const updateEventById = async (id: string, data: Prisma.EventUpdateInput) => {
   return database.event.update({
@@ -901,6 +927,7 @@ export const EventRepository = {
   getFeedToday,
   getFeedHistory,
   listPublishedEventsByCreatorIds,
+  setEventDisabledById,
   updateEventById,
   updateCurrentScheduleForEvent,
   markEventVerifiedForPatch,

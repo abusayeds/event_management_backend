@@ -46,6 +46,13 @@ router.get(
   EventController.getEventEditLogById
 );
 
+router.patch(
+  '/disabled/:eventId',
+  auth(UserRole.ADMIN),
+  validateRequest(EventValidation.patchEventDisabledValidationSchema),
+  EventController.setEventDisabled
+);
+
 router
   .route('/')
   // POST /events -> EventController.createEvent -> EventService.createEvent -> EventRepository.createEvent

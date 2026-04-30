@@ -293,6 +293,13 @@ const deleteEventValidationSchema = z.object({
   params: eventIdParamsValidationSchema,
 });
 
+const patchEventDisabledValidationSchema = z.object({
+  params: eventIdParamsValidationSchema,
+  body: z.object({
+    isDisabled: z.coerce.boolean(),
+  }),
+});
+
 export const EventValidation = {
   createEventValidationSchema,
   getEventsValidationSchema,
@@ -304,4 +311,5 @@ export const EventValidation = {
   getEventEditLogByIdValidationSchema,
   updateEventValidationSchema,
   deleteEventValidationSchema,
+  patchEventDisabledValidationSchema,
 };
