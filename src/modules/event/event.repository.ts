@@ -1,7 +1,10 @@
 import { Prisma } from '../../../prisma/generated/client';
 import {
   EventCreationMode,
+  EventType,
+  GroupCriteria,
   RepeatFrequency,
+  RoundCondition,
   SessionBucketType,
   SessionCreationMode,
 } from '../../../prisma/generated/enums';
@@ -15,20 +18,23 @@ import {
 } from '../../utils/paginate';
 import {
   ICreateEventPayload,
+  IEventAdminListFilters,
   IEventFilters,
   IFeedListFilters,
-  IFeedPriceFilters,
   IRepeatConfigInput,
   IUpdateCurrentSchedulePayload,
 } from './event.interface';
 import {
+  bandRangeForSlug,
+  buildAgeBandGroupWhere,
+  inferCategoryGroupSlugFromAgeRows,
+  normalizeCategoryGroupSlug,
   priceRangeOnSchedule,
   scheduleScopeWhereInput,
+  type CategoryGroupSlug,
   withScheduleCostEstimation,
 } from './event.helpers';
 import {
-  AUTO_EVENT_MODE,
-  MANUAL_EVENT_MODE,
   attachActiveSchedules,
   eventGroupsToNestedCreate,
   eventListSelect,
@@ -62,6 +68,78 @@ const applyFeedSearchTerm = (where: Prisma.EventWhereInput, searchTerm?: string)
     ],
   };
 };
+
+const applyFeedListProgramLocationCategoryWhere = (
+  where: Prisma.EventWhereInput,
+  filters?: IFeedListFilters
+): Prisma.EventWhereInput => {
+  let w = where;
+  if (filters?.programId?.trim()) {
+    w = { AND: [w, { programId: filters.programId.trim() }] };
+  }
+  if (filters?.location?.trim()) {
+    w = {
+      AND: [w, { location: { contains: filters.location.trim(), mode: 'insensitive' } }],
+    };
+  }
+  const categorySlug = normalizeCategoryGroupSlug(filters?.categoryGroup);
+  if (categorySlug) {
+    const { lo, hi } = bandRangeForSlug(categorySlug);
+    w = { AND: [w, { groups: { some: buildAgeBandGroupWhere(lo, hi) } }] };
+  }
+  return w;
+};
+
+const buildFeedEventsWhere = (
+  scope: 'today' | 'upcoming' | 'history',
+  filters?: IFeedListFilters
+): Prisma.EventWhereInput => {
+  const now = new Date();
+  const sessionAnd: Prisma.EventScheduleWhereInput[] = [scheduleScopeWhereInput(scope, now)];
+  const priceWhere = priceRangeOnSchedule(filters?.priceMin, filters?.priceMax);
+  if (priceWhere) {
+    sessionAnd.push(priceWhere);
+  }
+  if (filters?.type) {
+    sessionAnd.push({ eventType: filters.type });
+  }
+
+  let where: Prisma.EventWhereInput = {
+    ...publishedEventBaseWhere,
+    schedule: {
+      is: { AND: sessionAnd },
+    },
+  };
+
+  where = applyFeedListProgramLocationCategoryWhere(where, filters);
+  return applyFeedSearchTerm(where, filters?.searchTerm);
+};
+
+const attachFeedCategoryGroups = async <T extends { id: string }>(
+  events: T[]
+): Promise<Array<T & { categoryGroup: CategoryGroupSlug | null }>> => {
+  if (!events.length) {
+    return events.map(e => ({ ...e, categoryGroup: null }));
+  }
+  const ids = events.map(e => e.id);
+  const ageRows = await database.eventGroup.findMany({
+    where: { eventId: { in: ids }, criteria: GroupCriteria.Age },
+    select: { eventId: true, criteria: true, condition: true, value: true },
+  });
+  const byEvent = new Map<
+    string,
+    Array<{ criteria: GroupCriteria; condition: RoundCondition; value: number }>
+  >();
+  for (const r of ageRows) {
+    const arr = byEvent.get(r.eventId) ?? [];
+    arr.push({ criteria: r.criteria, condition: r.condition, value: r.value });
+    byEvent.set(r.eventId, arr);
+  }
+  return events.map(e => ({
+    ...e,
+    categoryGroup: inferCategoryGroupSlugFromAgeRows(byEvent.get(e.id) ?? []),
+  }));
+}
 
 const eventAuditSnapshotSelect = {
   version: true,
@@ -118,7 +196,6 @@ const eventAuditSnapshotSelect = {
   },
 } as const;
 
-// POST /events
 const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
   const coverImage = payload.coverImage?.trim();
   if (!coverImage) {
@@ -281,7 +358,7 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
   });
 };
 
-// GET /events/:eventId
+
 const getEventById = async (id: string) => {
   const event = await database.event.findFirst({
     where: { id, deletedAt: null, isDeleted: false, isDisabled: false },
@@ -505,7 +582,7 @@ const getEventEditLogById = async (eventId: string, editLogId: string) => {
 
 const getEventEditLogsByEventId = async (
   eventId: string,
-  filters: { searchTerm?: string; date?: string },
+  filters: IEventAdminListFilters,
   options: PaginationOptions
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
@@ -567,7 +644,7 @@ const getEventEditLogsByEventId = async (
 
 const getAppliedEventsByEventId = async (
   eventId: string,
-  filters: { searchTerm?: string; date?: string },
+  filters: IEventAdminListFilters,
   options: PaginationOptions
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
@@ -632,7 +709,7 @@ const getAppliedEventsByEventId = async (
   return createPaginationResult(rows, total, pagination);
 };
 
-// Internal: minimal event row for auth / guard checks (used by multiple service methods).
+
 const getEventBare = async (id: string) => {
   return database.event.findFirst({
     where: { id, deletedAt: null, isDeleted: false },
@@ -648,8 +725,6 @@ const getEventBare = async (id: string) => {
   });
 };
 
-
-// Internal: snapshot for EditLog diffing on PATCH /events/:eventId (before/after comparison).
 const getEventAuditSnapshot = async (id: string) => {
   return database.event.findFirst({
     where: { id, deletedAt: null, isDeleted: false },
@@ -659,7 +734,6 @@ const getEventAuditSnapshot = async (id: string) => {
 
 export type EventAuditSnapshot = NonNullable<Awaited<ReturnType<typeof getEventAuditSnapshot>>>;
 
-// Internal: persists edit history rows (written from EventService.updateEvent when changes are detected).
 const createEditLog = async (input: {
   eventId: string;
   version: number;
@@ -679,7 +753,6 @@ const createEditLog = async (input: {
   });
 };
 
-// GET /events
 const getEvents = async (
   filters: IEventFilters,
   options: PaginationOptions,
@@ -723,27 +796,111 @@ const getEvents = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
-// GET /events/feed/upcoming
-const getUpcomingEvents = async (
+
+const runFeedListQuery = async (
+  scope: 'today' | 'upcoming' | 'history',
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+): Promise<PaginationResult<unknown>> => {
+  const pagination = parsePaginationOptions(options);
+  const { skip, take, orderBy } = createPaginationQuery(pagination);
+  const where = buildFeedEventsWhere(scope, filters);
+
+  const [data, total] = await Promise.all([
+    database.event.findMany({
+      where,
+      select: eventListSelect,
+      skip,
+      take,
+      orderBy,
+    }),
+    database.event.count({ where }),
+  ]);
+
+  const withSchedule = await attachActiveSchedules(data);
+  const enriched = await attachFeedCategoryGroups(withSchedule);
+  return createPaginationResult(enriched, total, pagination);
+};
+
+const getUpcomingEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) =>
+  runFeedListQuery('upcoming', filters, options);
+
+const getTodayEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) =>
+  runFeedListQuery('today', filters, options);
+
+const getHistoryEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) =>
+  runFeedListQuery('history', filters, options);
+
+const getPersonalizedUpcomingEvents = async (
+  filters: IFeedListFilters | undefined,
   options: PaginationOptions,
-  feed?: IFeedListFilters
+  applicationProgramIds: string[],
+  applicationLocations: string[],
+  applicationEventTypes: string[]
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
   const now = new Date();
-  const priceWhere = priceRangeOnSchedule(feed?.priceMin, feed?.priceMax);
+  const priceWhere = priceRangeOnSchedule(filters?.priceMin, filters?.priceMax);
   const sessionAnd: Prisma.EventScheduleWhereInput[] = [scheduleScopeWhereInput('upcoming', now)];
-  if (priceWhere) sessionAnd.push(priceWhere);
+  if (priceWhere) {
+    sessionAnd.push(priceWhere);
+  }
+  if (filters?.type) {
+    sessionAnd.push({ eventType: filters.type });
+  }
 
-  const where: Prisma.EventWhereInput = applyFeedSearchTerm(
-    {
-      ...publishedEventBaseWhere,
+  const orBranches: Prisma.EventWhereInput[] = [];
+  const prefProgramIds = [
+    ...new Set(applicationProgramIds.map(id => String(id).trim()).filter(id => id.length > 0)),
+  ];
+  if (prefProgramIds.length) {
+    orBranches.push({ programId: { in: prefProgramIds } });
+  }
+  const locs = applicationLocations
+    .map(l => String(l).trim())
+    .filter(l => l.length > 0);
+  if (locs.length) {
+    orBranches.push({
+      OR: locs.map(loc => ({
+        location: { equals: loc, mode: 'insensitive' as const },
+      })),
+    });
+  }
+  const validEventTypes = [
+    ...new Set(
+      applicationEventTypes.filter((t): t is EventType =>
+        (Object.values(EventType) as string[]).includes(String(t))
+      )
+    ),
+  ];
+  if (validEventTypes.length) {
+    orBranches.push({
       schedule: {
-        is: { AND: sessionAnd },
+        is: {
+          eventType: { in: validEventTypes },
+        },
       },
-    },
-    feed?.searchTerm
-  );
+    });
+  }
+
+  if (!orBranches.length) {
+    return getUpcomingEvents(filters, options);
+  }
+
+  let where: Prisma.EventWhereInput = {
+    AND: [
+      { ...publishedEventBaseWhere },
+      {
+        schedule: {
+          is: { AND: sessionAnd },
+        },
+      },
+      { OR: orBranches },
+    ],
+  };
+  where = applyFeedListProgramLocationCategoryWhere(where, filters);
+  where = applyFeedSearchTerm(where, filters?.searchTerm);
 
   const [data, total] = await Promise.all([
     database.event.findMany({
@@ -756,64 +913,32 @@ const getUpcomingEvents = async (
     database.event.count({ where }),
   ]);
 
-  const enriched = await attachActiveSchedules(data);
+  const withSchedule = await attachActiveSchedules(data);
+  const enriched = await attachFeedCategoryGroups(withSchedule);
   return createPaginationResult(enriched, total, pagination);
 };
 
-// GET /events/feed/today
-const getFeedToday = async (
-  options: PaginationOptions,
-  feed?: IFeedListFilters
+const searchHomeScreenEvents = async (
+  filters: IFeedListFilters,
+  options: PaginationOptions
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
-  const now = new Date();
-  const priceWhere = priceRangeOnSchedule(feed?.priceMin, feed?.priceMax);
-  const sessionAnd: Prisma.EventScheduleWhereInput[] = [scheduleScopeWhereInput('today', now)];
-  if (priceWhere) sessionAnd.push(priceWhere);
+  const sessionAnd: Prisma.EventScheduleWhereInput[] = [];
+  const priceWhere = priceRangeOnSchedule(filters?.priceMin, filters?.priceMax);
+  if (priceWhere) {
+    sessionAnd.push(priceWhere);
+  }
+  if (filters?.type) {
+    sessionAnd.push({ eventType: filters.type });
+  }
 
-  const where = applyFeedSearchTerm(
-    {
-      ...publishedEventBaseWhere,
-      schedule: { is: { AND: sessionAnd } },
-    },
-    feed?.searchTerm
-  );
-
-  const [data, total] = await Promise.all([
-    database.event.findMany({
-      where,
-      select: eventListSelect,
-      skip,
-      take,
-      orderBy,
-    }),
-    database.event.count({ where }),
-  ]);
-
-  const enriched = await attachActiveSchedules(data);
-  return createPaginationResult(enriched, total, pagination);
-};
-
-// GET /events/feed/history
-const getFeedHistory = async (
-  options: PaginationOptions,
-  feed?: IFeedListFilters
-): Promise<PaginationResult<unknown>> => {
-  const pagination = parsePaginationOptions(options);
-  const { skip, take, orderBy } = createPaginationQuery(pagination);
-  const now = new Date();
-  const priceWhere = priceRangeOnSchedule(feed?.priceMin, feed?.priceMax);
-  const sessionAnd: Prisma.EventScheduleWhereInput[] = [scheduleScopeWhereInput('history', now)];
-  if (priceWhere) sessionAnd.push(priceWhere);
-
-  const where = applyFeedSearchTerm(
-    {
-      ...publishedEventBaseWhere,
-      schedule: { is: { AND: sessionAnd } },
-    },
-    feed?.searchTerm
-  );
+  let where: Prisma.EventWhereInput = { ...publishedEventBaseWhere };
+  if (sessionAnd.length) {
+    where = { AND: [where, { schedule: { is: { AND: sessionAnd } } }] };
+  }
+  where = applyFeedSearchTerm(where, filters.searchTerm);
+  where = applyFeedListProgramLocationCategoryWhere(where, filters);
 
   const [data, total] = await Promise.all([
     database.event.findMany({
@@ -826,28 +951,39 @@ const getFeedHistory = async (
     database.event.count({ where }),
   ]);
 
-  const enriched = await attachActiveSchedules(data);
+  const withSchedule = await attachActiveSchedules(data);
+  const enriched = await attachFeedCategoryGroups(withSchedule);
   return createPaginationResult(enriched, total, pagination);
 };
 
-const listPublishedEventsByCreatorIds = async (
+const getPublishedEventsByCreatorIds = async (
   creatorIds: string[],
-  options: PaginationOptions,
-  price?: IFeedPriceFilters
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
   if (creatorIds.length === 0) {
     return createPaginationResult([], 0, pagination);
   }
   const { skip, take, orderBy } = createPaginationQuery(pagination);
-  const priceWhere = priceRangeOnSchedule(price?.priceMin, price?.priceMax);
-  const where: Prisma.EventWhereInput = {
+  const sessionAnd: Prisma.EventScheduleWhereInput[] = [];
+  const priceWhere = priceRangeOnSchedule(filters?.priceMin, filters?.priceMax);
+  if (priceWhere) {
+    sessionAnd.push(priceWhere);
+  }
+  if (filters?.type) {
+    sessionAnd.push({ eventType: filters.type });
+  }
+
+  let where: Prisma.EventWhereInput = {
     ...publishedEventBaseWhere,
     creatorId: { in: creatorIds },
   };
-  if (priceWhere) {
-    where.schedule = { is: priceWhere };
+  if (sessionAnd.length) {
+    where = { AND: [where, { schedule: { is: { AND: sessionAnd } } }] };
   }
+  where = applyFeedListProgramLocationCategoryWhere(where, filters);
+  where = applyFeedSearchTerm(where, filters?.searchTerm);
 
   const [data, total] = await Promise.all([
     database.event.findMany({
@@ -864,7 +1000,6 @@ const listPublishedEventsByCreatorIds = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
-// PATCH /events/:eventId/disabled (admin) — toggle visibility without soft-delete
 const setEventDisabledById = async (eventId: string, isDisabled: boolean, adminUserId: string) => {
   const existing = await database.event.findFirst({
     where: { id: eventId, deletedAt: null, isDeleted: false },
@@ -876,7 +1011,7 @@ const setEventDisabledById = async (eventId: string, isDisabled: boolean, adminU
   return database.event.update({
     where: { id: eventId },
     data: {
-      isDisabled,
+      isDisabled: isDisabled,
       lastEditorId: adminUserId,
       version: { increment: 1 },
     },
@@ -884,7 +1019,6 @@ const setEventDisabledById = async (eventId: string, isDisabled: boolean, adminU
   });
 };
 
-// PATCH /events/:eventId (updates the `events` row; service may also update related tables)
 const updateEventById = async (id: string, data: Prisma.EventUpdateInput) => {
   return database.event.update({
     where: { id },
@@ -893,7 +1027,6 @@ const updateEventById = async (id: string, data: Prisma.EventUpdateInput) => {
   });
 };
 
-// PATCH /events/:eventId (body.schedule patch) — updates the single `event_sessions` row for this event.
 const updateCurrentScheduleForEvent = async (
   eventId: string,
   patch: IUpdateCurrentSchedulePayload
@@ -971,7 +1104,6 @@ const updateCurrentScheduleForEvent = async (
   });
 };
 
-// When PATCH body includes isVerified: true, set this event’s `isVerified` (no row on `EventSchedule`).
 const markEventVerifiedForPatch = async (eventId: string) => {
   const existing = await database.event.findFirst({
     where: { id: eventId, deletedAt: null, isDeleted: false },
@@ -990,7 +1122,6 @@ const markEventVerifiedForPatch = async (eventId: string) => {
   return { id: eventId, isVerified: true as const };
 };
 
-// PATCH /events/:eventId (body.repeatConfig) — upserts `repeat_configs` for this event.
 const upsertRepeatConfig = async (eventId: string, input: IRepeatConfigInput) => {
   const fields = repeatConfigFields(input);
   return database.repeatConfig.upsert({
@@ -1000,12 +1131,10 @@ const upsertRepeatConfig = async (eventId: string, input: IRepeatConfigInput) =>
   });
 };
 
-// PATCH /events/:eventId (body.repeatConfig=null) — deletes `repeat_configs` for this event.
 const deleteRepeatConfigByEventId = async (eventId: string) => {
   return database.repeatConfig.deleteMany({ where: { eventId } });
 };
 
-// DELETE /events/:eventId
 const softDeleteEvent = async (id: string) => {
   return database.event.update({
     where: { id },
@@ -1014,15 +1143,12 @@ const softDeleteEvent = async (id: string) => {
   });
 };
 
-// Internal: validation helper for POST /events (programId must exist).
 const programExists = async (programId: string) => {
   return database.program.findFirst({
     where: { id: programId, isDeleted: false },
     select: { id: true },
   });
 };
-
-// Internal: validation helper for POST /events when linking an existing catalog `Session` via `Event.sessionId`.
 const sessionsExist = async (sessionIds: string[]) => {
   const unique = [...new Set(sessionIds)];
   const rows = await database.session.findMany({
@@ -1033,27 +1159,34 @@ const sessionsExist = async (sessionIds: string[]) => {
 };
 
 export const EventRepository = {
-  createEvent,
+  // Feed & discovery
+  getUpcomingEvents,
+  getPersonalizedUpcomingEvents,
+  getTodayEvents,
+  getHistoryEvents,
+  searchHomeScreenEvents,
+  getPublishedEventsByCreatorIds,
+  // Paginated list & single reads
+  getEvents,
   getEventById,
   getEventByIdForAdmin,
+  getEventBare,
+  getEventAuditSnapshot,
+  // Admin: edit logs & applications
   getEventEditLogById,
   getEventEditLogsByEventId,
   getAppliedEventsByEventId,
-  getEventBare,
-  getEventAuditSnapshot,
+  // Writes
+  createEvent,
   createEditLog,
-  getEvents,
-  getUpcomingEvents,
-  getFeedToday,
-  getFeedHistory,
-  listPublishedEventsByCreatorIds,
-  setEventDisabledById,
   updateEventById,
   updateCurrentScheduleForEvent,
   markEventVerifiedForPatch,
   upsertRepeatConfig,
   deleteRepeatConfigByEventId,
   softDeleteEvent,
+  setEventDisabledById,
+  // Catalog
   programExists,
   sessionsExist,
 };

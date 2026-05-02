@@ -7,102 +7,112 @@ import { EventController } from './event.controller';
 import { EventValidation } from './event.validation';
 
 const router = Router();
-// GET /events/feed/upcoming -> EventController.getUpcomingEvents -> EventService.getUpcomingEvents -> EventRepository.getUpcomingEvents
+const asUser = auth(UserRole.ADMIN, UserRole.USER);
+const asAdmin = auth(UserRole.ADMIN);
+
 router.get(
   '/feed/upcoming',
-  auth(UserRole.ADMIN, UserRole.USER),
+  asUser,
   validateRequest(EventValidation.getUpcomingEventsValidationSchema),
   EventController.getUpcomingEvents
 );
 
-// GET /events/feed/today -> EventController.getTodayEvents -> EventService.getTodayEvents -> EventRepository.getFeedToday
 router.get(
   '/feed/today',
-  auth(UserRole.ADMIN, UserRole.USER),
+  asUser,
   validateRequest(EventValidation.getTodayEventsValidationSchema),
   EventController.getTodayEvents
 );
 
-// GET /events/feed/history -> EventController.getHistoryEvents -> EventService.getHistoryEvents -> EventRepository.getFeedHistory
 router.get(
   '/feed/history',
-  auth(UserRole.ADMIN, UserRole.USER),
+  asUser,
   validateRequest(EventValidation.getHistoryEventsValidationSchema),
   EventController.getHistoryEvents
 );
 
-// GET /events/feed/by-family-relation?relationShip=... — published events from creators matching family relationship filter
+router.get(
+  '/feed/search',
+  asUser,
+  validateRequest(EventValidation.searchHomeScreenEventsValidationSchema),
+  EventController.searchHomeScreenEvents
+);
+
 router.get(
   '/feed/by-family-relation',
-  auth(UserRole.ADMIN, UserRole.USER),
+  asUser,
   validateRequest(EventValidation.getEventsByFamilyRelationValidationSchema),
   EventController.getEventsByFamilyRelation
 );
 
+// -----------------------------------------------------------------------------
+// Admin: per-event lists & toggles
+// -----------------------------------------------------------------------------
 router.get(
   '/:eventId/edit-logs/:editLogId',
-  auth(UserRole.ADMIN),
+  asAdmin,
   validateRequest(EventValidation.getEventEditLogByIdValidationSchema),
   EventController.getEventEditLogById
 );
 
 router.get(
   '/edit-logs/:eventId',
-  auth(UserRole.ADMIN),
+  asAdmin,
   validateRequest(EventValidation.getEventEditLogsByEventIdValidationSchema),
   EventController.getEventEditLogsByEventId
 );
 
 router.get(
   '/applied-events/:eventId',
-  auth(UserRole.ADMIN),
+  asAdmin,
   validateRequest(EventValidation.getAppliedEventsByEventIdValidationSchema),
   EventController.getAppliedEventsByEventId
 );
 
 router.patch(
   '/disabled/:eventId',
-  auth(UserRole.ADMIN),
+  asAdmin,
   validateRequest(EventValidation.patchEventDisabledValidationSchema),
   EventController.setEventDisabled
 );
 
+// -----------------------------------------------------------------------------
+// Collection: create + list
+// -----------------------------------------------------------------------------
 router
   .route('/')
-  // POST /events -> EventController.createEvent -> EventService.createEvent -> EventRepository.createEvent
   .post(
-    auth(UserRole.ADMIN, UserRole.USER),
+    asUser,
     upload.single('coverImage'),
     validateRequest(EventValidation.createEventValidationSchema),
     EventController.createEvent
   )
-  // GET /events -> EventController.getEvents -> EventService.getEvents -> EventRepository.getEvents
   .get(
-    auth(UserRole.ADMIN, UserRole.USER),
+    asUser,
     validateRequest(EventValidation.getEventsValidationSchema),
     EventController.getEvents
   );
 
+// -----------------------------------------------------------------------------
+// Single event: detail, update, delete
+// -----------------------------------------------------------------------------
 router
   .route('/:eventId')
-  // GET /events/:eventId -> EventController.getEventById -> EventService.getEventById -> EventRepository.getEventById
   .get(
-    auth(UserRole.ADMIN, UserRole.USER),
+    asUser,
     validateRequest(EventValidation.getEventByIdValidationSchema),
     EventController.getEventById
   )
-  // PATCH /events/:eventId -> EventController.updateEvent -> EventService.updateEvent -> EventRepository.update* + createEditLog
   .patch(
-    auth(UserRole.ADMIN, UserRole.USER),
+    asUser,
     upload.single('coverImage'),
     validateRequest(EventValidation.updateEventValidationSchema),
     EventController.updateEvent
   )
-  // DELETE /events/:eventId -> EventController.deleteEvent -> EventService.deleteEvent -> EventRepository.softDeleteEvent
   .delete(
-    auth(UserRole.ADMIN, UserRole.USER),
+    asUser,
     validateRequest(EventValidation.deleteEventValidationSchema),
     EventController.deleteEvent
-);
+  );
 
 export const EventRoutes: Router = router;

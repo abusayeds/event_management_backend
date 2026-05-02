@@ -15,17 +15,13 @@ export const EVENT_CONTRIBUTION_SCORE = {
   VERIFY: 15,
   APPLY: 3,
 } as const;
-
-/** Filter list feeds by this event’s `EventSchedule` date/status window. */
 export type EventScheduleListScope = 'today' | 'upcoming' | 'history';
 
-/** Matches Prisma model `RepeatConfig` */
 export interface IRepeatConfigInput {
   repeatFunction?: RepeatFrequency;
   startDate?: Date | string;
 }
 
-/** Matches Prisma model `EventRound` */
 export interface IEventRoundInput {
   roundType: CompetitionLevel;
   deadline: Date | string;
@@ -44,7 +40,6 @@ export interface IEventGroupInput {
   rounds?: IEventRoundInput[];
 }
 
-/** Matches Prisma `EventSchedule` (registration window + pricing only). */
 export interface IEventScheduleInput {
   competitionLevel: CompetitionLevel;
   eventType: EventType;
@@ -71,7 +66,6 @@ export interface ICreateEventPayload {
   isPublished?: boolean;
   repeatConfig?: IRepeatConfigInput | null;
   sessionId?: string;
-  /** Prisma `Event` — only when creating/finding catalog session without `sessionId` (DontRepeat). */
   year?: string;
   session?: SessionBucketType | null;
   sessionValue?: string | null;
@@ -107,7 +101,6 @@ export interface IUpdateEventPayload {
   isActive?: boolean;
   isSharedToCommunity?: boolean;
   isUserAgreementAccepted?: boolean;
-  /** When true, sets this event’s `isVerified` to true (idempotent). */
   isVerified?: boolean;
   repeatConfig?: IRepeatConfigInput | null;
   sessionId?: string;
@@ -115,7 +108,6 @@ export interface IUpdateEventPayload {
   session?: SessionBucketType | null;
   sessionValue?: string | null;
   sessionLevel?: string | null;
-  /** Partial `EventSchedule` patch (same fields as create `schedule`). */
   schedule?: IUpdateCurrentSchedulePayload;
   groups?: IEventGroupInput[];
 }
@@ -125,15 +117,33 @@ export interface IEventFilters {
   filterType?: EventScheduleListScope;
 }
 
-export interface IFeedPriceFilters {
+/** Home feed + global search: single program/location/type plus price, category, text. */
+export interface IFeedListFilters {
+  searchTerm?: string;
+  programId?: string;
+  type?: EventType;
+  location?: string;
+  categoryGroup?: string;
   priceMin?: string;
   priceMax?: string;
 }
+export const FEED_LIST_QUERY_KEYS = [
+  'priceMin',
+  'priceMax',
+  'searchTerm',
+  'programId',
+  'type',
+  'location',
+  'categoryGroup',
+] as const;
 
-/** Optional filters for public feed list endpoints (today / upcoming / history). */
-export interface IFeedListFilters extends IFeedPriceFilters {
+/** Admin: paginated edit-log or application lists for one event (`GET` query). */
+export interface IEventAdminListFilters {
   searchTerm?: string;
+  date?: string;
 }
+
+export const EVENT_ADMIN_LIST_QUERY_KEYS = ['searchTerm', 'date'] as const;
 
 export interface IEventQuery {
   filters: IEventFilters;

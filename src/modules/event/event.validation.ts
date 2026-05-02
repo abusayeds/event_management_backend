@@ -8,6 +8,7 @@ import {
   RoundCondition,
   SessionBucketType,
 } from '../../../prisma/generated/enums';
+import { normalizeCategoryGroupSlug } from './event.helpers';
 
 const nonNegativeNumber = z.coerce.number().finite().nonnegative();
 
@@ -197,18 +198,6 @@ const getEventsValidationSchema = z.object({
   }),
 });
 
-const getEventsByFamilyRelationValidationSchema = z.object({
-  query: z.object({
-    relationShip: z.nativeEnum(FamilyRelationShip),
-    page: z.coerce.number().int().min(1).optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional(),
-    sortBy: z.string().optional(),
-    sortOrder: z.enum(['asc', 'desc']).optional(),
-    priceMin: z.string().optional(),
-    priceMax: z.string().optional(),
-  }),
-});
-
 const feedListQueryFields = {
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -217,18 +206,41 @@ const feedListQueryFields = {
   priceMin: z.string().optional(),
   priceMax: z.string().optional(),
   searchTerm: z.string().trim().max(200).optional(),
+  programId: z.string().trim().min(1).max(64).optional(),
+  type: z.nativeEnum(EventType).optional(),
+  location: z.string().trim().max(300).optional(),
+  categoryGroup: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .refine(
+      val => val === undefined || val === '' || normalizeCategoryGroupSlug(val) !== null,
+      'Invalid categoryGroup. Expected: 6year-10year, 11year-16year, or 17year+ (aliases like 6-10, 17+ accepted).'
+    ),
 } as const;
 
-const getTodayEventsValidationSchema = z.object({
+/** Shared query validation for feed list endpoints (today / upcoming / history). */
+const feedListEventsQueryValidationSchema = z.object({
   query: z.object(feedListQueryFields),
 });
 
-const getUpcomingEventsValidationSchema = z.object({
-  query: z.object(feedListQueryFields),
+const getTodayEventsValidationSchema = feedListEventsQueryValidationSchema;
+const getUpcomingEventsValidationSchema = feedListEventsQueryValidationSchema;
+const getHistoryEventsValidationSchema = feedListEventsQueryValidationSchema;
+
+const searchHomeScreenEventsValidationSchema = z.object({
+  query: z.object({
+    ...feedListQueryFields,
+    searchTerm: z.string().trim().min(1).max(200),
+  }),
 });
 
-const getHistoryEventsValidationSchema = z.object({
-  query: z.object(feedListQueryFields),
+const getEventsByFamilyRelationValidationSchema = z.object({
+  query: z.object({
+    relationShip: z.nativeEnum(FamilyRelationShip),
+    ...feedListQueryFields,
+  }),
 });
 
 const getEventByIdValidationSchema = z.object({
@@ -314,6 +326,7 @@ export const EventValidation = {
   getTodayEventsValidationSchema,
   getUpcomingEventsValidationSchema,
   getHistoryEventsValidationSchema,
+  searchHomeScreenEventsValidationSchema,
   getEventsByFamilyRelationValidationSchema,
   getEventByIdValidationSchema,
   getEventEditLogByIdValidationSchema,

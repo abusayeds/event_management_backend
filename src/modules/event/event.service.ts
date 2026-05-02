@@ -1,11 +1,13 @@
 import { StatusCodes } from 'http-status-codes';
 import {
+  EventType,
   FamilyRelationShip,
   NotificationMedium,
   NotificationType,
   RepeatFrequency,
   UserRole,
 } from '../../../prisma/generated/enums';
+import { database } from '../../config/database';
 import { PaginationOptions } from '../../interfaces';
 import logger from '../../config/logger';
 import ApiError from '../../utils/apiError';
@@ -14,9 +16,9 @@ import { rewardUserContribution } from '../user/contributionReward';
 import {
   EVENT_CONTRIBUTION_SCORE,
   ICreateEventPayload,
+  IEventAdminListFilters,
   IEventFilters,
   IFeedListFilters,
-  IFeedPriceFilters,
   IUpdateEventPayload,
 } from './event.interface';
 import {
@@ -115,35 +117,104 @@ const getEvents = async (
 };
 
 // GET /events/feed/upcoming
-const getUpcomingEvents = async (options: PaginationOptions, feed?: IFeedListFilters) => {
-  return EventRepository.getUpcomingEvents(options, feed);
+const getUpcomingEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) => {
+  return EventRepository.getUpcomingEvents(filters, options);
 };
 
 // GET /events/feed/today
-const getTodayEvents = async (options: PaginationOptions, feed?: IFeedListFilters) => {
-  return EventRepository.getFeedToday(options, feed);
+const getTodayEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) => {
+  return EventRepository.getTodayEvents(filters, options);
 };
 
 // GET /events/feed/history
-const getHistoryEvents = async (options: PaginationOptions, feed?: IFeedListFilters) => {
-  return EventRepository.getFeedHistory(options, feed);
+const getHistoryEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) => {
+  return EventRepository.getHistoryEvents(filters, options);
 };
 
-// GET /events/feed/by-family-relation
+const getPersonalizedUpcomingEvents = async (
+  userId: string,
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+) => {
+  const appliedRows = await database.eventApplied.findMany({
+    where: { userId, deletedAt: null },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: {
+      event: {
+        select: {
+          programId: true,
+          location: true,
+          schedule: { select: { eventType: true } },
+        },
+      },
+    },
+  });
+
+  if (appliedRows.length === 0) {
+    return EventRepository.getUpcomingEvents(filters, options);
+  }
+
+  const programIds = [
+    ...new Set(
+      appliedRows.map(r => r.event?.programId).filter((id): id is string => Boolean(id && String(id).trim()))
+    ),
+  ];
+  const locations = [
+    ...new Set(
+      appliedRows
+        .map(r => r.event?.location)
+        .filter((loc): loc is string => typeof loc === 'string' && loc.trim().length > 0)
+        .map(loc => loc.trim())
+    ),
+  ];
+  const eventTypes = [
+    ...new Set(
+      appliedRows
+        .map(r => r.event?.schedule?.eventType)
+        .filter((t): t is EventType => t !== undefined && t !== null)
+        .map(t => String(t))
+    ),
+  ];
+
+  const hasAnyPreference = programIds.length > 0 || locations.length > 0 || eventTypes.length > 0;
+  if (!hasAnyPreference) {
+    return EventRepository.getUpcomingEvents(filters, options);
+  }
+
+  const personalized = await EventRepository.getPersonalizedUpcomingEvents(
+    filters,
+    options,
+    programIds,
+    locations,
+    eventTypes
+  );
+  if (personalized.data.length === 0) {
+    return EventRepository.getUpcomingEvents(filters, options);
+  }
+  return personalized;
+};
+
+const searchHomeScreenEvents = async (filters: IFeedListFilters, options: PaginationOptions) => {
+  const trimmed = (filters.searchTerm ?? '').trim();
+  if (!trimmed.length) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Search term is required.');
+  }
+  return EventRepository.searchHomeScreenEvents({ ...filters, searchTerm: trimmed }, options);
+};
+
 const getEventsByFamilyRelation = async (
   viewerId: string,
   relationShip: FamilyRelationShip,
-  options: PaginationOptions,
-  price?: IFeedPriceFilters
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
 ) => {
   const creatorIds = await FamilyMemberRepository.listCreatorUserIdsForFamilyRelationFeed(
     viewerId,
     relationShip
   );
-  return EventRepository.listPublishedEventsByCreatorIds(creatorIds, options, price);
+  return EventRepository.getPublishedEventsByCreatorIds(creatorIds, filters, options);
 };
-
-// GET /events/:eventId
 const getEventById = async (id: string, role: UserRole) => {
   const event =
     role === UserRole.ADMIN
@@ -182,7 +253,7 @@ const getEventEditLogById = async (eventId: string, editLogId: string) => {
 
 const getEventEditLogsByEventId = async (
   eventId: string,
-  filters: { searchTerm?: string; date?: string },
+  filters: IEventAdminListFilters,
   options: PaginationOptions
 ) => {
   const existing = await EventRepository.getEventBare(eventId);
@@ -194,7 +265,7 @@ const getEventEditLogsByEventId = async (
 
 const getAppliedEventsByEventId = async (
   eventId: string,
-  filters: { searchTerm?: string; date?: string },
+  filters: IEventAdminListFilters,
   options: PaginationOptions
 ) => {
   const existing = await EventRepository.getEventBare(eventId);
@@ -204,7 +275,6 @@ const getAppliedEventsByEventId = async (
   return EventRepository.getAppliedEventsByEventId(eventId, filters, options);
 };
 
-// PATCH /events/:eventId (also writes EditLog when tracked fields change)
 const updateEvent = async (
   eventId: string,
   userId: string,
@@ -361,8 +431,6 @@ const updateEvent = async (
     throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to update event.');
   }
 };
-
-// PATCH /events/:eventId/disabled (admin)
 const setEventDisabledByAdmin = async (
   eventId: string,
   adminUserId: string,
@@ -375,8 +443,6 @@ const setEventDisabledByAdmin = async (
   const [withSchedule] = await attachActiveSchedules([updated]);
   return withSchedule;
 };
-
-// DELETE /events/:eventId
 const deleteEvent = async (eventId: string, userId: string, role: UserRole) => {
   const existing = await EventRepository.getEventBare(eventId);
   if (!existing) {
@@ -395,8 +461,10 @@ export const EventService = {
   createEvent,
   getEvents,
   getUpcomingEvents,
+  getPersonalizedUpcomingEvents,
   getTodayEvents,
   getHistoryEvents,
+  searchHomeScreenEvents,
   getEventsByFamilyRelation,
   getEventById,
   getEventEditLogById,

@@ -6,6 +6,7 @@ import ApiError from '../../utils/apiError';
 import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
+import { EVENT_ADMIN_LIST_QUERY_KEYS, FEED_LIST_QUERY_KEYS, IFeedListFilters } from './event.interface';
 import { EventService } from './event.service';
 
 // POST /events
@@ -38,11 +39,14 @@ const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
   });
 });
 
-// GET /events/feed/upcoming
+const pickFeedListFilters = (req: AuthenticatedRequest) => pick(req.query, [...FEED_LIST_QUERY_KEYS]);
+
+// GET /events/feed/upcoming (personalized from recent applications; same IFeedListFilters as other feeds)
 const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.userId;
+  const filters = pickFeedListFilters(req);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const feed = pick(req.query, ['priceMin', 'priceMax', 'searchTerm']);
-  const result = await EventService.getUpcomingEvents(options, feed);
+  const result = await EventService.getPersonalizedUpcomingEvents(userId, filters, options);
 
   apiResponse(res, {
     success: true,
@@ -55,9 +59,9 @@ const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Re
 
 // GET /events/feed/today
 const getTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const filters = pickFeedListFilters(req);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const feed = pick(req.query, ['priceMin', 'priceMax', 'searchTerm']);
-  const result = await EventService.getTodayEvents(options, feed);
+  const result = await EventService.getTodayEvents(filters, options);
 
   apiResponse(res, {
     success: true,
@@ -70,14 +74,29 @@ const getTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Respo
 
 // GET /events/feed/history
 const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const filters = pickFeedListFilters(req);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const feed = pick(req.query, ['priceMin', 'priceMax', 'searchTerm']);
-  const result = await EventService.getHistoryEvents(options, feed);
+  const result = await EventService.getHistoryEvents(filters, options);
 
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'History events fetched successfully.',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
+// GET /events/feed/search
+const searchHomeScreenEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const filters = pickFeedListFilters(req) as IFeedListFilters;
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+  const result = await EventService.searchHomeScreenEvents(filters, options);
+
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Events search completed successfully.',
     data: result.data,
     meta: result.meta,
   });
@@ -96,9 +115,9 @@ const getEventsByFamilyRelation = asyncHandler(async (req: AuthenticatedRequest,
   }
 
   const relationShip = rawRelationShip as FamilyRelationShip;
+  const filters = pickFeedListFilters(req);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.getEventsByFamilyRelation(userId, relationShip, options, price);
+  const result = await EventService.getEventsByFamilyRelation(userId, relationShip, filters, options);
 
   apiResponse(res, {
     success: true,
@@ -139,7 +158,7 @@ const getEventEditLogById = asyncHandler(async (req: AuthenticatedRequest, res: 
 
 // GET /events/:eventId/edit-logs
 const getEventEditLogsByEventId = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const filters = pick(req.query, ['searchTerm', 'date']);
+  const filters = pick(req.query, [...EVENT_ADMIN_LIST_QUERY_KEYS]);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const result = await EventService.getEventEditLogsByEventId(req.params.eventId as string, filters, options);
 
@@ -154,7 +173,7 @@ const getEventEditLogsByEventId = asyncHandler(async (req: AuthenticatedRequest,
 
 // GET /events/:eventId/applied-events
 const getAppliedEventsByEventId = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const filters = pick(req.query, ['searchTerm', 'date']);
+  const filters = pick(req.query, [...EVENT_ADMIN_LIST_QUERY_KEYS]);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const result = await EventService.getAppliedEventsByEventId(req.params.eventId as string, filters, options);
 
@@ -223,6 +242,7 @@ export const EventController = {
   getUpcomingEvents,
   getTodayEvents,
   getHistoryEvents,
+  searchHomeScreenEvents,
   getEventsByFamilyRelation,
   getEventById,
   getEventEditLogById,
