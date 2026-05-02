@@ -209,37 +209,26 @@ const getEventsByFamilyRelationValidationSchema = z.object({
   }),
 });
 
+const feedListQueryFields = {
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
+  priceMin: z.string().optional(),
+  priceMax: z.string().optional(),
+  searchTerm: z.string().trim().max(200).optional(),
+} as const;
+
 const getTodayEventsValidationSchema = z.object({
-  query: z.object({
-    page: z.coerce.number().int().min(1).optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional(),
-    sortBy: z.string().optional(),
-    sortOrder: z.enum(['asc', 'desc']).optional(),
-    priceMin: z.string().optional(),
-    priceMax: z.string().optional(),
-  }),
+  query: z.object(feedListQueryFields),
 });
 
 const getUpcomingEventsValidationSchema = z.object({
-  query: z.object({
-    page: z.coerce.number().int().min(1).optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional(),
-    sortBy: z.string().optional(),
-    sortOrder: z.enum(['asc', 'desc']).optional(),
-    priceMin: z.string().optional(),
-    priceMax: z.string().optional(),
-  }),
+  query: z.object(feedListQueryFields),
 });
 
 const getHistoryEventsValidationSchema = z.object({
-  query: z.object({
-    page: z.coerce.number().int().min(1).optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional(),
-    sortBy: z.string().optional(),
-    sortOrder: z.enum(['asc', 'desc']).optional(),
-    priceMin: z.string().optional(),
-    priceMax: z.string().optional(),
-  }),
+  query: z.object(feedListQueryFields),
 });
 
 const getEventByIdValidationSchema = z.object({

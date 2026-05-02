@@ -41,8 +41,8 @@ const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
 // GET /events/feed/upcoming
 const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.getUpcomingEvents(options, price);
+  const feed = pick(req.query, ['priceMin', 'priceMax', 'searchTerm']);
+  const result = await EventService.getUpcomingEvents(options, feed);
 
   apiResponse(res, {
     success: true,
@@ -56,8 +56,8 @@ const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Re
 // GET /events/feed/today
 const getTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.getTodayEvents(options, price);
+  const feed = pick(req.query, ['priceMin', 'priceMax', 'searchTerm']);
+  const result = await EventService.getTodayEvents(options, feed);
 
   apiResponse(res, {
     success: true,
@@ -71,8 +71,8 @@ const getTodayEvents = asyncHandler(async (req: AuthenticatedRequest, res: Respo
 // GET /events/feed/history
 const getHistoryEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const price = pick(req.query, ['priceMin', 'priceMax']);
-  const result = await EventService.getHistoryEvents(options, price);
+  const feed = pick(req.query, ['priceMin', 'priceMax', 'searchTerm']);
+  const result = await EventService.getHistoryEvents(options, feed);
 
   apiResponse(res, {
     success: true,

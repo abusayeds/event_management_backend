@@ -165,20 +165,18 @@ export function scheduleScopeWhereInput(
 ): Prisma.EventScheduleWhereInput {
   const startToday = startOfUtcDay(now);
   const endToday = endOfUtcDay(now);
-  const startTomorrow = startOfUtcDay(addUtcDays(now, 1));
-
   switch (scope) {
     case 'today':
       return {
-        AND: [{ registrationDate: { lte: endToday } }, { deadline: { gte: startToday } }],
+        AND: [{ deadline: { gte: startToday } }, { registrationDate: { lte: endToday } }],
       };
     case 'upcoming':
       return {
-        AND: [{ deadline: { gte: startTomorrow } }],
+        AND: [{ registrationDate: { gt: endToday } }, { deadline: { gte: startToday } }],
       };
     case 'history':
       return {
-        OR: [{ deadline: { lt: startToday } }],
+        AND: [{ deadline: { lt: startToday } }],
       };
     default:
       return {};

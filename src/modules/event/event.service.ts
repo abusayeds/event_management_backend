@@ -15,6 +15,7 @@ import {
   EVENT_CONTRIBUTION_SCORE,
   ICreateEventPayload,
   IEventFilters,
+  IFeedListFilters,
   IFeedPriceFilters,
   IUpdateEventPayload,
 } from './event.interface';
@@ -114,18 +115,18 @@ const getEvents = async (
 };
 
 // GET /events/feed/upcoming
-const getUpcomingEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
-  return EventRepository.getUpcomingEvents(options, price);
+const getUpcomingEvents = async (options: PaginationOptions, feed?: IFeedListFilters) => {
+  return EventRepository.getUpcomingEvents(options, feed);
 };
 
 // GET /events/feed/today
-const getTodayEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
-  return EventRepository.getFeedToday(options, price);
+const getTodayEvents = async (options: PaginationOptions, feed?: IFeedListFilters) => {
+  return EventRepository.getFeedToday(options, feed);
 };
 
 // GET /events/feed/history
-const getHistoryEvents = async (options: PaginationOptions, price?: IFeedPriceFilters) => {
-  return EventRepository.getFeedHistory(options, price);
+const getHistoryEvents = async (options: PaginationOptions, feed?: IFeedListFilters) => {
+  return EventRepository.getFeedHistory(options, feed);
 };
 
 // GET /events/feed/by-family-relation

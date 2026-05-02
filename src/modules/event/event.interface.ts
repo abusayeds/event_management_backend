@@ -130,6 +130,11 @@ export interface IFeedPriceFilters {
   priceMax?: string;
 }
 
+/** Optional filters for public feed list endpoints (today / upcoming / history). */
+export interface IFeedListFilters extends IFeedPriceFilters {
+  searchTerm?: string;
+}
+
 export interface IEventQuery {
   filters: IEventFilters;
   options: PaginationOptions;

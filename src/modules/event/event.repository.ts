@@ -16,15 +16,14 @@ import {
 import {
   ICreateEventPayload,
   IEventFilters,
+  IFeedListFilters,
   IFeedPriceFilters,
   IRepeatConfigInput,
   IUpdateCurrentSchedulePayload,
 } from './event.interface';
 import {
-  endOfUtcDay,
   priceRangeOnSchedule,
   scheduleScopeWhereInput,
-  startOfUtcDay,
   withScheduleCostEstimation,
 } from './event.helpers';
 import {
@@ -41,6 +40,29 @@ import {
   sessionTypeFromRepeatFrequency,
   toDecimal,
 } from './event.utils';
+
+const applyFeedSearchTerm = (where: Prisma.EventWhereInput, searchTerm?: string): Prisma.EventWhereInput => {
+  const term = searchTerm?.trim();
+  if (!term) {
+    return where;
+  }
+  return {
+    AND: [
+      where,
+      {
+        OR: [
+          { eventName: { contains: term, mode: 'insensitive' } },
+          { baseEventName: { contains: term, mode: 'insensitive' } },
+          { organizer: { contains: term, mode: 'insensitive' } },
+          { description: { contains: term, mode: 'insensitive' } },
+          { location: { contains: term, mode: 'insensitive' } },
+          { program: { name: { contains: term, mode: 'insensitive' } } },
+        ],
+      },
+    ],
+  };
+};
+
 const eventAuditSnapshotSelect = {
   version: true,
   programId: true,
@@ -241,8 +263,8 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
         },
         repeatConfig: repeatConfig
           ? {
-              create: repeatConfigFields(repeatConfig),
-            }
+            create: repeatConfigFields(repeatConfig),
+          }
           : undefined,
       },
       select: { id: true },
@@ -677,8 +699,9 @@ const getEvents = async (
   }
 
   const sessionParts: Prisma.EventScheduleWhereInput[] = [];
+  const now = new Date();
   if (filters.filterType) {
-    sessionParts.push(scheduleScopeWhereInput(filters.filterType));
+    sessionParts.push(scheduleScopeWhereInput(filters.filterType, now));
   }
 
   if (sessionParts.length > 0) {
@@ -703,21 +726,24 @@ const getEvents = async (
 // GET /events/feed/upcoming
 const getUpcomingEvents = async (
   options: PaginationOptions,
-  price?: IFeedPriceFilters
+  feed?: IFeedListFilters
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
   const now = new Date();
-  const priceWhere = priceRangeOnSchedule(price?.priceMin, price?.priceMax);
-  const sessionAnd: Prisma.EventScheduleWhereInput[] = [{ deadline: { gte: now } }];
+  const priceWhere = priceRangeOnSchedule(feed?.priceMin, feed?.priceMax);
+  const sessionAnd: Prisma.EventScheduleWhereInput[] = [scheduleScopeWhereInput('upcoming', now)];
   if (priceWhere) sessionAnd.push(priceWhere);
 
-  const where: Prisma.EventWhereInput = {
-    ...publishedEventBaseWhere,
-    schedule: {
-      is: { AND: sessionAnd },
+  const where: Prisma.EventWhereInput = applyFeedSearchTerm(
+    {
+      ...publishedEventBaseWhere,
+      schedule: {
+        is: { AND: sessionAnd },
+      },
     },
-  };
+    feed?.searchTerm
+  );
 
   const [data, total] = await Promise.all([
     database.event.findMany({
@@ -737,24 +763,22 @@ const getUpcomingEvents = async (
 // GET /events/feed/today
 const getFeedToday = async (
   options: PaginationOptions,
-  price?: IFeedPriceFilters
+  feed?: IFeedListFilters
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
   const now = new Date();
-  const startToday = startOfUtcDay(now);
-  const endToday = endOfUtcDay(now);
-  const priceWhere = priceRangeOnSchedule(price?.priceMin, price?.priceMax);
-  const sessionAnd: Prisma.EventScheduleWhereInput[] = [
-    { registrationDate: { lte: endToday } },
-    { deadline: { gte: startToday } },
-  ];
+  const priceWhere = priceRangeOnSchedule(feed?.priceMin, feed?.priceMax);
+  const sessionAnd: Prisma.EventScheduleWhereInput[] = [scheduleScopeWhereInput('today', now)];
   if (priceWhere) sessionAnd.push(priceWhere);
 
-  const where = {
-    ...publishedEventBaseWhere,
-    schedule: { is: { AND: sessionAnd } },
-  };
+  const where = applyFeedSearchTerm(
+    {
+      ...publishedEventBaseWhere,
+      schedule: { is: { AND: sessionAnd } },
+    },
+    feed?.searchTerm
+  );
 
   const [data, total] = await Promise.all([
     database.event.findMany({
@@ -774,18 +798,22 @@ const getFeedToday = async (
 // GET /events/feed/history
 const getFeedHistory = async (
   options: PaginationOptions,
-  price?: IFeedPriceFilters
+  feed?: IFeedListFilters
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(options);
   const { skip, take, orderBy } = createPaginationQuery(pagination);
-  const priceWhere = priceRangeOnSchedule(price?.priceMin, price?.priceMax);
-  const sessionAnd: Prisma.EventScheduleWhereInput[] = [scheduleScopeWhereInput('history')];
+  const now = new Date();
+  const priceWhere = priceRangeOnSchedule(feed?.priceMin, feed?.priceMax);
+  const sessionAnd: Prisma.EventScheduleWhereInput[] = [scheduleScopeWhereInput('history', now)];
   if (priceWhere) sessionAnd.push(priceWhere);
 
-  const where = {
-    ...publishedEventBaseWhere,
-    schedule: { is: { AND: sessionAnd } },
-  };
+  const where = applyFeedSearchTerm(
+    {
+      ...publishedEventBaseWhere,
+      schedule: { is: { AND: sessionAnd } },
+    },
+    feed?.searchTerm
+  );
 
   const [data, total] = await Promise.all([
     database.event.findMany({
