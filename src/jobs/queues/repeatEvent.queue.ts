@@ -1,9 +1,9 @@
 import { Queue } from 'bullmq';
 import config from '../../config';
-import { redisConnection } from '../../config/redis';
+import { bullmqConnection } from '../../config/redis';
 
 const repeatEventQueue = new Queue('repeat-event', {
-  connection: redisConnection,
+  connection: bullmqConnection,
   defaultJobOptions: {
     ...config.queue.defaultJobOptions,
     removeOnComplete: true,

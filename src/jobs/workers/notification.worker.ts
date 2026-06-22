@@ -1,11 +1,11 @@
 import colors from 'colors';
 import { Worker } from 'bullmq';
-import { redisConnection } from '../../config/redis';
+import { bullmqConnection } from '../../config/redis';
 import logger from '../../config/logger';
 import { processNotification } from '../processors/notification.processor';
 
 export const notificationWorker = new Worker('notification', processNotification, {
-  connection: redisConnection,
+  connection: bullmqConnection,
   concurrency: 10,
 });
 

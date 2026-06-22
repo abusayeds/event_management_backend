@@ -1,13 +1,13 @@
 import { Queue } from 'bullmq';
 import config from '../../config';
-import { redisConnection } from '../../config/redis';
+import { bullmqConnection } from '../../config/redis';
 
 export interface NotificationJobPayload {
   notificationId: string;
 }
 
 const notificationQueue = new Queue<NotificationJobPayload>('notification', {
-  connection: redisConnection,
+  connection: bullmqConnection,
   defaultJobOptions: {
     ...config.queue.defaultJobOptions,
     removeOnComplete: true,

@@ -1,11 +1,11 @@
 import { Worker } from 'bullmq';
-import { redisConnection } from '../../config/redis';
+import { bullmqConnection } from '../../config/redis';
 import logger from '../../config/logger';
 import colors from 'colors';
 import { processEmail } from '../processors/email.processor';
 
 export const emailWorker = new Worker('email', processEmail, {
-  connection: redisConnection,
+  connection: bullmqConnection,
   concurrency: 5,
 });
 

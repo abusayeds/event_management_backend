@@ -1,9 +1,9 @@
 import { Queue } from 'bullmq';
 import config from '../../config';
-import { redisConnection } from '../../config/redis';
+import { bullmqConnection } from '../../config/redis';
 
 const emailQueue = new Queue('email', {
-  connection: redisConnection,
+  connection: bullmqConnection,
   defaultJobOptions: {
     ...config.queue.defaultJobOptions,
     // ✅ Retry configuration for reliability

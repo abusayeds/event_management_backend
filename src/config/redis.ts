@@ -1,3 +1,4 @@
+import type { ConnectionOptions } from 'bullmq';
 import RedisIO from 'ioredis';
 import config from './index';
 import logger from './logger';
@@ -10,7 +11,7 @@ const baseRedisOptions = {
   enableReadyCheck: false,
 };
 
-const buildRedisOptions = () => {
+const buildConnectionConfig = () => {
   if (config.redis.url) {
     return {
       ...baseRedisOptions,
@@ -21,7 +22,7 @@ const buildRedisOptions = () => {
   const isLocalHost = localRedisHosts.has(config.redis.host);
   const useTls = config.redis.tls && !isLocalHost;
 
-  const redisOptions = {
+  return {
     ...baseRedisOptions,
     host: config.redis.host,
     port: config.redis.port,
@@ -32,13 +33,13 @@ const buildRedisOptions = () => {
       ? { username: config.redis.username }
       : {}),
   };
-
-  return redisOptions;
 };
 
+export const bullmqConnection = buildConnectionConfig() as ConnectionOptions;
+
 export const redisConnection = config.redis.url
-  ? new RedisIO(config.redis.url, buildRedisOptions())
-  : new RedisIO(buildRedisOptions());
+  ? new RedisIO(config.redis.url, buildConnectionConfig())
+  : new RedisIO(buildConnectionConfig());
 export const redisClient = redisConnection;
 
 export const connectRedis = async (): Promise<void> => {

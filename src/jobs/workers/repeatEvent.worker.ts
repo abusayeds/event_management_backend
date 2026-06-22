@@ -1,10 +1,10 @@
 import { Worker } from 'bullmq';
 import logger from '../../config/logger';
-import { redisConnection } from '../../config/redis';
+import { bullmqConnection } from '../../config/redis';
 import { processRepeatEvent } from '../processors/repeatEvent.processor';
 
 export const repeatEventWorker = new Worker('repeat-event', processRepeatEvent, {
-  connection: redisConnection,
+  connection: bullmqConnection,
   concurrency: 1,
 });
 
