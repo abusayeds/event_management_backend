@@ -1,25 +1,44 @@
-import colors from 'colors';
 import RedisIO from 'ioredis';
 import config from './index';
 import logger from './logger';
+
 const localRedisHosts = new Set(['localhost', '127.0.0.1', '::1', 'redis']);
-const redisOptions = {
-  host: config.redis.host,
-  port: config.redis.port,
-  db: config.redis.db || 0,
-  ...(config.redis.password ? { password: config.redis.password } : {}),
-  ...(config.redis.password && config.redis.username ? { username: config.redis.username } : {}),
+
+const baseRedisOptions = {
   maxRetriesPerRequest: null as null,
   lazyConnect: true,
   enableReadyCheck: false,
 };
 
-if (localRedisHosts.has(config.redis.host)) {
-  delete (redisOptions as { password?: string }).password;
-  delete (redisOptions as { username?: string }).username;
-}
+const buildRedisOptions = () => {
+  if (config.redis.url) {
+    return {
+      ...baseRedisOptions,
+      ...(config.redis.tls ? { tls: {} } : {}),
+    };
+  }
 
-export const redisConnection = new RedisIO(redisOptions);
+  const isLocalHost = localRedisHosts.has(config.redis.host);
+  const useTls = config.redis.tls && !isLocalHost;
+
+  const redisOptions = {
+    ...baseRedisOptions,
+    host: config.redis.host,
+    port: config.redis.port,
+    db: config.redis.db || 0,
+    ...(useTls ? { tls: {} } : {}),
+    ...(config.redis.password && !isLocalHost ? { password: config.redis.password } : {}),
+    ...(config.redis.password && config.redis.username && !isLocalHost
+      ? { username: config.redis.username }
+      : {}),
+  };
+
+  return redisOptions;
+};
+
+export const redisConnection = config.redis.url
+  ? new RedisIO(config.redis.url, buildRedisOptions())
+  : new RedisIO(buildRedisOptions());
 export const redisClient = redisConnection;
 
 export const connectRedis = async (): Promise<void> => {

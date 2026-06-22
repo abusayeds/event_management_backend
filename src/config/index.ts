@@ -91,11 +91,16 @@ const config = {
 
   // Redis
   redis: {
+    url: process.env.REDIS_URL || '',
     username: process.env.REDIS_USERNAME || '',
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || undefined,
     db: parseInt(process.env.REDIS_DB || '0', 10),
+    tls:
+      process.env.REDIS_TLS === 'true' ||
+      process.env.REDIS_TLS === '1' ||
+      (process.env.REDIS_URL?.startsWith('rediss://') ?? false),
   },
 
   // Security & Rate Limiting
