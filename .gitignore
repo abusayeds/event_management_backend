@@ -103,6 +103,8 @@ prisma/generated/
 # IDE
 .vscode/
 .idea/
+.agents/
+.claude/
 
 # OS
 .DS_Store
