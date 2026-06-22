@@ -150,6 +150,13 @@ enum SettingsPageKey {
   TermsCondition
 }
 
+enum WelcomeModuleKey {
+  EventCalendars
+  ActivitySuggestions
+  ResourceSharing
+  CustomizableProfiles
+}
+
 enum DonationPlatform {
   IOS
   ANDROID

@@ -1,0 +1,11 @@
+model WelcomePage {
+  id        String           @id @default(uuid())
+  key       WelcomeModuleKey @unique
+  title     String?
+  content   String
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@map("welcome_pages")
+}

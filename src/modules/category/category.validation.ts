@@ -8,9 +8,17 @@ const idParamSchema = z.object({
 // Create category payload validation
 const createCategory = z.object({
   body: z.object({
-    name: z.string().trim().min(1, 'Category name is required').max(100, 'Category name is too long'),
+    name: z
+      .string()
+      .trim()
+      .min(1, 'Category name is required')
+      .max(100, 'Category name is too long. Maximum 100 characters allowed.'),
     imageUrl: z.string().url('Invalid image URL').optional(),
-    description: z.string().trim().max(500, 'Description is too long').optional(),
+    description: z
+      .string()
+      .trim()
+      .max(5000, 'Description is too long. Maximum 5000 characters allowed.')
+      .optional(),
   }),
 });
 
