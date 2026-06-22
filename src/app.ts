@@ -104,12 +104,7 @@ const getCsrfProtection = () => {
   });
 };
 
-const csrfExcludedPathPrefixes = [
-  '/api/v1/auth',
-  '/api/v1/donations/webhook',
-  '/health',
-  '/test',
-];
+const csrfExcludedPathPrefixes = ['/api/v1/auth', '/api/v1/donations/webhook', '/health', '/test'];
 
 const shouldSkipCsrf = (path: string): boolean =>
   csrfExcludedPathPrefixes.some(prefix => path.startsWith(prefix));

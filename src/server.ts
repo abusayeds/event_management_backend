@@ -1,4 +1,5 @@
 import colors from 'colors';
+import { Worker } from 'bullmq';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import app from './app';
@@ -24,7 +25,7 @@ let isShuttingDown = false;
 let server: http.Server | null = null;
 let io: SocketIOServer | null = null;
 let activeConnections = new Set<TrackedSocket>();
-let workers: any[] = [];
+let workers: Worker[] = [];
 
 // ==========================================
 // UNCAUGHT EXCEPTION HANDLER
