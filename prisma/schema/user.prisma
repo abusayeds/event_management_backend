@@ -10,7 +10,7 @@ model User {
   phoneNumber         String?
   gender              UserGender
   birthDate           DateTime
-  profilePicture      String?             @default("https://areawins.s3.us-east-2.amazonaws.com/common/user.jpg")
+  profilePicture      String?             @default("https://areawins.s3.us-east-2.amazonaws.com/profiles/images/default-user.svg")
   location            String
   country             String
   state               String

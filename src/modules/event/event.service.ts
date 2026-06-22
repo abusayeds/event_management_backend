@@ -21,18 +21,10 @@ import {
   IFeedListFilters,
   IUpdateEventPayload,
 } from './event.interface';
-import {
-  diffEventForEditLog,
-  hasSchedulePatchBody,
-  pickScheduleForDetail,
-} from './event.helpers';
+import { diffEventForEditLog, hasSchedulePatchBody, pickScheduleForDetail } from './event.helpers';
 import { FamilyMemberRepository } from '../familyMember/familyMember.repository';
 import { EventRepository } from './event.repository';
-import {
-  attachActiveSchedules,
-  repeatConfigFields,
-  resolveRepeatFrequency,
-} from './event.utils';
+import { attachActiveSchedules, repeatConfigFields, resolveRepeatFrequency } from './event.utils';
 import { enqueueRepeatEventJob } from '../../jobs/repeatEvent.schedule';
 import { NotificationService } from '../notification/notification.service';
 
@@ -117,17 +109,26 @@ const getEvents = async (
 };
 
 // GET /events/feed/upcoming
-const getUpcomingEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) => {
+const getUpcomingEvents = async (
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+) => {
   return EventRepository.getUpcomingEvents(filters, options);
 };
 
 // GET /events/feed/today
-const getTodayEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) => {
+const getTodayEvents = async (
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+) => {
   return EventRepository.getTodayEvents(filters, options);
 };
 
 // GET /events/feed/history
-const getHistoryEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) => {
+const getHistoryEvents = async (
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+) => {
   return EventRepository.getHistoryEvents(filters, options);
 };
 
@@ -157,7 +158,9 @@ const getPersonalizedUpcomingEvents = async (
 
   const programIds = [
     ...new Set(
-      appliedRows.map(r => r.event?.programId).filter((id): id is string => Boolean(id && String(id).trim()))
+      appliedRows
+        .map(r => r.event?.programId)
+        .filter((id): id is string => Boolean(id && String(id).trim()))
     ),
   ];
   const locations = [
@@ -242,7 +245,10 @@ const getEventEditLogById = async (eventId: string, editLogId: string) => {
       ? (editLog.previousValues as Record<string, unknown>)
       : {};
   const presentValues = Object.fromEntries(
-    editLog.changedFields.map(field => [field, (eventSnapshot as Record<string, unknown>)[field] ?? null])
+    editLog.changedFields.map(field => [
+      field,
+      (eventSnapshot as Record<string, unknown>)[field] ?? null,
+    ])
   );
   return {
     ...editLog,
@@ -370,7 +376,10 @@ const updateEvent = async (
     }
 
     if (hasSessionPatch && schedulePatch) {
-      const scheduleRow = await EventRepository.updateCurrentScheduleForEvent(eventId, schedulePatch);
+      const scheduleRow = await EventRepository.updateCurrentScheduleForEvent(
+        eventId,
+        schedulePatch
+      );
       if (!scheduleRow) {
         throw new ApiError(
           StatusCodes.BAD_REQUEST,

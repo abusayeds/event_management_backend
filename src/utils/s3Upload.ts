@@ -107,6 +107,17 @@ const buildS3Url = (key: string): string => {
   return `https://${bucketName}.s3.${awsConfig.region}.amazonaws.com/${key}`;
 };
 
+export const DEFAULT_PROFILE_PICTURE_KEY = 'profiles/images/default-user.svg';
+
+export const getDefaultProfilePictureUrl = (): string => buildS3Url(DEFAULT_PROFILE_PICTURE_KEY);
+
+export const uploadBufferWithKey = async (
+  buffer: Buffer,
+  key: string,
+  contentType: string,
+  metadata?: Record<string, string>
+): Promise<string> => uploadBufferToS3(buffer, key, contentType, metadata);
+
 export const createS3Client = () => {
   ensureS3Config();
 

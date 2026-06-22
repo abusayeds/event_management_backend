@@ -9,6 +9,7 @@ import { verifyEmailConnection } from './config/email';
 import logger from './config/logger';
 import { closeRedis, connectRedis } from './config/redis';
 import { initializeWorkers, shutdownWorkers } from './jobs';
+import { seedDefaultProfilePicture } from './scripts/seedDefaultProfilePicture';
 import { seedDefaultUsers } from './scripts/userSeeder';
 import { initializeSocket } from './socket';
 
@@ -257,6 +258,10 @@ async function main() {
     // Step 1: Connect to Database
     logger.info(colors.cyan('📦 [1/5] Connecting to Database...'));
     await connectDB();
+
+    // Step 1.4: Ensure default profile picture exists on S3 (idempotent)
+    logger.info(colors.cyan('🖼️  [1.4/5] Ensuring default profile picture...'));
+    await seedDefaultProfilePicture();
 
     // Step 1.5: Seed default users on startup (idempotent)
     logger.info(colors.cyan('👥 [1.5/5] Seeding default users...'));
