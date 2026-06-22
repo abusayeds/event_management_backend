@@ -19,7 +19,9 @@ const getPage = asyncHandler(async (req: Request, res: Response) => {
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Settings page fetched successfully.',
+    message: result.id
+      ? 'Settings page fetched successfully.'
+      : 'Settings page not created yet. Empty template returned.',
     data: result,
   });
 });

@@ -104,10 +104,9 @@ const getCsrfProtection = () => {
   });
 };
 
-const csrfExcludedPathPrefixes = ['/api/v1/auth', '/api/v1/donations/webhook', '/health', '/test'];
-
+// JWT Bearer APIs do not use cookie sessions — CSRF is not applicable for /api/v1 routes.
 const shouldSkipCsrf = (path: string): boolean =>
-  csrfExcludedPathPrefixes.some(prefix => path.startsWith(prefix));
+  path.startsWith('/api/v1') || path === '/health' || path === '/test';
 
 const csrfProtection = getCsrfProtection();
 

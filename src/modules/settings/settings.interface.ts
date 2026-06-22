@@ -14,11 +14,11 @@ export interface IUpsertSettingsPagePayload {
 }
 
 export interface ISettingsPageResponse {
-  id: string;
+  id: string | null;
   key: SettingsPageKey;
   title: string | null;
   content: string;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | null;
+  updatedAt: Date | null;
 }

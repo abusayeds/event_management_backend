@@ -27,10 +27,19 @@ const addOrEditPage = async (payload: IUpsertSettingsPagePayload) => {
 const getPage = async (keyInput: string) => {
   const key = resolveSettingsKey(keyInput);
   const page = await SettingsRepository.getPageByKey(key);
-  if (!page) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Settings page not found.');
+  if (page) {
+    return page;
   }
-  return page;
+
+  return {
+    id: null,
+    key,
+    title: null,
+    content: '',
+    isActive: true,
+    createdAt: null,
+    updatedAt: null,
+  };
 };
 
 export const SettingsService = {
