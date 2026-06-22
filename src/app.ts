@@ -97,11 +97,31 @@ const getCsrfProtection = () => {
   return csrf({
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false',
       sameSite: 'strict',
     },
     ignoreMethods,
   });
+};
+
+const csrfExcludedPathPrefixes = [
+  '/api/v1/auth',
+  '/api/v1/donations/webhook',
+  '/health',
+  '/test',
+];
+
+const shouldSkipCsrf = (path: string): boolean =>
+  csrfExcludedPathPrefixes.some(prefix => path.startsWith(prefix));
+
+const csrfProtection = getCsrfProtection();
+
+const applyCsrfProtection = (req: Request, res: Response, next: NextFunction): void => {
+  if (shouldSkipCsrf(req.path)) {
+    next();
+    return;
+  }
+  csrfProtection(req, res, next);
 };
 
 // helmet config
@@ -238,6 +258,7 @@ const getSecurityErrorHandler = () => {
         ip: req.ip,
         method: req.method,
         url: req.originalUrl,
+        origin: req.get('Origin'),
       });
       res.status(403).json({ error: 'Invalid CSRF token' });
       return;
@@ -283,8 +304,8 @@ app.use(cors(corsOptions));
 // Serve static assets
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
-// CSRF Protection (ignoreMethods inside getCsrfProtection handles dev vs prod differences)
-app.use(getCsrfProtection());
+// CSRF Protection (skipped for JWT auth + webhooks; not needed for Bearer-token APIs)
+app.use(applyCsrfProtection);
 
 // Helmet security headers
 app.use(getHelmetConfig(allowedOrigins));
