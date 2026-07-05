@@ -329,6 +329,11 @@ main();
 
 // Process event handlers
 process.on('unhandledRejection', (reason: unknown) => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  if (message.includes('Connection is closed')) {
+    return;
+  }
+
   logger.error(colors.red('💥 UNHANDLED REJECTION:'), reason);
   gracefulShutdown('UNHANDLED_REJECTION');
 });

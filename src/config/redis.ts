@@ -43,7 +43,8 @@ export const redisConnection = config.redis.enabled
     : new RedisIO(buildConnectionConfig())
   : null;
 
-export const bullmqConnection = redisConnection as unknown as ConnectionOptions;
+// BullMQ uses its own connection config so worker shutdown does not close the shared client.
+export const bullmqConnection = buildConnectionConfig() as ConnectionOptions;
 
 export const redisClient = redisConnection;
 

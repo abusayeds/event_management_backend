@@ -13,17 +13,20 @@ const isQuotaExceededError = (error: unknown): boolean => {
   return message.includes('max requests limit exceeded');
 };
 
-const stopWorkersAfterQuotaError = async (): Promise<void> => {
+const stopWorkersAfterQuotaError = (): void => {
   if (workersStoppedForQuota) {
     return;
   }
 
   workersStoppedForQuota = true;
   logger.warn(
-    'Upstash Redis command quota exceeded. BullMQ workers were stopped to prevent log spam. ' +
-      'Upgrade your Upstash plan or set QUEUE_WORKERS_ENABLED=false until the quota resets.'
+    'Upstash Redis command quota exceeded. BullMQ workers were paused. ' +
+      'Use VPS Redis or set QUEUE_WORKERS_ENABLED=false until the quota resets.'
   );
-  await shutdownWorkers();
+
+  activeWorkers.forEach(worker => {
+    void worker.pause(true).catch(() => undefined);
+  });
 };
 
 export const initializeWorkers = (): Worker[] => {
@@ -42,7 +45,7 @@ export const initializeWorkers = (): Worker[] => {
   activeWorkers.forEach(worker => {
     worker.on('error', err => {
       if (isQuotaExceededError(err)) {
-        void stopWorkersAfterQuotaError();
+        stopWorkersAfterQuotaError();
         return;
       }
 
