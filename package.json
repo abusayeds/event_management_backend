@@ -1,5 +1,5 @@
 {
-  "name": "dawabuyi-backend",
+  "name": "dawabuyi-backend-by-rakib",
   "version": "1.0.0",
   "description": "Dawabuyi e-commerce backend with authentication, RBAC, real-time features, and modular architecture.",
   "main": "src/server.ts",
