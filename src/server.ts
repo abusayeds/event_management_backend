@@ -255,6 +255,10 @@ async function main() {
     logger.info(colors.cyan('                🚀 APPLICATION INITIALIZATION               '));
     logger.info(colors.cyan('═══════════════════════════════════════════════════════════'));
 
+    if (process.env.RATE_LIMIT_ENABLED === 'false') {
+      logger.warn(colors.yellow('Rate limiting is DISABLED'));
+    }
+
     // Step 1: Connect to Database
     logger.info(colors.cyan('📦 [1/5] Connecting to Database...'));
     await connectDB();

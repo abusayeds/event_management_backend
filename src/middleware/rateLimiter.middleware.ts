@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { StatusCodes } from 'http-status-codes';
 import ApiError from '../utils/apiError';
@@ -11,8 +11,14 @@ export interface RateLimitConfig {
   keyGenerator?: (req: Request) => string;
 }
 
+const isRateLimitEnabled = (): boolean => process.env.RATE_LIMIT_ENABLED !== 'false';
+
 // General rate limiter
 export const createRateLimiter = (config: RateLimitConfig) => {
+  if (!isRateLimitEnabled()) {
+    return (_req: Request, _res: Response, next: NextFunction) => next();
+  }
+
   return rateLimit({
     windowMs: config.windowMs,
     max: config.maxRequests,
