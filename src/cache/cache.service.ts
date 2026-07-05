@@ -1,5 +1,5 @@
 import logger from '../config/logger';
-import { redisClient } from '../config/redis';
+import { isRedisReady, redisClient } from '../config/redis';
 
 interface CacheService {
   get<T>(key: string): Promise<T | null>;
@@ -13,7 +13,7 @@ interface CacheService {
 
 class RedisCacheService implements CacheService {
   async get<T>(key: string): Promise<T | null> {
-    if (!redisClient) {
+    if (!redisClient || !isRedisReady()) {
       return null;
     }
 
@@ -27,7 +27,7 @@ class RedisCacheService implements CacheService {
   }
 
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    if (!redisClient) {
+    if (!redisClient || !isRedisReady()) {
       return;
     }
 
@@ -45,7 +45,7 @@ class RedisCacheService implements CacheService {
   }
 
   async del(key: string): Promise<void> {
-    if (!redisClient) {
+    if (!redisClient || !isRedisReady()) {
       return;
     }
 
@@ -58,7 +58,7 @@ class RedisCacheService implements CacheService {
   }
 
   async exists(key: string): Promise<boolean> {
-    if (!redisClient) {
+    if (!redisClient || !isRedisReady()) {
       return false;
     }
 
@@ -72,7 +72,7 @@ class RedisCacheService implements CacheService {
   }
 
   async increment(key: string): Promise<number> {
-    if (!redisClient) {
+    if (!redisClient || !isRedisReady()) {
       return 0;
     }
 
@@ -86,7 +86,7 @@ class RedisCacheService implements CacheService {
   }
 
   async setTTL(key: string, ttlSeconds: number): Promise<void> {
-    if (!redisClient) {
+    if (!redisClient || !isRedisReady()) {
       return;
     }
 
@@ -99,7 +99,7 @@ class RedisCacheService implements CacheService {
   }
 
   async getTTL(key: string): Promise<number> {
-    if (!redisClient) {
+    if (!redisClient || !isRedisReady()) {
       return -1;
     }
 

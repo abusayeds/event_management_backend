@@ -91,6 +91,8 @@ const config = {
 
   // Redis
   redis: {
+    enabled: process.env.REDIS_ENABLED !== 'false',
+    required: process.env.REDIS_REQUIRED === 'true',
     url: process.env.REDIS_URL || '',
     username: process.env.REDIS_USERNAME || '',
     host: process.env.REDIS_HOST || 'localhost',
@@ -126,6 +128,7 @@ const config = {
 
   // Queue Configuration (BullMQ)
   queue: {
+    workersEnabled: process.env.QUEUE_WORKERS_ENABLED !== 'false',
     redis: {
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379'),

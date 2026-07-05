@@ -273,13 +273,18 @@ async function main() {
 
     // Step 2: Connect to Redis
     logger.info(colors.cyan('📦 [2/5] Connecting to Redis...'));
-    await connectRedis();
-    logger.info(colors.green('✅ Local Redis connected'));
+    const redisConnected = await connectRedis();
 
-    // Step 2.5: Initialize BullMQ Workers
-    logger.info(colors.cyan('👷 [2.5/5] Initializing Job Workers...'));
-    workers = initializeWorkers();
-    logger.info(colors.green(' ✅ BullMQ Workers initialized'));
+    if (redisConnected) {
+      logger.info(colors.green('   ✅ Redis connected'));
+
+      // Step 2.5: Initialize BullMQ Workers (only after Redis is available)
+      logger.info(colors.cyan('👷 [2.5/5] Initializing Job Workers...'));
+      workers = initializeWorkers();
+      logger.info(colors.green('   ✅ BullMQ Workers initialized'));
+    } else {
+      logger.warn(colors.yellow('   ⚠️  Redis unavailable — background jobs and cache disabled'));
+    }
 
     // Step 3: Verify Email Service (optional)
     if (config.email.username && config.email.password) {
