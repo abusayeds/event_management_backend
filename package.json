@@ -18,7 +18,7 @@
     "start:prod": "CI=1 npm run prisma:generate && tsx src/server.ts",
     "seed": "tsx src/scripts/seed.ts",
     "purge:non-core": "tsx src/scripts/purge-non-core-data.ts",
-    "prisma:generate": "CI=1 prisma generate",
+    "prisma:generate": "node scripts/prisma-generate.js",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
