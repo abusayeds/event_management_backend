@@ -1,0 +1,18 @@
+model UserSettings {
+  id                      String                  @id @default(uuid())
+  userId                  String                  @unique
+  user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Fixed to English only (en-US). Not user-changeable.
+  displayLanguage         String                  @default("en-US")
+  dateTimeFormat          String                  @default("MMM. dd yyyy HH:mm:ss")
+  timeZone                String                  @default("UTC")
+  currency                String                  @default("USD")
+  notifications           NotificationPreference  @default(All)
+  eventShareEmail         EmailNotifyPreference   @default(Instant)
+  appliedEventUpdateEmail EmailNotifyPreference   @default(Instant)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  @@index([userId])
+  @@map("user_settings")
+}

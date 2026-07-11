@@ -70,6 +70,16 @@ const updateMyProfile = asyncHandler(async (req: AuthenticatedRequest, res: Resp
   });
 });
 
+const getEditOptions = asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
+  const data = await UserService.getEditOptions();
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Edit account options fetched successfully.',
+    data,
+  });
+});
+
 // Update user by ID with authorization checks
 const updateUser = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id: userId } = req.params;
@@ -162,6 +172,7 @@ export const UserController = {
   getAllUsers,
   getMyProfile,
   updateMyProfile,
+  getEditOptions,
   getUserById,
   checkUsernameExists,
   updateUser,

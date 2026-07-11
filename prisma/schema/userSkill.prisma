@@ -1,0 +1,18 @@
+model UserSkill {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programId   String?
+  program     Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  /// Display / lookup name (e.g. Chess). Kept even if program is deleted.
+  programName String
+  startYear   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, programName])
+  @@index([userId])
+  @@index([programId])
+  @@index([startYear])
+  @@map("user_skills")
+}

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import ApiError from '../../utils/apiError';
-import { ICreateUserPayload } from './user.interface';
+import { ICreateUserPayload, IUserSkillInput, IUserSkillResponse } from './user.interface';
 import { UserRepository } from './user.repository';
 
 // Normalize username: lowercase, no spaces, only alphanumeric, dots, underscores
@@ -89,4 +89,56 @@ export const prepareCreateUserPayload = async (
     username,
     accountId,
   };
+};
+
+export const currentYear = (): number => new Date().getFullYear();
+
+/** Last 100 years inclusive: current year down to currentYear - 99. */
+export const buildStartYearOptions = (): number[] => {
+  const end = currentYear();
+  const start = end - 99;
+  const years: number[] = [];
+  for (let y = end; y >= start; y -= 1) {
+    years.push(y);
+  }
+  return years;
+};
+
+export const skillLabel = (programName: string, startYear: number): string =>
+  `${programName} since ${startYear}`;
+
+const LEGACY_SKILL_RE = /^(.+?)\s+since\s+(\d{4})$/i;
+
+export const parseLegacySkillLabel = (raw: string): IUserSkillInput | null => {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const match = trimmed.match(LEGACY_SKILL_RE);
+  if (match) {
+    const year = Number(match[2]);
+    if (!Number.isInteger(year)) {
+      return null;
+    }
+    return { program: match[1].trim(), startYear: year };
+  }
+  return { program: trimmed, startYear: currentYear() };
+};
+
+export const toSkillResponse = (row: {
+  id: string;
+  programId: string | null;
+  programName: string;
+  startYear: number;
+}): IUserSkillResponse => ({
+  id: row.id,
+  programId: row.programId,
+  programName: row.programName,
+  startYear: row.startYear,
+  label: skillLabel(row.programName, row.startYear),
+});
+
+export const isStartYearAllowed = (year: number): boolean => {
+  const end = currentYear();
+  return Number.isInteger(year) && year >= end - 99 && year <= end;
 };

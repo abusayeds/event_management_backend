@@ -47,6 +47,7 @@ model Event {
 
   results EventResult[]
   eventApplieds EventApplied[]
+  invitations EventInvitation[]
 
   editLogs     EditLog[]
   version      Int       @default(1) // optimistic locking

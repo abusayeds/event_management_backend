@@ -1,13 +1,33 @@
 import { UserGender, UserRole, UserStatus } from '../../../prisma/generated/enums';
 
+export interface IUserSkillInput {
+  id?: string;
+  programId?: string;
+  /** Program name (e.g. Chess). Created if missing. */
+  program?: string;
+  /** Alias for program. */
+  skill?: string;
+  startYear: number;
+}
+
+export interface IUserSkillResponse {
+  id: string;
+  programId: string | null;
+  programName: string;
+  startYear: number;
+  label: string;
+}
+
 // User domain model with all profile details
 export interface IUser {
   id: string;
   firstName: string;
   lastName: string;
   username: string;
+  displayName?: string | null;
   email: string;
   password: string;
+  phoneNumber?: string | null;
   gender: UserGender;
   birthDate: Date;
   profilePicture?: string | null;
@@ -52,6 +72,7 @@ export interface IUpdateUserPayload {
   username?: string;
   firstName?: string;
   lastName?: string;
+  displayName?: string | null;
   gender?: UserGender;
   birthDate?: string;
   location?: string;
@@ -59,7 +80,8 @@ export interface IUpdateUserPayload {
   state?: string;
   city?: string;
   email?: string;
-  skills?: string[];
+  phoneNumber?: string | null;
+  skills?: string[] | IUserSkillInput[];
   hasSeparateAccount?: boolean;
   profilePicture?: string;
 }

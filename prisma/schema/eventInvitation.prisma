@@ -1,0 +1,21 @@
+model EventInvitation {
+  id         String           @id @default(uuid())
+  eventId    String
+  event      Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  inviterId  String
+  inviter    User             @relation("EventInvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviteeId  String
+  invitee    User             @relation("EventInvitationInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  message    String?
+  status     InvitationStatus @default(PENDING)
+  respondedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([eventId, inviterId, inviteeId])
+  @@index([eventId])
+  @@index([inviterId])
+  @@index([inviteeId])
+  @@index([status])
+  @@map("event_invitations")
+}

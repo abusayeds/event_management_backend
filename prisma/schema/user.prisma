@@ -37,10 +37,14 @@ model User {
   eventsLastEdited    Event[]             @relation("EventLastEditor")
   eventEditLogs       EditLog[]
   eventApplieds       EventApplied[]
+  sentEventInvitations     EventInvitation[] @relation("EventInvitationInviter")
+  receivedEventInvitations EventInvitation[] @relation("EventInvitationInvitee")
   donations           DonationTransaction[]
   notifications       Notification[]      @relation("NotificationRecipient")
   sentNotifications   Notification[]      @relation("NotificationSender")
   feedbacks           UserFeedback[]
+  settings            UserSettings?
+  userSkills          UserSkill[]
 
   @@index([createdByOwner])
   @@index([fcmToken])

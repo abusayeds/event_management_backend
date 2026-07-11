@@ -7,7 +7,15 @@ import {
   PaginationResult,
   parsePaginationOptions,
 } from '../../utils/paginate';
-import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
+import { skillLabel } from './user.helpers';
+import { ICreateUserPayload, IUpdateUserPayload, IUserFilters, IUserSkillInput } from './user.interface';
+
+const userSkillSelect = {
+  id: true,
+  programId: true,
+  programName: true,
+  startYear: true,
+} as const;
 
 // User full select
 export const userFullSelect = {
@@ -16,7 +24,9 @@ export const userFullSelect = {
   firstName: true,
   lastName: true,
   username: true,
+  displayName: true,
   email: true,
+  phoneNumber: true,
   gender: true,
   birthDate: true,
   profilePicture: true,
@@ -30,6 +40,10 @@ export const userFullSelect = {
   hasSeparateAccount: true,
   createdByOwner: true,
   contributionScore: true,
+  userSkills: {
+    select: userSkillSelect,
+    orderBy: { startYear: 'desc' as const },
+  },
 };
 
 // User list select
@@ -39,6 +53,7 @@ export const userListSelect = {
   firstName: true,
   lastName: true,
   username: true,
+  displayName: true,
   email: true,
   status: true,
   createdAt: true,
@@ -144,14 +159,83 @@ const getAllUsers = async (
 
 // Update User by ID
 const updateUserById = async (id: string, data: IUpdateUserPayload) => {
-  const { birthDate, ...rest } = data;
+  const { birthDate, skills: _skills, ...rest } = data;
+
+  const cleaned = Object.fromEntries(
+    Object.entries(rest).filter(([, value]) => value !== undefined)
+  ) as Omit<IUpdateUserPayload, 'birthDate' | 'skills'>;
+
   return database.user.update({
     where: { id, status: { not: UserStatus.DELETED } },
     data: {
-      ...rest,
+      ...cleaned,
       ...(birthDate !== undefined ? { birthDate: new Date(birthDate) } : {}),
     },
-    select: userListSelect,
+    select: userFullSelect,
+  });
+};
+
+const findOrCreateProgramByName = async (name: string) => {
+  const normalizedName = name.trim();
+  const existing = await database.program.findFirst({
+    where: {
+      name: { equals: normalizedName, mode: 'insensitive' },
+      isDeleted: false,
+    },
+    select: { id: true, name: true },
+  });
+  if (existing) {
+    return existing;
+  }
+
+  return database.program.create({
+    data: {
+      name: normalizedName,
+    },
+    select: { id: true, name: true },
+  });
+};
+
+const getProgramById = async (id: string) => {
+  return database.program.findFirst({
+    where: { id, isDeleted: false },
+    select: { id: true, name: true },
+  });
+};
+
+const listActivePrograms = async () => {
+  return database.program.findMany({
+    where: { isDeleted: false },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+};
+
+const replaceUserSkills = async (userId: string, skills: Array<IUserSkillInput & { programName: string; programId: string | null }>) => {
+  const labels = skills.map(s => skillLabel(s.programName, s.startYear));
+
+  await database.$transaction(async tx => {
+    await tx.userSkill.deleteMany({ where: { userId } });
+    if (skills.length) {
+      await tx.userSkill.createMany({
+        data: skills.map(s => ({
+          userId,
+          programId: s.programId,
+          programName: s.programName,
+          startYear: s.startYear,
+        })),
+      });
+    }
+    await tx.user.update({
+      where: { id: userId },
+      data: { skills: labels },
+    });
+  });
+
+  return database.userSkill.findMany({
+    where: { userId },
+    select: userSkillSelect,
+    orderBy: { startYear: 'desc' },
   });
 };
 
@@ -275,4 +359,8 @@ export const UserRepository = {
   isAccountIdExists,
   isUserExists,
   incrementContributionScore,
+  findOrCreateProgramByName,
+  getProgramById,
+  listActivePrograms,
+  replaceUserSkills,
 };

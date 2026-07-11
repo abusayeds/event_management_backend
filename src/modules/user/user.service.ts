@@ -1,18 +1,125 @@
 import bcrypt from 'bcryptjs';
 import { StatusCodes } from 'http-status-codes';
-import { UserStatus } from '../../../prisma/generated/enums';
+import { UserGender, UserStatus } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces/pagination.interface';
 import ApiError from '../../utils/apiError';
 import { deleteFileFromS3, generatePresignedUrl, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import { FamilyMemberRepository } from '../familyMember/familyMember.repository';
-import { normalizeUsername, prepareCreateUserPayload } from './user.helpers';
-import { ICreateUserPayload, IUpdateUserPayload, IUserFilters } from './user.interface';
+import {
+  buildStartYearOptions,
+  isStartYearAllowed,
+  normalizeUsername,
+  parseLegacySkillLabel,
+  prepareCreateUserPayload,
+  toSkillResponse,
+} from './user.helpers';
+import { ICreateUserPayload, IUpdateUserPayload, IUserFilters, IUserSkillInput } from './user.interface';
 import { UserRepository } from './user.repository';
 
-const normalizeSkills = (skills: string[]) => {
-  const cleanedSkills = skills.map(skill => skill.trim()).filter(skill => skill.length > 0);
+const shapeUserProfile = (user: Record<string, unknown>) => {
+  const userSkills = Array.isArray(user.userSkills)
+    ? (user.userSkills as Array<{
+        id: string;
+        programId: string | null;
+        programName: string;
+        startYear: number;
+      }>).map(toSkillResponse)
+    : [];
 
-  return Array.from(new Set(cleanedSkills));
+  const legacySkills = Array.isArray(user.skills) ? (user.skills as string[]) : [];
+
+  const skills =
+    userSkills.length > 0
+      ? userSkills
+      : legacySkills
+          .map(parseLegacySkillLabel)
+          .filter((s): s is IUserSkillInput => s !== null)
+          .map((s, index) =>
+            toSkillResponse({
+              id: `legacy-${index}`,
+              programId: null,
+              programName: (s.program || '').trim(),
+              startYear: s.startYear,
+            })
+          );
+
+  return {
+    ...user,
+    skills,
+    skillLabels: skills.map(s => s.label),
+  };
+};
+
+const resolveSkillInputs = async (
+  rawSkills: NonNullable<IUpdateUserPayload['skills']>
+): Promise<Array<IUserSkillInput & { programName: string; programId: string | null }>> => {
+  const inputs: IUserSkillInput[] = [];
+
+  for (const item of rawSkills) {
+    if (typeof item === 'string') {
+      const parsed = parseLegacySkillLabel(item);
+      if (parsed) {
+        inputs.push(parsed);
+      }
+      continue;
+    }
+    inputs.push(item);
+  }
+
+  const resolved: Array<IUserSkillInput & { programName: string; programId: string | null }> = [];
+  const seen = new Set<string>();
+
+  for (const skill of inputs) {
+    if (!isStartYearAllowed(skill.startYear)) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `startYear must be within the last 100 years (up to ${new Date().getFullYear()}).`
+      );
+    }
+
+    let programId: string | null = null;
+    let programName = '';
+
+    if (skill.programId?.trim()) {
+      const program = await UserRepository.getProgramById(skill.programId.trim());
+      if (!program) {
+        throw new ApiError(StatusCodes.NOT_FOUND, `Program not found: ${skill.programId}`);
+      }
+      programId = program.id;
+      programName = program.name;
+    } else {
+      const name = skill.program?.trim() || skill.skill?.trim();
+      if (!name) {
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          'Each skill requires programId, program, or skill name.'
+        );
+      }
+      const program = await UserRepository.findOrCreateProgramByName(name);
+      programId = program.id;
+      programName = program.name;
+    }
+
+    const key = programName.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    resolved.push({
+      ...skill,
+      programId,
+      programName,
+      startYear: skill.startYear,
+    });
+  }
+
+  return resolved;
+};
+
+const applySkillsUpdate = async (userId: string, rawSkills: NonNullable<IUpdateUserPayload['skills']>) => {
+  const resolved = await resolveSkillInputs(rawSkills);
+  await UserRepository.replaceUserSkills(userId, resolved);
 };
 
 // Create User
@@ -55,7 +162,7 @@ const getUserById = async (id: string) => {
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  // Step:3 Return user
+  // Step:3 Return user (raw public fields for auth/admin consumers)
   return user;
 };
 
@@ -66,8 +173,8 @@ const getMyProfile = async (userId: string) => {
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  // Step:3 Return user profile
-  return user;
+  // Step:3 Return edit-account shaped profile
+  return shapeUserProfile(user as unknown as Record<string, unknown>);
 };
 
 const updateMyProfile = async (
@@ -112,30 +219,32 @@ const updateMyProfile = async (
     payload.username = normalizedUsername;
   }
 
-  // ✅ Step:5 Normalize skills
-  if (payload.skills) {
-    payload.skills = normalizeSkills(payload.skills);
-  }
+  const skillsPayload = payload.skills;
+  delete payload.skills;
 
   // Step:6 Handle profile picture upload
-  let profilePictureUrl: string | undefined;
   if (file) {
     const uploaded = await uploadSingleFileToS3(file, 'profiles');
-    profilePictureUrl = uploaded?.url;
-    // Step:7 Delete old profile picture from S3 if exists
-    if (user?.profilePicture) {
-      await deleteFileFromS3(user.profilePicture);
+    if (uploaded?.url) {
+      payload.profilePicture = uploaded.url;
+      if (user?.profilePicture) {
+        await deleteFileFromS3(user.profilePicture);
+      }
     }
+  } else {
+    delete payload.profilePicture;
   }
 
-  // Step:8 Prepare update payload with profile picture URL
-  payload = {
-    ...payload,
-    profilePicture: profilePictureUrl,
-  };
+  // Step:8 Update scalar profile fields (displayName, phoneNumber, etc.)
+  await UserRepository.updateUserById(userId, payload);
 
-  // Step:9 Update user in database
-  return UserRepository.updateUserById(userId, payload);
+  // Step:9 Replace skills when provided (program find-or-create + startYear last 100 years)
+  if (skillsPayload !== undefined) {
+    await applySkillsUpdate(userId, skillsPayload);
+  }
+
+  const refreshed = await UserRepository.getUserByIdPublic(userId);
+  return shapeUserProfile(refreshed as unknown as Record<string, unknown>);
 };
 
 // Update User
@@ -212,10 +321,9 @@ const updateUser = async (
     payload.username = normalizedUsername;
   }
 
-  // Step:9 Normalize skills array if updating
-  if (payload.skills) {
-    payload.skills = normalizeSkills(payload.skills);
-  }
+  // Step:9 Normalize / replace skills if updating
+  const skillsPayload = payload.skills;
+  delete payload.skills;
 
   // Step:10 Handle profile picture upload if file provided
   if (file) {
@@ -228,8 +336,14 @@ const updateUser = async (
   }
 
   // Step:12 Update user in database
-  const updated = await UserRepository.updateUserById(id, payload);
-  return updated;
+  await UserRepository.updateUserById(id, payload);
+
+  if (skillsPayload !== undefined) {
+    await applySkillsUpdate(id, skillsPayload);
+  }
+
+  const refreshed = await UserRepository.getUserByIdPublic(id);
+  return shapeUserProfile(refreshed as unknown as Record<string, unknown>);
 };
 
 const updateUserStatus = async (id: string, status: UserStatus, actorId: string) => {
@@ -387,6 +501,19 @@ const getProfilePicturePresignedUrl = async (
   return generatePresignedUrl(fileName, mimeType, 'profiles');
 };
 
+const getEditOptions = async () => {
+  const programs = await UserRepository.listActivePrograms();
+  return {
+    startYears: buildStartYearOptions(),
+    programs,
+    genders: [
+      { value: UserGender.MALE, label: 'Male' },
+      { value: UserGender.FEMALE, label: 'Female' },
+      { value: UserGender.OTHER, label: 'Other' },
+    ],
+  };
+};
+
 export const UserService = {
   createUser,
   getUserById,
@@ -397,6 +524,7 @@ export const UserService = {
   deleteUser,
   getMyProfile,
   updateMyProfile,
+  getEditOptions,
   // Helper methods for auth
   getUserByEmail,
   getUserByIdForAuth,

@@ -184,6 +184,7 @@ enum NotificationType {
   System
   Event
   EventApplication
+  EventInvitation
   Donation
 }
 
@@ -204,4 +205,17 @@ enum UserFeedbackStatus {
   NEW
   READ
   ARCHIVED
+}
+
+// ========================== User profile settings ==========================
+enum NotificationPreference {
+  All
+  ImportantOnly
+  Off
+}
+
+enum EmailNotifyPreference {
+  Instant
+  Daily
+  Off
 }

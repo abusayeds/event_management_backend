@@ -16,6 +16,12 @@ router.get(
 );
 
 router.get('/me', auth(UserRole.ADMIN, UserRole.USER), UserController.getMyProfile);
+router.get(
+  '/edit-options',
+  auth(UserRole.ADMIN, UserRole.USER),
+  validateRequest(UserValidation.getEditOptions),
+  UserController.getEditOptions
+);
 router.delete('/me', auth(UserRole.ADMIN, UserRole.USER), UserController.deleteMyAccount);
 router.patch(
   '/update-me',
