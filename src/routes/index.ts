@@ -30,6 +30,19 @@ router.get('/health', (req, res) => {
   });
 });
 
+// List all API endpoints
+router.get('/endpoints', (req, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const listEndpoints = require('express-list-endpoints');
+  const endpoints = listEndpoints(req.app);
+  res.json({
+    success: true,
+    message: 'API Endpoints',
+    count: endpoints.length,
+    data: endpoints,
+  });
+});
+
 // API routes
 router.use('/auth', AuthRoutes);
 router.use('/categories', CategoryRoutes);
