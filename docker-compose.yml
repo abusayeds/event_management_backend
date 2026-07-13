@@ -6,15 +6,19 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8082:8082"
+      - "7788:7788"
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/dawabuyi_db
-      - REDIS_URL=redis://redis:6379
-      - JWT_ACCESS_SECRET=your-super-secret-jwt-access-key-min-32-chars
-      - JWT_REFRESH_SECRET=your-super-secret-jwt-refresh-key-min-32-chars
-      - UPSTASH_REDIS_REST_URL=http://redis:6379
-      - UPSTASH_REDIS_REST_TOKEN=dummy-token
+      NODE_ENV: production
+      PORT: "7788"
+      # Use Docker network hostnames for DB + Redis inside compose
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/dawabuyi_db
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_TLS: "false"
+      REDIS_ENABLED: "true"
+      REDIS_REQUIRED: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,27 +33,22 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=dawabuyi_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: dawabuyi_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -57,9 +56,9 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:

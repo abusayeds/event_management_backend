@@ -1,52 +1,42 @@
-# Use Node.js 18 LTS as base image
-FROM node:18-alpine AS base
+# Node 20
+FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat openssl wget
 
-# Install dependencies only when needed
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
-
-# Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm ci
 
-# Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN npm run prisma:generate
 
-# Build the application
-RUN npm run build
-
-# Production image, copy all the files and run node
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
+ENV PORT=7788
 
-# Create a non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nodejs
 
-# Copy the built application
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/package-lock.json ./package-lock.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/scripts ./scripts
 
-# Create logs directory
-RUN mkdir -p logs && chown -R nodejs:nodejs logs
+RUN mkdir -p logs && chown -R nodejs:nodejs /app
 
 USER nodejs
 
-# Expose port
-EXPOSE 8082
+EXPOSE 7788
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node dist/health-check.js || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:7788/api/v1/health || exit 1
 
-# Start the application
-CMD ["npm", "start"]
+CMD ["npm", "run", "start:prod"]
