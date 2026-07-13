@@ -24,17 +24,25 @@ const getShareLink = z.object({
   params: eventIdParamSchema,
 });
 
+const inviteeIdsBody = z.object({
+  inviteeIds: z
+    .array(z.string().min(1, 'Invitee id is required'))
+    .min(1, 'Select at least one connection to invite'),
+  message: z
+    .string()
+    .trim()
+    .max(500, 'Message must be 500 characters or less')
+    .optional(),
+});
+
 const sendInvitations = z.object({
   params: eventIdParamSchema,
-  body: z.object({
-    inviteeIds: z
-      .array(z.string().min(1, 'Invitee id is required'))
-      .min(1, 'Select at least one connection to invite'),
-    message: z
-      .string()
-      .trim()
-      .max(500, 'Message must be 500 characters or less')
-      .optional(),
+  body: inviteeIdsBody,
+});
+
+const sendInvitationsRoot = z.object({
+  body: inviteeIdsBody.extend({
+    eventId: z.string().min(1, 'Event id is required'),
   }),
 });
 
@@ -60,6 +68,7 @@ export const EventInvitationValidation = {
   getShareConnections,
   getShareLink,
   sendInvitations,
+  sendInvitationsRoot,
   getReceivedInvitations,
   getSentInvitations,
   respondToInvitation,

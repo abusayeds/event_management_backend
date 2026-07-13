@@ -37,11 +37,12 @@ const getShareLink = asyncHandler(async (req: AuthenticatedRequest, res: Respons
 
 const sendInvitations = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId } = req.user!;
-  const result = await EventInvitationService.sendInvitations(
-    userId,
-    req.params.eventId as string,
-    req.body
-  );
+  const eventId = (req.params.eventId as string | undefined) || (req.body.eventId as string);
+  const { inviteeIds, message } = req.body;
+  const result = await EventInvitationService.sendInvitations(userId, eventId, {
+    inviteeIds,
+    message,
+  });
 
   apiResponse(res, {
     success: true,

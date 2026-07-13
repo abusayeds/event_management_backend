@@ -8,6 +8,20 @@ import { EventInvitationValidation } from './eventInvitation.validation';
 const router = Router();
 const asUser = auth(UserRole.ADMIN, UserRole.USER);
 
+router.post(
+  '/',
+  asUser,
+  validateRequest(EventInvitationValidation.sendInvitationsRoot),
+  EventInvitationController.sendInvitations
+);
+
+router.get(
+  '/',
+  asUser,
+  validateRequest(EventInvitationValidation.getReceivedInvitations),
+  EventInvitationController.getReceivedInvitations
+);
+
 router.get(
   '/share/:eventId/connections',
   asUser,

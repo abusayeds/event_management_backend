@@ -152,7 +152,11 @@ const config = {
   socket: {
     enabled: process.env.SOCKET_ENABLED !== 'false',
     cors: {
-      origin: process.env.FRONTEND_URL?.split(',') || ['http://localhost:3000'],
+      origin: process.env.FRONTEND_URL
+        ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
+        : process.env.ALLOWED_ORIGINS
+          ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+          : ['http://localhost:3000'],
       credentials: true,
     },
     transports: ['websocket', 'polling'],
