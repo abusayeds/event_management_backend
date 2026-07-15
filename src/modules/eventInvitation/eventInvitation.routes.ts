@@ -8,19 +8,7 @@ import { EventInvitationValidation } from './eventInvitation.validation';
 const router = Router();
 const asUser = auth(UserRole.ADMIN, UserRole.USER);
 
-router.post(
-  '/',
-  asUser,
-  validateRequest(EventInvitationValidation.sendInvitationsRoot),
-  EventInvitationController.sendInvitations
-);
-
-router.get(
-  '/',
-  asUser,
-  validateRequest(EventInvitationValidation.getReceivedInvitations),
-  EventInvitationController.getReceivedInvitations
-);
+// --- Share helpers -------------------------------------------------------
 
 router.get(
   '/share/:eventId/connections',
@@ -36,12 +24,24 @@ router.get(
   EventInvitationController.getShareLink
 );
 
+// --- Send invitations ----------------------------------------------------
+
 router.post(
   '/share/:eventId',
   asUser,
   validateRequest(EventInvitationValidation.sendInvitations),
   EventInvitationController.sendInvitations
 );
+
+// Alias: eventId in the body instead of the path.
+router.post(
+  '/',
+  asUser,
+  validateRequest(EventInvitationValidation.sendInvitationsRoot),
+  EventInvitationController.sendInvitations
+);
+
+// --- List invitations ----------------------------------------------------
 
 router.get(
   '/received',
@@ -56,6 +56,17 @@ router.get(
   validateRequest(EventInvitationValidation.getSentInvitations),
   EventInvitationController.getSentInvitations
 );
+
+// Alias: defaults to received invitations.
+router.get(
+  '/',
+  asUser,
+  validateRequest(EventInvitationValidation.getReceivedInvitations),
+  EventInvitationController.getReceivedInvitations
+);
+
+// --- Respond to invitations ----------------------------------------------
+// Bulk routes must stay above '/:id/...' so 'accept-all' is not captured as an id.
 
 router.patch(
   '/accept-all',

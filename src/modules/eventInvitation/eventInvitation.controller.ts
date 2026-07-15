@@ -37,7 +37,8 @@ const getShareLink = asyncHandler(async (req: AuthenticatedRequest, res: Respons
 
 const sendInvitations = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId } = req.user!;
-  const eventId = (req.params.eventId as string | undefined) || (req.body.eventId as string);
+  // eventId comes from the path on POST /share/:eventId, or from the body on POST /.
+  const eventId = (req.params.eventId as string | undefined) ?? (req.body.eventId as string);
   const { inviteeIds, message } = req.body;
   const result = await EventInvitationService.sendInvitations(userId, eventId, {
     inviteeIds,
@@ -47,7 +48,10 @@ const sendInvitations = asyncHandler(async (req: AuthenticatedRequest, res: Resp
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
-    message: 'Invitations sent.',
+    message:
+      result.skippedCount > 0
+        ? `${result.sentCount} invitation(s) sent, ${result.skippedCount} skipped (already invited).`
+        : 'Invitations sent.',
     data: result,
   });
 });

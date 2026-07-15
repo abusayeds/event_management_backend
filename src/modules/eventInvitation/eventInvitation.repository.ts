@@ -14,6 +14,7 @@ import {
 import {
   IEventInvitation,
   IShareableConnection,
+  ISkippedInvitee,
 } from './eventInvitation.interface';
 
 const invitationUserSelect = {
@@ -163,45 +164,85 @@ const createInvitations = async (
   inviterId: string,
   inviteeIds: string[],
   message?: string
-) => {
-  const created: IEventInvitation[] = [];
+): Promise<{ invitations: IEventInvitation[]; skipped: ISkippedInvitee[] }> => {
+  return database.$transaction(async tx => {
+    const existing = await tx.eventInvitation.findMany({
+      where: { eventId, inviterId, inviteeId: { in: inviteeIds } },
+      select: { id: true, inviteeId: true, status: true },
+    });
+    const existingByInvitee = new Map(existing.map(row => [row.inviteeId, row]));
 
-  for (const inviteeId of inviteeIds) {
-    const existing = await findExistingInvitation(eventId, inviterId, inviteeId);
+    const toCreate: string[] = [];
+    const toReopen: { id: string; inviteeId: string }[] = [];
+    const skipped: ISkippedInvitee[] = [];
 
-    if (existing) {
-      if (
-        existing.status === InvitationStatus.DECLINED ||
-        existing.status === InvitationStatus.EXPIRED
-      ) {
-        const reopened = await database.eventInvitation.update({
-          where: { id: existing.id },
-          data: {
-            status: InvitationStatus.PENDING,
-            message: message ?? existing.message,
-            respondedAt: null,
-          },
-          select: eventInvitationSelect,
-        });
-        created.push(reopened as IEventInvitation);
+    for (const inviteeId of inviteeIds) {
+      const found = existingByInvitee.get(inviteeId);
+
+      if (!found) {
+        toCreate.push(inviteeId);
+        continue;
       }
-      continue;
+
+      if (
+        found.status === InvitationStatus.DECLINED ||
+        found.status === InvitationStatus.EXPIRED
+      ) {
+        toReopen.push({ id: found.id, inviteeId });
+        continue;
+      }
+
+      skipped.push({
+        inviteeId,
+        reason:
+          found.status === InvitationStatus.ACCEPTED
+            ? 'Invitation already accepted.'
+            : 'Invitation already pending.',
+      });
     }
 
-    const invitation = await database.eventInvitation.create({
-      data: {
+    if (toReopen.length > 0) {
+      await tx.eventInvitation.updateMany({
+        where: { id: { in: toReopen.map(row => row.id) } },
+        data: {
+          status: InvitationStatus.PENDING,
+          respondedAt: null,
+          ...(message !== undefined ? { message } : {}),
+        },
+      });
+    }
+
+    if (toCreate.length > 0) {
+      await tx.eventInvitation.createMany({
+        data: toCreate.map(inviteeId => ({
+          eventId,
+          inviterId,
+          inviteeId,
+          message,
+          status: InvitationStatus.PENDING,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    const affectedInviteeIds = [...toCreate, ...toReopen.map(row => row.inviteeId)];
+
+    if (affectedInviteeIds.length === 0) {
+      return { invitations: [], skipped };
+    }
+
+    const invitations = await tx.eventInvitation.findMany({
+      where: {
         eventId,
         inviterId,
-        inviteeId,
-        message,
+        inviteeId: { in: affectedInviteeIds },
         status: InvitationStatus.PENDING,
       },
       select: eventInvitationSelect,
     });
-    created.push(invitation as IEventInvitation);
-  }
 
-  return created;
+    return { invitations: invitations as IEventInvitation[], skipped };
+  });
 };
 
 const getReceivedPendingInvitations = async (
@@ -214,6 +255,14 @@ const getReceivedPendingInvitations = async (
   const where = {
     inviteeId: userId,
     status: InvitationStatus.PENDING,
+    // Hide invitations to events that can no longer be joined.
+    event: {
+      isDeleted: false,
+      deletedAt: null,
+      isDisabled: false,
+      isActive: true,
+      isPublished: true,
+    },
   };
 
   const [rows, total] = await Promise.all([
@@ -273,6 +322,19 @@ const bulkUpdateReceivedPending = async (userId: string, status: InvitationStatu
     where: {
       inviteeId: userId,
       status: InvitationStatus.PENDING,
+      // Only accept invitations for events that are still live; declining is
+      // always allowed regardless of event state.
+      ...(status === InvitationStatus.ACCEPTED
+        ? {
+            event: {
+              isDeleted: false,
+              deletedAt: null,
+              isDisabled: false,
+              isActive: true,
+              isPublished: true,
+            },
+          }
+        : {}),
     },
     data: {
       status,

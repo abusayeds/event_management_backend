@@ -51,6 +51,11 @@ export interface ISendEventInvitationsPayload {
   message?: string;
 }
 
+export interface ISkippedInvitee {
+  inviteeId: string;
+  reason: string;
+}
+
 export interface IEventInvitationQuery {
   options: PaginationOptions;
 }

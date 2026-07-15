@@ -5,6 +5,7 @@ import {
   NotificationType,
 } from '../../../prisma/generated/enums';
 import config from '../../config';
+import logger from '../../config/logger';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { NotificationService } from '../notification/notification.service';
@@ -69,15 +70,17 @@ const sendInvitations = async (
     );
   }
 
-  const created = await EventInvitationRepository.createInvitations(
+  const { invitations, skipped } = await EventInvitationRepository.createInvitations(
     eventId,
     userId,
     uniqueInviteeIds,
     payload.message
   );
 
-  await Promise.all(
-    created.map(invitation =>
+  // Notifications are best-effort: a delivery failure must not fail the request
+  // after invitations are already persisted.
+  const notificationResults = await Promise.allSettled(
+    invitations.map(invitation =>
       NotificationService.createNotification({
         recipientId: invitation.inviteeId,
         senderId: userId,
@@ -98,9 +101,17 @@ const sendInvitations = async (
     )
   );
 
+  notificationResults.forEach(result => {
+    if (result.status === 'rejected') {
+      logger.error('Failed to send event invitation notification', result.reason);
+    }
+  });
+
   return {
-    sentCount: created.length,
-    invitations: created,
+    sentCount: invitations.length,
+    skippedCount: skipped.length,
+    skipped,
+    invitations,
   };
 };
 
@@ -128,25 +139,33 @@ const acceptInvitation = async (invitationId: string, userId: string) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Only pending invitations can be accepted.');
   }
 
+  // The event must still be live to accept its invitation.
+  await assertEventShareable(invitation.eventId);
+
   const updated = await EventInvitationRepository.updateInvitationStatus(
     invitationId,
     InvitationStatus.ACCEPTED
   );
 
-  await NotificationService.createNotification({
-    recipientId: invitation.inviterId,
-    senderId: userId,
-    type: NotificationType.EventInvitation,
-    medium: [NotificationMedium.InApp],
-    title: 'Invitation accepted',
-    message: `Your invitation to "${invitation.event.eventName}" was accepted.`,
-    linkId: invitation.eventId,
-    linkType: 'event',
-    data: {
-      eventId: invitation.eventId,
-      invitationId: invitation.id,
-    },
-  });
+  // Best-effort notification — invitation is already accepted at this point.
+  try {
+    await NotificationService.createNotification({
+      recipientId: invitation.inviterId,
+      senderId: userId,
+      type: NotificationType.EventInvitation,
+      medium: [NotificationMedium.InApp],
+      title: 'Invitation accepted',
+      message: `Your invitation to "${invitation.event.eventName}" was accepted.`,
+      linkId: invitation.eventId,
+      linkType: 'event',
+      data: {
+        eventId: invitation.eventId,
+        invitationId: invitation.id,
+      },
+    });
+  } catch (error) {
+    logger.error('Failed to send invitation-accepted notification', error);
+  }
 
   return updated;
 };

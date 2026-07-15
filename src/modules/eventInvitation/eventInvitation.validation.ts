@@ -11,13 +11,19 @@ const eventIdParamSchema = z.object({
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  sortBy: z.string().optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'status', 'respondedAt']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
 });
 
 const getShareConnections = z.object({
   params: eventIdParamSchema,
-  query: paginationQuerySchema,
+  // Connection listing is sorted server-side; only page/limit are honored.
+  query: z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+  }),
 });
 
 const getShareLink = z.object({
@@ -27,7 +33,8 @@ const getShareLink = z.object({
 const inviteeIdsBody = z.object({
   inviteeIds: z
     .array(z.string().min(1, 'Invitee id is required'))
-    .min(1, 'Select at least one connection to invite'),
+    .min(1, 'Select at least one connection to invite')
+    .max(100, 'You can invite at most 100 connections at a time'),
   message: z
     .string()
     .trim()
