@@ -83,10 +83,15 @@ const config = {
   cors: {
     allowedOrigins: process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-      : ['http://localhost:3000', 'http://localhost:3001'],
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://206.162.244.11:4173'],
     developmentOrigins: process.env.DEV_ALLOWED_ORIGINS
       ? process.env.DEV_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-      : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000'],
+      : [
+          'http://localhost:3000',
+          'http://localhost:5173',
+          'http://127.0.0.1:3000',
+          'http://206.162.244.11:4173',
+        ],
   },
 
   // Redis
