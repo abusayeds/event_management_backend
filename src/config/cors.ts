@@ -1,28 +1,8 @@
 import cors from 'cors';
 import { RequestHandler } from 'express';
-import config from './index';
 
 const corsOptions: cors.CorsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (config.env === 'development') {
-      // In development, allow all origins in the development list
-      if (config.cors.developmentOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS in development'), false);
-      }
-    } else {
-      // In production, only allow allowed origins
-      if (config.cors.allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'), false);
-      }
-    }
-  },
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
@@ -33,9 +13,10 @@ const corsOptions: cors.CorsOptions = {
     'Authorization',
     'Cache-Control',
     'X-API-Key',
+    'X-CSRF-Token',
   ],
-  exposedHeaders: ['X-Total-Count', 'X-Page-Count'],
-  maxAge: 86400, // 24 hours
+  exposedHeaders: ['X-Total-Count', 'X-Page-Count', 'Content-Length', 'X-Request-Id'],
+  maxAge: 86400,
 };
 
 export const corsMiddleware: RequestHandler = cors(corsOptions);

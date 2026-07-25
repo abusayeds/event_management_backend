@@ -17,57 +17,10 @@ import routes from './routes';
 // Create Express application
 const app: express.Application = express();
 
-const getAllowedOrigins = (): string[] => {
-  const origins = [...config.cors.allowedOrigins];
-
-  // Add development origins in development mode
-  if (process.env.NODE_ENV === 'development') {
-    origins.push(...config.cors.developmentOrigins);
-  }
-
-  return origins;
-};
-
-//
-const getCorsOptions = (allowedOrigins: string[]) => {
-  const isProduction = process.env.NODE_ENV === 'production';
-
+const getCorsOptions = () => {
   return {
-    origin: (
-      origin: string | undefined,
-      callback: (error: Error | null, allow?: boolean) => void
-    ) => {
-      if (isProduction) {
-        if (!origin) {
-          return callback(null, true);
-        }
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-
-        logger.warn('CORS blocked origin in production', {
-          type: 'SECURITY',
-          origin,
-        });
-        return callback(new Error('Not allowed by CORS'));
-      }
-
-      // In development: More permissive
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      // Check if origin is in allowed list
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // Allow localhost in development only
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return callback(null, true);
-      }
-      callback(new Error('Not allowed by CORS'));
-    },
+    // Reflect request Origin so credentials work from any frontend.
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -84,7 +37,7 @@ const getCorsOptions = (allowedOrigins: string[]) => {
     exposedHeaders: ['Content-Length', 'X-Request-Id'],
     preflightContinue: false,
     optionsSuccessStatus: 204,
-    maxAge: isProduction ? 86400 : 3600,
+    maxAge: 86400,
   };
 };
 
@@ -119,7 +72,7 @@ const applyCsrfProtection = (req: Request, res: Response, next: NextFunction): v
 };
 
 // helmet config
-const getHelmetConfig = (allowedOrigins: string[]) => {
+const getHelmetConfig = () => {
   return helmet({
     hsts: {
       includeSubDomains: true,
@@ -149,7 +102,7 @@ const getHelmetConfig = (allowedOrigins: string[]) => {
         childSrc: ["'self'", 'blob:'],
         styleSrcAttr: ["'self'", "'unsafe-inline'", 'http:'],
         frameSrc: ["'self'"],
-        connectSrc: ["'self'", ...allowedOrigins],
+        connectSrc: ["'self'", '*'],
       },
     },
     dnsPrefetchControl: { allow: false },
@@ -160,9 +113,9 @@ const getHelmetConfig = (allowedOrigins: string[]) => {
     permittedCrossDomainPolicies: { permittedPolicies: 'none' },
     referrerPolicy: { policy: 'no-referrer' },
     xssFilter: true,
-    crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production',
+    crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
-    crossOriginResourcePolicy: { policy: 'same-site' },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     originAgentCluster: true,
   });
 };
@@ -289,11 +242,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Cookie parser
 app.use(cookieParser());
 
-// CORS Configuration
-const allowedOrigins = getAllowedOrigins();
-const corsOptions = getCorsOptions(allowedOrigins);
-
-app.use(cors(corsOptions));
+// CORS Configuration — allow all origins
+app.use(cors(getCorsOptions()));
 
 // Serve static assets
 app.use('/public', express.static(path.join(__dirname, '../public')));
@@ -302,7 +252,7 @@ app.use('/public', express.static(path.join(__dirname, '../public')));
 app.use(applyCsrfProtection);
 
 // Helmet security headers
-app.use(getHelmetConfig(allowedOrigins));
+app.use(getHelmetConfig());
 
 // Additional security headers
 app.use(getAdditionalSecurityHeaders());

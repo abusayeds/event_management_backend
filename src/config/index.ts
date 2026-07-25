@@ -79,19 +79,10 @@ const config = {
     ip: process.env.BACKEND_IP || '0.0.0.0',
     baseUrl: `http://${process.env.BACKEND_IP || 'localhost'}:${process.env.PORT || '8082'}`,
   },
-  // CORS
+  // CORS — allow all origins (see app.ts / socket config)
   cors: {
-    allowedOrigins: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://206.162.244.11:4173'],
-    developmentOrigins: process.env.DEV_ALLOWED_ORIGINS
-      ? process.env.DEV_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-      : [
-          'http://localhost:3000',
-          'http://localhost:5173',
-          'http://127.0.0.1:3000',
-          'http://206.162.244.11:4173',
-        ],
+    allowedOrigins: ['*'],
+    developmentOrigins: ['*'],
   },
 
   // Redis
@@ -157,11 +148,7 @@ const config = {
   socket: {
     enabled: process.env.SOCKET_ENABLED !== 'false',
     cors: {
-      origin: process.env.FRONTEND_URL
-        ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
-        : process.env.ALLOWED_ORIGINS
-          ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-          : ['http://localhost:3000'],
+      origin: true,
       credentials: true,
     },
     transports: ['websocket', 'polling'],
