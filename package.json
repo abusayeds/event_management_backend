@@ -121,5 +121,15 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "@firebase/util": true,
+    "@prisma/engines": true,
+    "@scarf/scarf": true,
+    "aws-sdk": true,
+    "esbuild": true,
+    "msgpackr-extract": true,
+    "prisma": true,
+    "protobufjs": true
   }
 }
