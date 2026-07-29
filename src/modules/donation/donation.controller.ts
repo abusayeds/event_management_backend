@@ -45,7 +45,9 @@ const getDonationsForAdmin = asyncHandler(async (req: AuthenticatedRequest, res:
 
 const stripeWebhook = asyncHandler(async (req: Request, res: Response) => {
   const signature = req.headers['stripe-signature'];
-  const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body ?? {}));
+  const rawBody = Buffer.isBuffer(req.body)
+    ? req.body
+    : Buffer.from(JSON.stringify(req.body ?? {}));
   const result = await DonationService.processStripeWebhook(
     rawBody,
     Array.isArray(signature) ? signature[0] : signature
@@ -84,7 +86,6 @@ const googleWebhook = asyncHandler(async (req: Request, res: Response) => {
     data: result,
   });
 });
-
 
 export const DonationController = {
   createDonation,

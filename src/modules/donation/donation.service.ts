@@ -114,7 +114,12 @@ const processStripeWebhook = async (
   const eventType = String(event.type ?? '');
   const providerTransactionId = event.data?.object?.id;
   if (!providerTransactionId) {
-    return { accepted: true, provider: DonationProvider.Stripe, eventType, message: 'No payment intent in event.' };
+    return {
+      accepted: true,
+      provider: DonationProvider.Stripe,
+      eventType,
+      message: 'No payment intent in event.',
+    };
   }
 
   const matched = await DonationRepository.getByProviderAndTransactionId(
@@ -146,11 +151,15 @@ const processStripeWebhook = async (
     };
   }
 
-  await DonationRepository.updateByProviderAndTransactionId(DonationProvider.Stripe, providerTransactionId, {
-    paymentStatus: nextStatus,
-    verifiedAt: nextStatus === DonationPaymentStatus.Succeeded ? new Date() : matched.verifiedAt,
-    rawPayload: event as unknown as Prisma.InputJsonValue,
-  });
+  await DonationRepository.updateByProviderAndTransactionId(
+    DonationProvider.Stripe,
+    providerTransactionId,
+    {
+      paymentStatus: nextStatus,
+      verifiedAt: nextStatus === DonationPaymentStatus.Succeeded ? new Date() : matched.verifiedAt,
+      rawPayload: event as unknown as Prisma.InputJsonValue,
+    }
+  );
 
   if (nextStatus === DonationPaymentStatus.Succeeded) {
     await NotificationService.createNotification({
@@ -194,21 +203,36 @@ const processStoreWebhook = async (
 
   const eventType = String(payload.eventType ?? payload.notificationType ?? 'unknown');
   const providerTransactionId = String(
-    payload.transactionId ?? payload.originalTransactionId ?? payload.orderId ?? payload.purchaseToken ?? ''
+    payload.transactionId ??
+      payload.originalTransactionId ??
+      payload.orderId ??
+      payload.purchaseToken ??
+      ''
   );
   if (!providerTransactionId) {
     return { accepted: true, provider, eventType, message: 'No transaction id in event.' };
   }
 
-  const matched = await DonationRepository.getByProviderAndTransactionId(provider, providerTransactionId);
+  const matched = await DonationRepository.getByProviderAndTransactionId(
+    provider,
+    providerTransactionId
+  );
   if (!matched) {
-    return { accepted: true, provider, eventType, providerTransactionId, message: 'Donation not found.' };
+    return {
+      accepted: true,
+      provider,
+      eventType,
+      providerTransactionId,
+      message: 'Donation not found.',
+    };
   }
 
   const eventLower = eventType.toLowerCase();
   let nextStatus: DonationPaymentStatus = DonationPaymentStatus.Succeeded;
-  if (eventLower.includes('fail') || eventLower.includes('cancel')) nextStatus = DonationPaymentStatus.Failed;
-  if (eventLower.includes('refund') || eventLower.includes('revoke')) nextStatus = DonationPaymentStatus.Refunded;
+  if (eventLower.includes('fail') || eventLower.includes('cancel'))
+    nextStatus = DonationPaymentStatus.Failed;
+  if (eventLower.includes('refund') || eventLower.includes('revoke'))
+    nextStatus = DonationPaymentStatus.Refunded;
 
   await DonationRepository.updateByProviderAndTransactionId(provider, providerTransactionId, {
     paymentStatus: nextStatus,
@@ -228,7 +252,13 @@ const processStoreWebhook = async (
     });
   }
 
-  return { accepted: true, provider, eventType, providerTransactionId, message: `${provider} webhook processed.` };
+  return {
+    accepted: true,
+    provider,
+    eventType,
+    providerTransactionId,
+    message: `${provider} webhook processed.`,
+  };
 };
 
 const processAppleWebhook = async (

@@ -8,10 +8,7 @@ import {
   PaginationResult,
   parsePaginationOptions,
 } from '../../utils/paginate';
-import {
-  IDonationFilters,
-  ICreateDonationPayload,
-} from './donation.interface';
+import { IDonationFilters, ICreateDonationPayload } from './donation.interface';
 
 const donationSelect = {
   id: true,
@@ -150,7 +147,6 @@ const getDonationListForAdmin = async (
 
   return createPaginationResult(data, total, pagination);
 };
-
 
 export const DonationRepository = {
   createDonation,

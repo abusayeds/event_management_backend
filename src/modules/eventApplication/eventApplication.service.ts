@@ -51,7 +51,10 @@ const createEventApplication = async (userId: string, payload: ICreateEventAppli
   }
 };
 
-const getEventApplicationByUser = async (userId: string, query: IGetEventApplicationByUserQuery) => {
+const getEventApplicationByUser = async (
+  userId: string,
+  query: IGetEventApplicationByUserQuery
+) => {
   return EventApplicationRepository.getEventApplicationByUser(userId, query);
 };
 

@@ -1,7 +1,4 @@
-import {
-  EmailNotifyPreference,
-  NotificationPreference,
-} from '../../../prisma/generated/enums';
+import { EmailNotifyPreference, NotificationPreference } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import type { IUpdateUserSettingsPayload } from './userSettings.interface';
 import { DISPLAY_LANGUAGE } from './userSettings.interface';

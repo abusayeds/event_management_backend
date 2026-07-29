@@ -1,16 +1,16 @@
 import { database } from '../../config/database';
 import {
-    createPaginationQuery,
-    createPaginationResult,
-    PaginationOptions,
-    PaginationResult,
-    parsePaginationOptions,
+  createPaginationQuery,
+  createPaginationResult,
+  PaginationOptions,
+  PaginationResult,
+  parsePaginationOptions,
 } from '../../utils/paginate';
 import {
-    ICategory,
-    ICategoryFilters,
-    ICreateCategoryPayload,
-    IUpdateCategoryPayload,
+  ICategory,
+  ICategoryFilters,
+  ICreateCategoryPayload,
+  IUpdateCategoryPayload,
 } from './category.interface';
 
 // Event select for category events list

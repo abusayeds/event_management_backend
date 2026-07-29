@@ -36,11 +36,7 @@ export const initializeWorkers = (): Worker[] => {
   }
 
   workersStoppedForQuota = false;
-  activeWorkers = [
-    createEmailWorker(),
-    createNotificationWorker(),
-    createRepeatEventWorker(),
-  ];
+  activeWorkers = [createEmailWorker(), createNotificationWorker(), createRepeatEventWorker()];
 
   activeWorkers.forEach(worker => {
     worker.on('error', err => {

@@ -3,9 +3,9 @@ import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { deleteFileFromS3, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import {
-    ICreateSubcategoryPayload,
-    ISubcategoryFilters,
-    IUpdateSubcategoryPayload,
+  ICreateSubcategoryPayload,
+  ISubcategoryFilters,
+  IUpdateSubcategoryPayload,
 } from './subcategory.interface';
 import { SubcategoryRepository } from './subcategory.repository';
 

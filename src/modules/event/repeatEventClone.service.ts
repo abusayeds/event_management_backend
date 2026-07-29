@@ -6,9 +6,7 @@ import type { ICreateEventPayload, IEventGroupInput } from './event.interface';
 import { addRepeatInterval, computeRepeatingEventNaming } from './event.utils';
 import { enqueueRepeatEventJob } from '../../jobs/repeatEvent.schedule';
 
-type RepeatSourceEvent = NonNullable<
-  Awaited<ReturnType<typeof loadRepeatSourceEvent>>
->;
+type RepeatSourceEvent = NonNullable<Awaited<ReturnType<typeof loadRepeatSourceEvent>>>;
 
 const loadRepeatSourceEvent = async (eventId: string) => {
   return database.event.findFirst({
@@ -151,7 +149,8 @@ const buildClonePayload = (
       deadline: new Date(anchorDate.getTime() + scheduleDurationMs),
       cost: Number(source.schedule.cost),
       hasFinalDeadline: source.schedule.hasFinalDeadline,
-      finalDeadline: finalDurationMs == null ? null : new Date(anchorDate.getTime() + finalDurationMs),
+      finalDeadline:
+        finalDurationMs == null ? null : new Date(anchorDate.getTime() + finalDurationMs),
       lateFee: Number(source.schedule.lateFee),
     },
   };

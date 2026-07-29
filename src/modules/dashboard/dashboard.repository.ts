@@ -1,10 +1,6 @@
 import { DonationPaymentStatus } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
-import {
-  IDashboardOverviewData,
-  IIncomeRatioData,
-  IUserRatioData,
-} from './dashboard.interface';
+import { IDashboardOverviewData, IIncomeRatioData, IUserRatioData } from './dashboard.interface';
 
 const getOverview = async (recentDays: number): Promise<IDashboardOverviewData> => {
   const start = new Date();
@@ -52,7 +48,20 @@ const getOverview = async (recentDays: number): Promise<IDashboardOverviewData> 
   };
 };
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 const getIncomeRatio = async (year: number): Promise<IIncomeRatioData> => {
   const start = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));

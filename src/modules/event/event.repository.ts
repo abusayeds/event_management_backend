@@ -47,7 +47,10 @@ import {
   toDecimal,
 } from './event.utils';
 
-const applyFeedSearchTerm = (where: Prisma.EventWhereInput, searchTerm?: string): Prisma.EventWhereInput => {
+const applyFeedSearchTerm = (
+  where: Prisma.EventWhereInput,
+  searchTerm?: string
+): Prisma.EventWhereInput => {
   const term = searchTerm?.trim();
   if (!term) {
     return where;
@@ -139,7 +142,7 @@ const attachFeedCategoryGroups = async <T extends { id: string }>(
     ...e,
     categoryGroup: inferCategoryGroupSlugFromAgeRows(byEvent.get(e.id) ?? []),
   }));
-}
+};
 
 const eventAuditSnapshotSelect = {
   version: true,
@@ -234,7 +237,7 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
   );
   const yearForEvent =
     repeatFrequency === RepeatFrequency.DontRepeat
-      ? (payloadYear?.trim() || String(anchorDate.getUTCFullYear()))
+      ? payloadYear?.trim() || String(anchorDate.getUTCFullYear())
       : String(anchorDate.getUTCFullYear());
   const sessionTypeForEvent: SessionBucketType =
     repeatFrequency === RepeatFrequency.DontRepeat
@@ -254,7 +257,9 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
     // Repeating events: the bucket label is always derived from the chosen repeat frequency + anchor date.
     return sessionValueForEvent;
   })();
-  const sessionLevelForEvent = isYearlySession ? `${yearForEvent}` : `${yearForEvent}-${suffixForEvent}`;
+  const sessionLevelForEvent = isYearlySession
+    ? `${yearForEvent}`
+    : `${yearForEvent}-${suffixForEvent}`;
   const eventNameWithSuffix = isYearlySession
     ? `${payload.eventName.trim()}-${yearForEvent}`
     : `${payload.eventName.trim()}-${yearForEvent}-${suffixForEvent}`;
@@ -340,8 +345,8 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
         },
         repeatConfig: repeatConfig
           ? {
-            create: repeatConfigFields(repeatConfig),
-          }
+              create: repeatConfigFields(repeatConfig),
+            }
           : undefined,
       },
       select: { id: true },
@@ -357,7 +362,6 @@ const createEvent = async (creatorId: string, payload: ICreateEventPayload) => {
     return created;
   });
 };
-
 
 const getEventById = async (id: string) => {
   const event = await database.event.findFirst({
@@ -709,7 +713,6 @@ const getAppliedEventsByEventId = async (
   return createPaginationResult(rows, total, pagination);
 };
 
-
 const getEventBare = async (id: string) => {
   return database.event.findFirst({
     where: { id, deletedAt: null, isDeleted: false },
@@ -796,7 +799,6 @@ const getEvents = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
-
 const runFeedListQuery = async (
   scope: 'today' | 'upcoming' | 'history',
   filters: IFeedListFilters | undefined,
@@ -822,14 +824,18 @@ const runFeedListQuery = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
-const getUpcomingEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) =>
-  runFeedListQuery('upcoming', filters, options);
+const getUpcomingEvents = async (
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+) => runFeedListQuery('upcoming', filters, options);
 
 const getTodayEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) =>
   runFeedListQuery('today', filters, options);
 
-const getHistoryEvents = async (filters: IFeedListFilters | undefined, options: PaginationOptions) =>
-  runFeedListQuery('history', filters, options);
+const getHistoryEvents = async (
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+) => runFeedListQuery('history', filters, options);
 
 const getPersonalizedUpcomingEvents = async (
   filters: IFeedListFilters | undefined,
@@ -857,9 +863,7 @@ const getPersonalizedUpcomingEvents = async (
   if (prefProgramIds.length) {
     orBranches.push({ programId: { in: prefProgramIds } });
   }
-  const locs = applicationLocations
-    .map(l => String(l).trim())
-    .filter(l => l.length > 0);
+  const locs = applicationLocations.map(l => String(l).trim()).filter(l => l.length > 0);
   if (locs.length) {
     orBranches.push({
       OR: locs.map(loc => ({

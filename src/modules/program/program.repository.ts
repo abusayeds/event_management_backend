@@ -1,12 +1,17 @@
 import { database } from '../../config/database';
 import {
-    createPaginationQuery,
-    createPaginationResult,
-    PaginationOptions,
-    PaginationResult,
-    parsePaginationOptions,
+  createPaginationQuery,
+  createPaginationResult,
+  PaginationOptions,
+  PaginationResult,
+  parsePaginationOptions,
 } from '../../utils/paginate';
-import { ICreateProgramPayload, IProgram, IProgramFilters, IUpdateProgramPayload } from './program.interface';
+import {
+  ICreateProgramPayload,
+  IProgram,
+  IProgramFilters,
+  IUpdateProgramPayload,
+} from './program.interface';
 
 // Program list select
 export const programListSelect = {

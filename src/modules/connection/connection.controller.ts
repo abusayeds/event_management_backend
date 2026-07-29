@@ -23,23 +23,25 @@ const createConnectionRequest = asyncHandler(async (req: AuthenticatedRequest, r
   });
 });
 
-const getReceivedConnectionRequests = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  // Step:1 Read authenticated user id and pagination options.
-  const { userId } = req.user!;
-  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+const getReceivedConnectionRequests = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Step:1 Read authenticated user id and pagination options.
+    const { userId } = req.user!;
+    const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
 
-  // Step:2 Fetch received pending requests.
-  const result = await ConnectionService.getReceivedConnectionRequests(userId, options);
+    // Step:2 Fetch received pending requests.
+    const result = await ConnectionService.getReceivedConnectionRequests(userId, options);
 
-  // Step:3 Return paginated request list.
-  apiResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Received requests fetched.',
-    data: result.data,
-    meta: result.meta,
-  });
-});
+    // Step:3 Return paginated request list.
+    apiResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: 'Received requests fetched.',
+      data: result.data,
+      meta: result.meta,
+    });
+  }
+);
 
 const getSentConnectionRequests = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   // Step:1 Read authenticated user id and pagination options.

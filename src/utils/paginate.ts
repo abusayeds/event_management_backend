@@ -10,8 +10,8 @@ const toPositiveInteger = (value: unknown, fallback: number): number => {
     typeof value === 'number'
       ? value
       : typeof value === 'string'
-      ? Number.parseInt(value, 10)
-      : Number.NaN;
+        ? Number.parseInt(value, 10)
+        : Number.NaN;
 
   return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : fallback;
 };

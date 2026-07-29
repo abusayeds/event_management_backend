@@ -6,19 +6,19 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "7788:7788"
+      - '7788:7788'
     env_file:
       - .env
     environment:
       NODE_ENV: production
-      PORT: "7788"
+      PORT: '7788'
       # Use Docker network hostnames for DB + Redis inside compose
       DATABASE_URL: postgresql://postgres:password@postgres:5432/dawabuyi_db
       REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      REDIS_TLS: "false"
-      REDIS_ENABLED: "true"
-      REDIS_REQUIRED: "false"
+      REDIS_PORT: '6379'
+      REDIS_TLS: 'false'
+      REDIS_ENABLED: 'true'
+      REDIS_REQUIRED: 'false'
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,7 +42,7 @@ services:
       - app-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -55,7 +55,7 @@ services:
       - app-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 10

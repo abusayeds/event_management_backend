@@ -23,11 +23,7 @@ const assertEventShareable = async (eventId: string) => {
   return event;
 };
 
-const getShareConnections = async (
-  userId: string,
-  eventId: string,
-  options: PaginationOptions
-) => {
+const getShareConnections = async (userId: string, eventId: string, options: PaginationOptions) => {
   await assertEventShareable(eventId);
   return EventInvitationRepository.getShareableConnections(userId, eventId, options);
 };
@@ -64,10 +60,7 @@ const sendInvitations = async (
 
   const invalidInvitee = uniqueInviteeIds.find(inviteeId => !connectedSet.has(inviteeId));
   if (invalidInvitee) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'You can only invite users from your connections.'
-    );
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You can only invite users from your connections.');
   }
 
   const { invitations, skipped } = await EventInvitationRepository.createInvitations(
@@ -87,9 +80,7 @@ const sendInvitations = async (
         type: NotificationType.EventInvitation,
         medium: [NotificationMedium.InApp, NotificationMedium.Push],
         title: 'Event invitation',
-        message:
-          payload.message?.trim() ||
-          `You have been invited to "${event.eventName}".`,
+        message: payload.message?.trim() || `You have been invited to "${event.eventName}".`,
         image: event.coverImage,
         linkId: invitation.id,
         linkType: 'event-invitation',
@@ -119,11 +110,7 @@ const getReceivedInvitations = async (userId: string, options: PaginationOptions
   return EventInvitationRepository.getReceivedPendingInvitations(userId, options);
 };
 
-const getSentInvitations = async (
-  userId: string,
-  options: PaginationOptions,
-  eventId?: string
-) => {
+const getSentInvitations = async (userId: string, options: PaginationOptions, eventId?: string) => {
   return EventInvitationRepository.getSentInvitations(userId, options, eventId);
 };
 
@@ -182,10 +169,7 @@ const declineInvitation = async (invitationId: string, userId: string) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Only pending invitations can be ignored.');
   }
 
-  return EventInvitationRepository.updateInvitationStatus(
-    invitationId,
-    InvitationStatus.DECLINED
-  );
+  return EventInvitationRepository.updateInvitationStatus(invitationId, InvitationStatus.DECLINED);
 };
 
 const acceptAllInvitations = async (userId: string) => {

@@ -8,7 +8,12 @@ import {
   parsePaginationOptions,
 } from '../../utils/paginate';
 import { skillLabel } from './user.helpers';
-import { ICreateUserPayload, IUpdateUserPayload, IUserFilters, IUserSkillInput } from './user.interface';
+import {
+  ICreateUserPayload,
+  IUpdateUserPayload,
+  IUserFilters,
+  IUserSkillInput,
+} from './user.interface';
 
 const userSkillSelect = {
   id: true,
@@ -211,7 +216,10 @@ const listActivePrograms = async () => {
   });
 };
 
-const replaceUserSkills = async (userId: string, skills: Array<IUserSkillInput & { programName: string; programId: string | null }>) => {
+const replaceUserSkills = async (
+  userId: string,
+  skills: Array<IUserSkillInput & { programName: string; programId: string | null }>
+) => {
   const labels = skills.map(s => skillLabel(s.programName, s.startYear));
 
   await database.$transaction(async tx => {

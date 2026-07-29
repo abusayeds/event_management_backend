@@ -43,4 +43,3 @@ const requireAdmin = requireRole(UserRole.ADMIN);
 const requireManagerOrAdmin = requireRole(UserRole.MANAGER, UserRole.ADMIN);
 
 export { requireAdmin, requireManagerOrAdmin, requireRole };
-

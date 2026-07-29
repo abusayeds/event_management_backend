@@ -5,16 +5,10 @@ import { deleteFileFromS3, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import { ICreateProgramPayload, IProgramFilters, IUpdateProgramPayload } from './program.interface';
 import { ProgramRepository } from './program.repository';
 
-const ensureProgramRelations = async (payload: {
-  categoryId?: string;
-  subcategoryId?: string;
-}) => {
+const ensureProgramRelations = async (payload: { categoryId?: string; subcategoryId?: string }) => {
   // Step:1 Ensure at least one relationship target is provided
   if (!payload.categoryId && !payload.subcategoryId) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Either categoryId or subcategoryId is required.'
-    );
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Either categoryId or subcategoryId is required.');
   }
 
   // Step:2 Validate category if provided
@@ -141,7 +135,10 @@ const updateProgram = async (
 
   // Step:5 Validate at least one field or file is provided
   if (!file && Object.keys(payload).length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one field is required to update program.');
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'At least one field is required to update program.'
+    );
   }
 
   let uploadedImageUrl: string | undefined;

@@ -50,7 +50,14 @@ const addFamilyMember = async (actorId: string, payload: IAddFamilyMemberWithUse
   const hashedPassword = await bcrypt.hash(preparedPayload.password, 12);
 
   // Step:5 Atomically create user + family member in a single transaction
-  const { createdById: _createdById, accountId, username, birthDate, password: _plainPass, ...userRest } = preparedPayload;
+  const {
+    createdById: _createdById,
+    accountId,
+    username,
+    birthDate,
+    password: _plainPass,
+    ...userRest
+  } = preparedPayload;
 
   const result = await database.$transaction(async tx => {
     const createdUser = await tx.user.create({
@@ -215,7 +222,10 @@ const updateOwnerIndependentStatus = async (
 
   // Step:4 Prevent owner from activating themselves
   if (actorId === targetUserId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot change your own independence status here.');
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'You cannot change your own independence status here.'
+    );
   }
 
   // Step:5 Update member's independence status via UserService

@@ -59,7 +59,7 @@ const getCsrfProtection = () => {
 
 // JWT Bearer APIs do not use cookie sessions — CSRF is not applicable for /api/v1 routes.
 const shouldSkipCsrf = (path: string): boolean =>
-  path.startsWith('/api/v1') || path === '/health' || path === '/test';
+  path.startsWith('/api/v1') || path === '/' || path === '/health' || path === '/test';
 
 const csrfProtection = getCsrfProtection();
 
@@ -293,14 +293,17 @@ app.get('/test', (req: Request, res: Response) => {
   });
 });
 
-// Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
+// Health check at root
+const healthHandler = (_req: Request, res: Response): void => {
   res.status(200).json({
     success: true,
     message: 'Server is healthy',
     timestamp: new Date().toISOString(),
   });
-});
+};
+
+app.get('/', healthHandler);
+app.get('/health', healthHandler);
 
 // Register Swagger routes before the catch-all notFound middleware.
 setupSwagger(app);

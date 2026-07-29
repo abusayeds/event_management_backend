@@ -6,7 +6,11 @@ import ApiError from '../../utils/apiError';
 import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
-import { EVENT_ADMIN_LIST_QUERY_KEYS, FEED_LIST_QUERY_KEYS, IFeedListFilters } from './event.interface';
+import {
+  EVENT_ADMIN_LIST_QUERY_KEYS,
+  FEED_LIST_QUERY_KEYS,
+  IFeedListFilters,
+} from './event.interface';
 import { EventService } from './event.service';
 
 // POST /events
@@ -39,7 +43,8 @@ const getEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
   });
 });
 
-const pickFeedListFilters = (req: AuthenticatedRequest) => pick(req.query, [...FEED_LIST_QUERY_KEYS]);
+const pickFeedListFilters = (req: AuthenticatedRequest) =>
+  pick(req.query, [...FEED_LIST_QUERY_KEYS]);
 
 // GET /events/feed/upcoming (personalized from recent applications; same IFeedListFilters as other feeds)
 const getUpcomingEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -107,7 +112,10 @@ const getEventsByFamilyRelation = asyncHandler(async (req: AuthenticatedRequest,
   const userId = req.user!.userId;
   const rawRelationShip = req.query.relationShip as string;
 
-  if (!rawRelationShip || !Object.values(FamilyRelationShip).includes(rawRelationShip as FamilyRelationShip)) {
+  if (
+    !rawRelationShip ||
+    !Object.values(FamilyRelationShip).includes(rawRelationShip as FamilyRelationShip)
+  ) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       `relationShip query parameter is required and must be one of: ${Object.values(FamilyRelationShip).join(', ')}`
@@ -117,7 +125,12 @@ const getEventsByFamilyRelation = asyncHandler(async (req: AuthenticatedRequest,
   const relationShip = rawRelationShip as FamilyRelationShip;
   const filters = pickFeedListFilters(req);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const result = await EventService.getEventsByFamilyRelation(userId, relationShip, filters, options);
+  const result = await EventService.getEventsByFamilyRelation(
+    userId,
+    relationShip,
+    filters,
+    options
+  );
 
   apiResponse(res, {
     success: true,
@@ -160,7 +173,11 @@ const getEventEditLogById = asyncHandler(async (req: AuthenticatedRequest, res: 
 const getEventEditLogsByEventId = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const filters = pick(req.query, [...EVENT_ADMIN_LIST_QUERY_KEYS]);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const result = await EventService.getEventEditLogsByEventId(req.params.eventId as string, filters, options);
+  const result = await EventService.getEventEditLogsByEventId(
+    req.params.eventId as string,
+    filters,
+    options
+  );
 
   apiResponse(res, {
     success: true,
@@ -175,7 +192,11 @@ const getEventEditLogsByEventId = asyncHandler(async (req: AuthenticatedRequest,
 const getAppliedEventsByEventId = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const filters = pick(req.query, [...EVENT_ADMIN_LIST_QUERY_KEYS]);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const result = await EventService.getAppliedEventsByEventId(req.params.eventId as string, filters, options);
+  const result = await EventService.getAppliedEventsByEventId(
+    req.params.eventId as string,
+    filters,
+    options
+  );
 
   apiResponse(res, {
     success: true,

@@ -13,6 +13,7 @@
 ### Environment Setup
 
 1. **Server Preparation**
+
 ```bash
 # Update system
 sudo apt update && sudo apt upgrade -y
@@ -32,6 +33,7 @@ sudo apt install redis-server
 ```
 
 2. **Database Setup**
+
 ```bash
 # Switch to postgres user
 sudo -u postgres psql
@@ -44,6 +46,7 @@ GRANT ALL PRIVILEGES ON DATABASE dawabuyi TO dawabuyi_user;
 ```
 
 3. **Application Setup**
+
 ```bash
 # Clone repository
 git clone <repository-url> /var/www/dawabuyi-backend
@@ -66,35 +69,40 @@ npm run build
 ### Process Management with PM2
 
 1. **Install PM2**
+
 ```bash
 npm install -g pm2
 ```
 
 2. **Create PM2 Config**
+
 ```bash
 nano ecosystem.config.js
 ```
 
 ```javascript
 module.exports = {
-  apps: [{
-    name: 'dawabuyi-backend',
-    script: 'dist/server.js',
-    instances: 'max',
-    exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 8082
+  apps: [
+    {
+      name: 'dawabuyi-backend',
+      script: 'dist/server.js',
+      instances: 'max',
+      exec_mode: 'cluster',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 8082,
+      },
+      error_file: './logs/err.log',
+      out_file: './logs/out.log',
+      log_file: './logs/combined.log',
+      time: true,
     },
-    error_file: './logs/err.log',
-    out_file: './logs/out.log',
-    log_file: './logs/combined.log',
-    time: true
-  }]
+  ],
 };
 ```
 
 3. **Start Application**
+
 ```bash
 pm2 start ecosystem.config.js
 pm2 save
@@ -104,6 +112,7 @@ pm2 startup
 ### Nginx Configuration
 
 1. **Create Nginx Config**
+
 ```bash
 sudo nano /etc/nginx/sites-available/dawabuyi-backend
 ```
@@ -140,6 +149,7 @@ server {
 ```
 
 2. **Enable Site**
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/dawabuyi-backend /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -163,6 +173,7 @@ sudo crontab -e
 ### Monitoring and Logging
 
 1. **Log Rotation**
+
 ```bash
 sudo nano /etc/logrotate.d/dawabuyi-backend
 ```
@@ -183,6 +194,7 @@ sudo nano /etc/logrotate.d/dawabuyi-backend
 ```
 
 2. **Monitoring Script**
+
 ```bash
 nano scripts/health-check.sh
 ```
@@ -200,6 +212,7 @@ fi
 ### Backup Strategy
 
 1. **Database Backup**
+
 ```bash
 # Create backup script
 nano scripts/backup-db.sh
@@ -222,6 +235,7 @@ find $BACKUP_DIR -name "*.sql.gz" -mtime +30 -delete
 ```
 
 2. **Schedule Backups**
+
 ```bash
 # Add to crontab
 crontab -e
@@ -236,6 +250,7 @@ crontab -e
 ### Security Hardening
 
 1. **Firewall Configuration**
+
 ```bash
 sudo ufw enable
 sudo ufw allow ssh
@@ -244,6 +259,7 @@ sudo ufw allow from 127.0.0.1 to any port 8082
 ```
 
 2. **Application Security**
+
 - Use environment variables for secrets
 - Enable CORS for specific domains only
 - Implement rate limiting
@@ -253,6 +269,7 @@ sudo ufw allow from 127.0.0.1 to any port 8082
 ### Docker Deployment (Alternative)
 
 1. **Dockerfile**
+
 ```dockerfile
 FROM node:20-alpine
 
@@ -273,6 +290,7 @@ CMD ["npm", "start"]
 ```
 
 2. **Docker Compose**
+
 ```yaml
 version: '3.8'
 
@@ -280,7 +298,7 @@ services:
   app:
     build: .
     ports:
-      - "8082:8082"
+      - '8082:8082'
     environment:
       - NODE_ENV=production
     depends_on:

@@ -1,16 +1,16 @@
 import { database } from '../../config/database';
 import {
-    createPaginationQuery,
-    createPaginationResult,
-    PaginationOptions,
-    PaginationResult,
-    parsePaginationOptions,
+  createPaginationQuery,
+  createPaginationResult,
+  PaginationOptions,
+  PaginationResult,
+  parsePaginationOptions,
 } from '../../utils/paginate';
 import {
-    ICreateSubcategoryPayload,
-    ISubcategory,
-    ISubcategoryFilters,
-    IUpdateSubcategoryPayload,
+  ICreateSubcategoryPayload,
+  ISubcategory,
+  ISubcategoryFilters,
+  IUpdateSubcategoryPayload,
 } from './subcategory.interface';
 
 // Subcategory list select

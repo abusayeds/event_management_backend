@@ -1,8 +1,4 @@
-import {
-  ConnectionStatus,
-  InvitationStatus,
-  UserStatus,
-} from '../../../prisma/generated/enums';
+import { ConnectionStatus, InvitationStatus, UserStatus } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import {
   createPaginationQuery,
@@ -75,11 +71,7 @@ const getInvitationById = async (id: string) => {
   });
 };
 
-const findExistingInvitation = async (
-  eventId: string,
-  inviterId: string,
-  inviteeId: string
-) => {
+const findExistingInvitation = async (eventId: string, inviterId: string, inviteeId: string) => {
   return database.eventInvitation.findFirst({
     where: { eventId, inviterId, inviteeId },
     select: eventInvitationSelect,
@@ -151,7 +143,9 @@ const getShareableConnections = async (
     const invitationStatus = invitationByInvitee.get(user.id) ?? null;
     return {
       ...user,
-      alreadyInvited: invitationStatus === InvitationStatus.PENDING || invitationStatus === InvitationStatus.ACCEPTED,
+      alreadyInvited:
+        invitationStatus === InvitationStatus.PENDING ||
+        invitationStatus === InvitationStatus.ACCEPTED,
       invitationStatus,
     };
   });
@@ -184,10 +178,7 @@ const createInvitations = async (
         continue;
       }
 
-      if (
-        found.status === InvitationStatus.DECLINED ||
-        found.status === InvitationStatus.EXPIRED
-      ) {
+      if (found.status === InvitationStatus.DECLINED || found.status === InvitationStatus.EXPIRED) {
         toReopen.push({ id: found.id, inviteeId });
         continue;
       }

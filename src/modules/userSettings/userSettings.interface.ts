@@ -1,7 +1,4 @@
-import {
-  EmailNotifyPreference,
-  NotificationPreference,
-} from '../../../prisma/generated/enums';
+import { EmailNotifyPreference, NotificationPreference } from '../../../prisma/generated/enums';
 
 /** Only English is supported for display language. */
 export const DISPLAY_LANGUAGE = 'en-US' as const;

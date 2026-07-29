@@ -1,18 +1,12 @@
 import { z } from 'zod';
-import {
-  EmailNotifyPreference,
-  NotificationPreference,
-} from '../../../prisma/generated/enums';
+import { EmailNotifyPreference, NotificationPreference } from '../../../prisma/generated/enums';
 import {
   CURRENCY_OPTIONS,
   DATE_TIME_FORMAT_OPTIONS,
   TIME_ZONE_OPTIONS,
 } from './userSettings.interface';
 
-const dateTimeFormatValues = DATE_TIME_FORMAT_OPTIONS.map(o => o.value) as [
-  string,
-  ...string[],
-];
+const dateTimeFormatValues = DATE_TIME_FORMAT_OPTIONS.map(o => o.value) as [string, ...string[]];
 const currencyValues = CURRENCY_OPTIONS.map(o => o.value) as [string, ...string[]];
 const timeZoneValues = TIME_ZONE_OPTIONS.map(o => o.value) as [string, ...string[]];
 

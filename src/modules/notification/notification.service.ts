@@ -7,17 +7,16 @@ import { ROOMS } from '../../socket/constants';
 import { SOCKET_EVENTS } from '../../socket/socket.events';
 import ApiError from '../../utils/apiError';
 import notificationQueue from '../../jobs/queues/notification.queue';
-import {
-  ICreateNotificationPayload,
-  INotificationFilters,
-} from './notification.interface';
+import { ICreateNotificationPayload, INotificationFilters } from './notification.interface';
 import { NotificationRepository } from './notification.repository';
 
 const emitUnreadCount = async (userId: string) => {
   const unreadCount = await NotificationRepository.getUnreadCount(userId);
   try {
     const io = getSocketIO();
-    io.to(`${ROOMS.USER_PREFIX}${userId}`).emit(SOCKET_EVENTS.NOTIFICATION_UNREAD_COUNT, { unreadCount });
+    io.to(`${ROOMS.USER_PREFIX}${userId}`).emit(SOCKET_EVENTS.NOTIFICATION_UNREAD_COUNT, {
+      unreadCount,
+    });
   } catch {
     // Socket may be disabled in some environments.
   }
@@ -35,9 +34,7 @@ const createNotification = async (payload: ICreateNotificationPayload) => {
   return created;
 };
 
-const notifyAdmins = async (
-  payload: Omit<ICreateNotificationPayload, 'recipientId'>
-) => {
+const notifyAdmins = async (payload: Omit<ICreateNotificationPayload, 'recipientId'>) => {
   const admins = await database.user.findMany({
     where: { role: UserRole.ADMIN, status: 'ACTIVE' },
     select: { id: true },

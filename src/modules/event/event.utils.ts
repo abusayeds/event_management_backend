@@ -90,9 +90,7 @@ const quarterIndexFromStart = (anchorDate: Date, cycleStartDate: Date): number =
 export const resolveRepeatFrequency = (input?: IRepeatConfigInput | null): RepeatFrequency =>
   input?.repeatFunction ?? RepeatFrequency.DontRepeat;
 
-export const sessionTypeFromRepeatFrequency = (
-  frequency: RepeatFrequency
-): SessionBucketType => {
+export const sessionTypeFromRepeatFrequency = (frequency: RepeatFrequency): SessionBucketType => {
   switch (frequency) {
     case RepeatFrequency.Daily:
       return SessionBucketType.Daily;

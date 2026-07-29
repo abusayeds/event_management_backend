@@ -33,7 +33,9 @@ const skillObjectSchema = z
   });
 
 // Parse skills input from array of objects, array of strings, JSON, or comma-separated
-const parseSkillsInput = (value: unknown): Array<string | z.infer<typeof skillObjectSchema>> | undefined => {
+const parseSkillsInput = (
+  value: unknown
+): Array<string | z.infer<typeof skillObjectSchema>> | undefined => {
   if (value === undefined) {
     return undefined;
   }
@@ -95,10 +97,7 @@ const updateUserBodySchema = z.object({
   hasSeparateAccount: z.boolean().optional(),
   profilePicture: z.string().trim().min(1).optional(),
   skills: z
-    .union([
-      z.array(z.union([skillObjectSchema, z.string().trim().min(1)])),
-      z.string().trim(),
-    ])
+    .union([z.array(z.union([skillObjectSchema, z.string().trim().min(1)])), z.string().trim()])
     .optional()
     .transform(value => parseSkillsInput(value)),
 });

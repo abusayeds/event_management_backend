@@ -42,7 +42,6 @@ export const socketHandler = (socket: AuthenticatedSocket) => {
 
       logger.info(`Socket authenticated`, { socketId: socket.id, userId: decoded.userId });
       notificationHandler(socket);
-
     } catch (error) {
       logger.error('Socket authentication error', { error });
       socket.emit(SOCKET_EVENTS.AUTH_ERROR, { error: SOCKET_ERRORS.AUTHENTICATION_FAILED });
@@ -50,7 +49,7 @@ export const socketHandler = (socket: AuthenticatedSocket) => {
   });
 
   // Handle disconnection
-  socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
+  socket.on(SOCKET_EVENTS.DISCONNECT, reason => {
     logger.info(`Socket disconnected`, { socketId: socket.id, reason });
 
     if (socket.user) {
@@ -63,7 +62,7 @@ export const socketHandler = (socket: AuthenticatedSocket) => {
   });
 
   // Handle errors
-  socket.on(SOCKET_EVENTS.ERROR, (error) => {
+  socket.on(SOCKET_EVENTS.ERROR, error => {
     logger.error(`Socket error`, { socketId: socket.id, error });
   });
 

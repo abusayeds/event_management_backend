@@ -1,10 +1,6 @@
 import { SettingsPageKey } from '../../../prisma/generated/enums';
 
-export type SettingsPageKeyInput =
-  | 'about'
-  | 'privacy'
-  | 'terms'
-
+export type SettingsPageKeyInput = 'about' | 'privacy' | 'terms';
 
 export interface IUpsertSettingsPagePayload {
   key: SettingsPageKeyInput;

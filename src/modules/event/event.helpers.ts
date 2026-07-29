@@ -49,7 +49,10 @@ const sameScalar = (before: unknown, after: unknown): boolean => {
   if (before == null && after == null) return true;
   if (before == null || after == null) return false;
   if (typeof before === 'object' && typeof after === 'object' && before && after) {
-    if ('equals' in before && typeof (before as { equals?: (x: unknown) => boolean }).equals === 'function') {
+    if (
+      'equals' in before &&
+      typeof (before as { equals?: (x: unknown) => boolean }).equals === 'function'
+    ) {
       try {
         return Boolean((before as { equals: (x: unknown) => boolean }).equals(after));
       } catch {
@@ -226,7 +229,9 @@ export function withScheduleCostEstimation<
       rounds?: Array<{ cost?: unknown }>;
     }>;
   },
->(session: T): T & {
+>(
+  session: T
+): T & {
   estimatedCost: {
     competitionLevelCost: number;
     roundsTotalCost: number;
@@ -291,14 +296,19 @@ export function normalizeCategoryGroupSlug(raw?: string | null): CategoryGroupSl
   if (mapped) {
     return mapped;
   }
-  return (CATEGORY_GROUP_SLUGS as readonly string[]).includes(key) ? (key as CategoryGroupSlug) : null;
+  return (CATEGORY_GROUP_SLUGS as readonly string[]).includes(key)
+    ? (key as CategoryGroupSlug)
+    : null;
 }
 
 export function bandRangeForSlug(slug: CategoryGroupSlug): { lo: number; hi: number } {
   return BAND_BY_SLUG[slug];
 }
 
-export function ageRowToYearRange(row: { condition: RoundCondition; value: number }): { lo: number; hi: number } | null {
+export function ageRowToYearRange(row: {
+  condition: RoundCondition;
+  value: number;
+}): { lo: number; hi: number } | null {
   const v = row.value;
   switch (row.condition) {
     case RoundCondition.GreaterAndEqual:
@@ -351,7 +361,9 @@ export function inferCategoryGroupSlugFromAgeRows(
   if (!ageRows.length) {
     return null;
   }
-  const ranges = ageRows.map(r => ageRowToYearRange(r)).filter((x): x is { lo: number; hi: number } => x !== null);
+  const ranges = ageRows
+    .map(r => ageRowToYearRange(r))
+    .filter((x): x is { lo: number; hi: number } => x !== null);
   if (!ranges.length) {
     return null;
   }

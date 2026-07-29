@@ -35,11 +35,7 @@ const inviteeIdsBody = z.object({
     .array(z.string().min(1, 'Invitee id is required'))
     .min(1, 'Select at least one connection to invite')
     .max(100, 'You can invite at most 100 connections at a time'),
-  message: z
-    .string()
-    .trim()
-    .max(500, 'Message must be 500 characters or less')
-    .optional(),
+  message: z.string().trim().max(500, 'Message must be 500 characters or less').optional(),
 });
 
 const sendInvitations = z.object({

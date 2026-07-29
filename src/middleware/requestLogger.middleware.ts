@@ -15,21 +15,16 @@ const requestLogger = morgan(morganFormat, {
       if (parts.length >= 4) {
         const [method, url, status, responseTime] = parts;
         const duration = parseInt(responseTime) || 0;
-        
+
         // Log performance metrics
-        performanceLogger.apiCall(
-          method,
-          url,
-          duration,
-          parseInt(status) || 200
-        );
+        performanceLogger.apiCall(method, url, duration, parseInt(status) || 200);
       }
-      
+
       // Also log to winston for file output
       logger.info('HTTP Request', {
         type: 'HTTP',
         message: message.trim(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     },
   },
@@ -38,7 +33,7 @@ const requestLogger = morgan(morganFormat, {
 // Enhanced request logging middleware
 export const enhancedRequestLogger = (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
-  
+
   // Log request start
   logger.info('Request started', {
     type: 'REQUEST',
@@ -46,14 +41,14 @@ export const enhancedRequestLogger = (req: Request, res: Response, next: NextFun
     url: req.url,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
-  
+
   // Override res.end to log response
   const originalEnd = res.end.bind(res);
-  res.end = function(chunk?: any, encoding?: any, callback?: any) {
+  res.end = function (chunk?: any, encoding?: any, callback?: any) {
     const duration = Date.now() - startTime;
-    
+
     logger.info('Request completed', {
       type: 'RESPONSE',
       method: req.method,
@@ -61,12 +56,12 @@ export const enhancedRequestLogger = (req: Request, res: Response, next: NextFun
       statusCode: res.statusCode,
       duration: `${duration}ms`,
       ip: req.ip,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     return originalEnd(chunk, encoding, callback);
   };
-  
+
   next();
 };
 

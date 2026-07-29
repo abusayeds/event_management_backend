@@ -38,7 +38,7 @@ export const generateResetToken = (userId: string, email: string, role: string):
   const secret = config.jwt.resetPasswordSecret as string;
   const options: SignOptions = {
     expiresIn: toJwtExpiresIn(config.jwt.resetPasswordExpiration, '30m'),
-};
+  };
   return jwt.sign(payload, secret, options);
 };
 

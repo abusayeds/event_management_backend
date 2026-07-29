@@ -17,7 +17,6 @@ const getLogoAttachment = () => [
   },
 ];
 
-
 const generateProfessionalEmailTemplate = (
   content: string,
   options: { title: string; preheader?: string }
@@ -350,7 +349,11 @@ const sendWelcomeEmail = async (to: string, name: string): Promise<void> => {
     preheader: `Welcome ${name}! Start exploring public event sessions on ${APP_NAME}.`,
   });
 
-  await emailQueue.add('sendEmail', { to, subject, html, attachments: getLogoAttachment() }, { priority: 5 });
+  await emailQueue.add(
+    'sendEmail',
+    { to, subject, html, attachments: getLogoAttachment() },
+    { priority: 5 }
+  );
 };
 const sendVerificationEmail = async (to: string, otp: string): Promise<void> => {
   const subject = `${APP_NAME} Email Verification - Your OTP Code`;
@@ -367,7 +370,11 @@ const sendVerificationEmail = async (to: string, otp: string): Promise<void> => 
   });
 
   // High priority for OTP emails
-  await emailQueue.add('sendEmail', { to, subject, html, attachments: getLogoAttachment() }, { priority: 1 });
+  await emailQueue.add(
+    'sendEmail',
+    { to, subject, html, attachments: getLogoAttachment() },
+    { priority: 1 }
+  );
 };
 
 const sendResetPasswordEmail = async (to: string, otp: string): Promise<void> => {
@@ -385,9 +392,12 @@ const sendResetPasswordEmail = async (to: string, otp: string): Promise<void> =>
   });
 
   // High priority for password reset emails
-  await emailQueue.add('sendEmail', { to, subject, html, attachments: getLogoAttachment() }, { priority: 1 });
+  await emailQueue.add(
+    'sendEmail',
+    { to, subject, html, attachments: getLogoAttachment() },
+    { priority: 1 }
+  );
 };
-
 
 export const emailTemplates = {
   sendWelcomeEmail,

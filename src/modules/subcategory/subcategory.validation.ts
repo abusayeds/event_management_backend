@@ -9,7 +9,11 @@ const idParamSchema = z.object({
 const createSubcategory = z.object({
   body: z.object({
     categoryId: z.string().min(1, 'Category id is required'),
-    name: z.string().trim().min(1, 'Subcategory name is required').max(100, 'Subcategory name is too long'),
+    name: z
+      .string()
+      .trim()
+      .min(1, 'Subcategory name is required')
+      .max(100, 'Subcategory name is too long'),
     imageUrl: z.string().url('Invalid image URL').optional(),
     description: z.string().trim().max(500, 'Description is too long').optional(),
   }),

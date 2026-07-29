@@ -8,10 +8,10 @@ describe('Auth Module', () => {
       const validPayload = {
         body: {
           email: 'test@example.com',
-          password: 'password123'
-        }
+          password: 'password123',
+        },
       };
-      
+
       const result = AuthValidation.login.safeParse(validPayload);
       expect(result.success).toBe(true);
     });
@@ -21,10 +21,10 @@ describe('Auth Module', () => {
         body: {
           fullName: 'John Doe',
           email: 'test@example.com',
-          password: 'password123'
-        }
+          password: 'password123',
+        },
       };
-      
+
       const result = AuthValidation.register.safeParse(validPayload);
       expect(result.success).toBe(true);
     });

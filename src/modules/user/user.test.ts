@@ -10,10 +10,10 @@ describe('User Module', () => {
           fullName: 'John Doe',
           email: 'test@example.com',
           password: 'password123',
-          roleId: 'role-id'
-        }
+          roleId: 'role-id',
+        },
       };
-      
+
       const result = UserValidation.createUser.safeParse(validPayload);
       expect(result.success).toBe(true);
     });
@@ -21,10 +21,10 @@ describe('User Module', () => {
     it('should validate get user by id payload correctly', () => {
       const validPayload = {
         params: {
-          id: 'user-id'
-        }
+          id: 'user-id',
+        },
       };
-      
+
       const result = UserValidation.getUserById.safeParse(validPayload);
       expect(result.success).toBe(true);
     });

@@ -55,7 +55,9 @@ const getEventApplicationByUser = async (
 ): Promise<PaginationResult<unknown>> => {
   const pagination = parsePaginationOptions(query.options);
   const { skip, take } = createPaginationQuery(pagination);
-  const orderBy = { [pagination.sortBy]: pagination.sortOrder } as Prisma.EventAppliedOrderByWithRelationInput;
+  const orderBy = {
+    [pagination.sortBy]: pagination.sortOrder,
+  } as Prisma.EventAppliedOrderByWithRelationInput;
 
   const where: Prisma.EventAppliedWhereInput = {
     userId,

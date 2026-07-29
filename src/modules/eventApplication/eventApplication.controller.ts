@@ -25,7 +25,10 @@ const getEventApplicationByUser = asyncHandler(async (req: AuthenticatedRequest,
 });
 const deleteApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
-  const result = await EventApplicationService.deleteApplication(req.params.appliedId as string, userId);
+  const result = await EventApplicationService.deleteApplication(
+    req.params.appliedId as string,
+    userId
+  );
 
   apiResponse(res, {
     success: true,
@@ -37,10 +40,7 @@ const deleteApplication = asyncHandler(async (req: AuthenticatedRequest, res: Re
 
 const createEventApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
-  const result = await EventApplicationService.createEventApplication(
-    userId,
-    req.body
-  );
+  const result = await EventApplicationService.createEventApplication(userId, req.body);
 
   apiResponse(res, {
     success: true,

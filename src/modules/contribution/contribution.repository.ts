@@ -1,5 +1,10 @@
 import { Prisma } from '../../../prisma/generated/client';
-import { EventType, GroupCriteria, PlacementType, RoundCondition } from '../../../prisma/generated/enums';
+import {
+  EventType,
+  GroupCriteria,
+  PlacementType,
+  RoundCondition,
+} from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
 import {
   createPaginationQuery,
@@ -16,11 +21,7 @@ import {
   type CategoryGroupSlug,
 } from '../event/event.helpers';
 import { publishedEventBaseWhere } from '../event/event.utils';
-import {
-  contributionMetaLabel,
-  decimalToNumber,
-  formatHistoryLabel,
-} from './contribution.helpers';
+import { contributionMetaLabel, decimalToNumber, formatHistoryLabel } from './contribution.helpers';
 import type {
   ContributionTimeRange,
   IContributionCard,

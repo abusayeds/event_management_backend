@@ -1,8 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import {
-  EmailNotifyPreference,
-  NotificationPreference,
-} from '../../../prisma/generated/enums';
+import { EmailNotifyPreference, NotificationPreference } from '../../../prisma/generated/enums';
 import ApiError from '../../utils/apiError';
 import {
   CURRENCY_OPTIONS,

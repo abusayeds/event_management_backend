@@ -13,17 +13,24 @@ import {
   prepareCreateUserPayload,
   toSkillResponse,
 } from './user.helpers';
-import { ICreateUserPayload, IUpdateUserPayload, IUserFilters, IUserSkillInput } from './user.interface';
+import {
+  ICreateUserPayload,
+  IUpdateUserPayload,
+  IUserFilters,
+  IUserSkillInput,
+} from './user.interface';
 import { UserRepository } from './user.repository';
 
 const shapeUserProfile = (user: Record<string, unknown>) => {
   const userSkills = Array.isArray(user.userSkills)
-    ? (user.userSkills as Array<{
-        id: string;
-        programId: string | null;
-        programName: string;
-        startYear: number;
-      }>).map(toSkillResponse)
+    ? (
+        user.userSkills as Array<{
+          id: string;
+          programId: string | null;
+          programName: string;
+          startYear: number;
+        }>
+      ).map(toSkillResponse)
     : [];
 
   const legacySkills = Array.isArray(user.skills) ? (user.skills as string[]) : [];
@@ -117,7 +124,10 @@ const resolveSkillInputs = async (
   return resolved;
 };
 
-const applySkillsUpdate = async (userId: string, rawSkills: NonNullable<IUpdateUserPayload['skills']>) => {
+const applySkillsUpdate = async (
+  userId: string,
+  rawSkills: NonNullable<IUpdateUserPayload['skills']>
+) => {
   const resolved = await resolveSkillInputs(rawSkills);
   await UserRepository.replaceUserSkills(userId, resolved);
 };

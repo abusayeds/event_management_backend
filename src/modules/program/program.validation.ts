@@ -11,7 +11,11 @@ const createProgram = z.object({
     .object({
       categoryId: z.string().min(1, 'Category id cannot be empty').optional(),
       subcategoryId: z.string().min(1, 'Subcategory id cannot be empty').optional(),
-      name: z.string().trim().min(1, 'Program name is required').max(120, 'Program name is too long'),
+      name: z
+        .string()
+        .trim()
+        .min(1, 'Program name is required')
+        .max(120, 'Program name is too long'),
       description: z.string().trim().max(1000, 'Description is too long').optional(),
       imageUrl: z.string().url('Invalid image URL').optional(),
     })

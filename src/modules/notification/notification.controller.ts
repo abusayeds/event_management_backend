@@ -25,7 +25,12 @@ const getMyNotifications = asyncHandler(async (req: AuthenticatedRequest, res: R
   const filters = pick(req.query, ['isRead', 'type']);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
   const { markAllRead } = pick(req.query, ['markAllRead']) as { markAllRead?: boolean };
-  const result = await NotificationService.getMyNotifications(userId, filters, options, markAllRead);
+  const result = await NotificationService.getMyNotifications(
+    userId,
+    filters,
+    options,
+    markAllRead
+  );
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,

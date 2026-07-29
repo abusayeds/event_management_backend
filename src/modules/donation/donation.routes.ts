@@ -32,5 +32,4 @@ router.get(
   DonationController.getDonationsForAdmin
 );
 
-
 export const DonationRoutes: Router = router;

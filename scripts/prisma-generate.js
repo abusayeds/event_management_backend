@@ -11,7 +11,7 @@ const prismaBin = path.join(
   '..',
   'node_modules',
   '.bin',
-  process.platform === 'win32' ? 'prisma.cmd' : 'prisma',
+  process.platform === 'win32' ? 'prisma.cmd' : 'prisma'
 );
 
 const result = spawnSync(prismaBin, ['generate'], {

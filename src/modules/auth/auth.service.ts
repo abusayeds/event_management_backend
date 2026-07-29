@@ -220,7 +220,7 @@ const verifyEmail = async (sessionId: string, otp: string) => {
 const login = async (payload: ILoginPayload) => {
   // Step:1 Normalize email
   const normalizedEmail = normalizeEmail(payload.email);
-  
+
   // Step:2 Check if account is locked due to failed attempts
   const isLocked = await cacheService.exists(CACHE_KEYS.AUTH.LOCK(normalizedEmail));
   if (isLocked) {

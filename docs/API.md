@@ -79,6 +79,7 @@ AWS_S3_BUCKET=your-bucket
 ### Authentication
 
 #### Register
+
 ```
 POST /api/auth/register
 Content-Type: application/json
@@ -91,6 +92,7 @@ Content-Type: application/json
 ```
 
 #### Login
+
 ```
 POST /api/auth/login
 Content-Type: application/json
@@ -102,6 +104,7 @@ Content-Type: application/json
 ```
 
 #### Refresh Token
+
 ```
 POST /api/auth/refresh
 Content-Type: application/json
@@ -114,18 +117,21 @@ Content-Type: application/json
 ### Users
 
 #### Get All Users
+
 ```
 GET /api/users?page=1&limit=10&search=john
 Authorization: Bearer <access-token>
 ```
 
 #### Get User by ID
+
 ```
 GET /api/users/:id
 Authorization: Bearer <access-token>
 ```
 
 #### Update User
+
 ```
 PUT /api/users/:id
 Authorization: Bearer <access-token>
@@ -140,6 +146,7 @@ Content-Type: application/json
 ### Connections
 
 #### Send Connection Request
+
 ```
 POST /api/connections/requests
 Authorization: Bearer <access-token>
@@ -151,42 +158,49 @@ Content-Type: application/json
 ```
 
 #### Get Accepted Connections
+
 ```
 GET /api/connections?page=1&limit=10
 Authorization: Bearer <access-token>
 ```
 
 #### Get Received Requests
+
 ```
 GET /api/connections/requests/received?page=1&limit=10
 Authorization: Bearer <access-token>
 ```
 
 #### Get Sent Requests
+
 ```
 GET /api/connections/requests/sent?page=1&limit=10
 Authorization: Bearer <access-token>
 ```
 
 #### Accept Request
+
 ```
 PATCH /api/connections/requests/:id/accept
 Authorization: Bearer <access-token>
 ```
 
 #### Reject Request
+
 ```
 PATCH /api/connections/requests/:id/reject
 Authorization: Bearer <access-token>
 ```
 
 #### Cancel Sent Request
+
 ```
 DELETE /api/connections/requests/:id/cancel
 Authorization: Bearer <access-token>
 ```
 
 #### Remove Accepted Connection
+
 ```
 DELETE /api/connections/:id
 Authorization: Bearer <access-token>
@@ -195,16 +209,19 @@ Authorization: Bearer <access-token>
 ### Products
 
 #### Get All Products
+
 ```
 GET /api/products?page=1&limit=10&category=electronics
 ```
 
 #### Get Product by ID
+
 ```
 GET /api/products/:id
 ```
 
 #### Create Product
+
 ```
 POST /api/products
 Authorization: Bearer <access-token>
@@ -221,12 +238,14 @@ Content-Type: application/json
 ### Notifications
 
 #### Get User Notifications
+
 ```
 GET /api/notifications?page=1&limit=10&unreadOnly=true
 Authorization: Bearer <access-token>
 ```
 
 #### Mark Notification as Read
+
 ```
 PUT /api/notifications/:id/read
 Authorization: Bearer <access-token>
@@ -282,17 +301,20 @@ npm test -- auth.test.ts
 ## Deployment
 
 ### Development
+
 ```bash
 npm run dev
 ```
 
 ### Production
+
 ```bash
 npm run build
 npm start
 ```
 
 ### Docker
+
 ```bash
 docker build -t dawabuyi-backend .
 docker run -p 8082:8082 dawabuyi-backend

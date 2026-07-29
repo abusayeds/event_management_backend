@@ -1,5 +1,5 @@
 # Development Dockerfile
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Install dependencies
 RUN apk add --no-cache libc6-compat
@@ -8,6 +8,9 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
+
+# prepare script runs on npm install
+COPY scripts ./scripts
 
 # Install dependencies
 RUN npm install
@@ -19,7 +22,7 @@ COPY . .
 RUN mkdir -p logs
 
 # Expose ports
-EXPOSE 8082 9229
+EXPOSE 2001 9229
 
 # Start the application in development mode
 CMD ["npm", "run", "dev"]
