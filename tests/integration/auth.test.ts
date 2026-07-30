@@ -55,7 +55,6 @@ describe('Auth Integration Tests', () => {
 
       const accessToken = loginResponse.body.data.tokens.accessToken;
 
-      // 3. Access protected route
       const profileResponse = await request(app)
         .get('/api/auth/profile')
         .set('Authorization', `Bearer ${accessToken}`)
