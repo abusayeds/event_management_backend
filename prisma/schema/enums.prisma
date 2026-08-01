@@ -1,4 +1,3 @@
-// ========================== User Related Enums ==========================
 enum UserRole {
   ADMIN
   USER
@@ -16,7 +15,6 @@ enum UserGender {
   OTHER
 }
 
-// ========================== Invitation Related Enums ==========================
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -24,7 +22,6 @@ enum InvitationStatus {
   EXPIRED
 }
 
-// ========================== Connection Related Enums ==========================
 enum ConnectionStatus {
   PENDING
   ACCEPTED
@@ -32,7 +29,6 @@ enum ConnectionStatus {
   CANCELED
 }
 
-// ========================== Family Related Enums ==========================
 enum FamilyRole {
   OWNER
   MEMBER
@@ -46,7 +42,6 @@ enum FamilyRelationShip {
   Other
 }
 
-// ========================== Event Related Enums ==========================
 enum CompetitionLevel {
   Preliminary
   SemiFinal
@@ -86,7 +81,6 @@ enum PlacementType {
   Participation
 }
 
-// ========================== Repeat Configuration Related Enums ==========================
 enum RepeatFrequency {
   DontRepeat
   Daily
@@ -134,7 +128,6 @@ enum MonthWeek {
   Last
 }
 
-// ========================== Session Related Enums ==========================
 enum SessionStatus {
   Unverified
   Verified
@@ -184,8 +177,8 @@ enum NotificationType {
   System
   Event
   EventApplication
-  EventInvitation
   Donation
+  EventInvitation
 }
 
 enum NotificationMedium {
@@ -193,7 +186,6 @@ enum NotificationMedium {
   Push
 }
 
-// ========================== User feedback (to admin) ==========================
 enum UserFeedbackCategory {
   GENERAL
   BUG_REPORT
@@ -207,7 +199,6 @@ enum UserFeedbackStatus {
   ARCHIVED
 }
 
-// ========================== User profile settings ==========================
 enum NotificationPreference {
   All
   ImportantOnly

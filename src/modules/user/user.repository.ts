@@ -337,6 +337,21 @@ const isUserExists = async (id: string): Promise<boolean> => {
   return !!user;
 };
 
+/**
+ * Returns the number of events a user has created and the number of edits
+ * they have made (each EditLog row = one edit action).
+ * totalContribution = createdCount + editedCount
+ */
+const getContributionCounts = async (
+  userId: string
+): Promise<{ createdCount: number; editedCount: number; totalContribution: number }> => {
+  const [createdCount, editedCount] = await Promise.all([
+    database.event.count({ where: { creatorId: userId, isDeleted: false } }),
+    database.editLog.count({ where: { editorId: userId } }),
+  ]);
+  return { createdCount, editedCount, totalContribution: createdCount + editedCount };
+};
+
 const incrementContributionScore = async (userId: string, delta: number) => {
   if (delta === 0) {
     return database.user.findFirst({
@@ -367,6 +382,7 @@ export const UserRepository = {
   isAccountIdExists,
   isUserExists,
   incrementContributionScore,
+  getContributionCounts,
   findOrCreateProgramByName,
   getProgramById,
   listActivePrograms,

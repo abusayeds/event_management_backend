@@ -10,8 +10,8 @@ import {
 } from '../../../prisma/generated/enums';
 
 export const EVENT_CONTRIBUTION_SCORE = {
-  CREATE: 10,
-  UPDATE: 5,
+  CREATE: 3,
+  UPDATE: 1,
   VERIFY: 15,
   APPLY: 3,
 } as const;

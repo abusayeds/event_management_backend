@@ -1,4 +1,3 @@
-// Catalog time-bucket row in `sessions` (shared definitions). Linked from `Event.sessionId` only.
 model Session {
   id           String              @id @default(uuid())
   session      SessionBucketType
@@ -7,10 +6,9 @@ model Session {
   year         String
   creationMode SessionCreationMode @default(Manual)
   isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
   events       Event[]             @relation("EventCatalogSession")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([year])
   @@map("sessions")
@@ -18,14 +16,12 @@ model Session {
 
 model Event {
   id                      String            @id @default(uuid())
-  // ── Permanent Identity (Step 1) ───────────────────────────
   baseEventName           String?
   eventName               String
   eventYear               String?
   scheduleLabel           String?           @map("eventSessionLabel")
   coverImage              String
   programId               String
-  program                 Program           @relation(fields: [programId], references: [id])
   organizer               String
   location                String?
   eventPortal             String
@@ -34,36 +30,33 @@ model Event {
   note                    String?
   creationMode            EventCreationMode @default(Manual)
   sourceEventId           String?
-  sourceEvent             Event?            @relation("EventAutoSource", fields: [sourceEventId], references: [id], onDelete: SetNull)
-  generatedEvents         Event[]           @relation("EventAutoSource")
   sessionId               String?
-  catalogSession          Session?          @relation("EventCatalogSession", fields: [sessionId], references: [id], onDelete: Restrict)
   isSharedToCommunity     Boolean           @default(false)
   isUserAgreementAccepted Boolean           @default(false)
-  // ── Repeat Configuration ──────────────────────────────────
-  repeatConfig            RepeatConfig?
-  schedule                EventSchedule?
+  version                 Int               @default(1)
+  creatorId               String
+  lastEditorId            String?
+  isPublished             Boolean           @default(true)
+  isActive                Boolean           @default(true)
+  isVerified              Boolean           @default(false)
+  isDisabled              Boolean           @default(false)
+  isDeleted               Boolean           @default(false)
+  deletedAt               DateTime?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  editLogs                EditLog[]
+  eventApplieds           EventApplied[]
   groups                  EventGroup[]
-
-  results EventResult[]
-  eventApplieds EventApplied[]
-  invitations EventInvitation[]
-
-  editLogs     EditLog[]
-  version      Int       @default(1) // optimistic locking
-  creatorId    String
-  creator      User      @relation("EventCreator", fields: [creatorId], references: [id], onDelete: Restrict)
-  lastEditorId String?
-  lastEditor   User?     @relation("EventLastEditor", fields: [lastEditorId], references: [id], onDelete: SetNull)
-  isPublished  Boolean   @default(true)
-  isActive     Boolean   @default(true)
-  isVerified   Boolean   @default(false)
-  isDisabled   Boolean   @default(false) // admin: hide event from feeds / public detail without soft-delete
-  isDeleted    Boolean   @default(false)
-  deletedAt    DateTime? // soft delete timestamp
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  invitations             EventInvitation[]
+  results                 EventResult[]
+  schedule                EventSchedule?
+  creator                 User              @relation("EventCreator", fields: [creatorId], references: [id])
+  lastEditor              User?             @relation("EventLastEditor", fields: [lastEditorId], references: [id])
+  program                 Program           @relation(fields: [programId], references: [id])
+  catalogSession          Session?          @relation("EventCatalogSession", fields: [sessionId], references: [id], onDelete: Restrict)
+  sourceEvent             Event?            @relation("EventAutoSource", fields: [sourceEventId], references: [id])
+  generatedEvents         Event[]           @relation("EventAutoSource")
+  repeatConfig            RepeatConfig?
 
   @@index([programId])
   @@index([eventName])
@@ -80,7 +73,6 @@ model Event {
 model EventSchedule {
   id               String           @id @default(uuid())
   eventId          String           @unique
-  event            Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
   competitionLevel CompetitionLevel
   eventType        EventType
   registrationDate DateTime
@@ -88,10 +80,10 @@ model EventSchedule {
   cost             Decimal          @db.Decimal(10, 2)
   hasFinalDeadline Boolean          @default(false)
   finalDeadline    DateTime?
-  lateFee          Decimal          @default(0) @db.Decimal(10, 2) // fixed amount; 0 = no late fee
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  lateFee          Decimal          @default(0) @db.Decimal(10, 2)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  event            Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("event_schedules")
 }
@@ -99,15 +91,14 @@ model EventSchedule {
 model EventGroup {
   id        String         @id @default(uuid())
   eventId   String
-  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   name      String
   criteria  GroupCriteria
   condition RoundCondition
   value     Int
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   rounds    EventRound[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([eventId])
   @@map("event_groups")
@@ -116,17 +107,16 @@ model EventGroup {
 model EventRound {
   id               String           @id @default(uuid())
   groupId          String
-  group            EventGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
   roundType        CompetitionLevel
   deadline         DateTime
   cost             Decimal          @db.Decimal(10, 2)
   hasFinalDeadline Boolean          @default(false)
   finalDeadline    DateTime?
-  lateFee          Decimal          @default(0) @db.Decimal(10, 2) // fixed amount; 0 = no late fee
+  lateFee          Decimal          @default(0) @db.Decimal(10, 2)
   description      String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  group            EventGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@index([groupId])
   @@map("event_rounds")
@@ -135,13 +125,12 @@ model EventRound {
 model RepeatConfig {
   id                   String          @id @default(uuid())
   eventId              String          @unique
-  event                Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   frequency            RepeatFrequency @default(DontRepeat)
   startDate            DateTime?
   nextAutoGenerateDate DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  event                Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("repeat_configs")
 }
@@ -149,27 +138,25 @@ model RepeatConfig {
 model EventResult {
   id        String        @id @default(uuid())
   eventId   String
-  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   placement PlacementType
   note      String?
   createdAt DateTime      @default(now())
+  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, placement])
   @@map("event_results")
 }
 
 model EditLog {
-  id      String @id @default(uuid())
-  eventId String
-  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  version        Int // which Event version this edit created
+  id             String   @id @default(uuid())
+  eventId        String
+  version        Int
   editorId       String
-  editor         User     @relation(fields: [editorId], references: [id], onDelete: Restrict)
   changedFields  String[]
   previousValues Json
-
-  createdAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  editor         User     @relation(fields: [editorId], references: [id])
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
   @@index([createdAt])

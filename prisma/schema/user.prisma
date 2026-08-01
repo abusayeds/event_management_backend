@@ -1,50 +1,51 @@
 model User {
-  id                  String              @id @default(uuid())
-  accountId           String              @unique
-  firstName           String
-  lastName            String
-  username            String              @unique
-  displayName         String?
-  email               String              @unique
-  password            String
-  phoneNumber         String?
-  gender              UserGender
-  birthDate           DateTime
-  profilePicture      String?             @default("https://areawins.s3.us-east-2.amazonaws.com/profiles/images/default-user.svg")
-  location            String
-  country             String
-  state               String
-  city                String
-  skills              String[]
-  role                UserRole            @default(USER)
-  status              UserStatus          @default(ACTIVE)
-  hasSeparateAccount  Boolean             @default(false)
-  isEmailVerified     Boolean             @default(false)
-  createdByOwner      String?
-  owner               User?               @relation("OwnerCreatedUsers", fields: [createdByOwner], references: [id], onDelete: SetNull)
-  createdUsers        User[]              @relation("OwnerCreatedUsers")
-  contributionScore   Int                 @default(0)
-  fcmToken            String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  families            Family[]            @relation("FamilyCreator")
-  familyMembers       FamilyMember[]
-  familyInvitations   FamilyInvitation[]  @relation("FamilyInvitedBy")
-  familyJoinRequests  FamilyJoinRequest[] @relation("FamilyJoinRequest")
-  sentConnections     Connection[]        @relation("ConnectionRequester")
-  receivedConnections Connection[]        @relation("ConnectionReceiver")
-  eventsCreated       Event[]             @relation("EventCreator")
-  eventsLastEdited    Event[]             @relation("EventLastEditor")
-  eventEditLogs       EditLog[]
-  eventApplieds       EventApplied[]
-  sentEventInvitations     EventInvitation[] @relation("EventInvitationInviter")
-  receivedEventInvitations EventInvitation[] @relation("EventInvitationInvitee")
-  donations           DonationTransaction[]
-  notifications       Notification[]      @relation("NotificationRecipient")
-  sentNotifications   Notification[]      @relation("NotificationSender")
-  feedbacks           UserFeedback[]
-  settings            UserSettings?
-  userSkills          UserSkill[]
+  id                       String                @id @default(uuid())
+  accountId                String                @unique
+  firstName                String
+  lastName                 String
+  username                 String                @unique
+  displayName              String?
+  email                    String                @unique
+  password                 String
+  phoneNumber              String?
+  gender                   UserGender
+  birthDate                DateTime
+  profilePicture           String?               @default("https://areawins.s3.us-east-2.amazonaws.com/profiles/images/default-user.svg")
+  location                 String
+  country                  String
+  state                    String
+  city                     String
+  skills                   String[]
+  role                     UserRole              @default(USER)
+  status                   UserStatus            @default(ACTIVE)
+  hasSeparateAccount       Boolean               @default(false)
+  isEmailVerified          Boolean               @default(false)
+  createdByOwner           String?
+  contributionScore        Int                   @default(0)
+  fcmToken                 String?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  receivedConnections      Connection[]          @relation("ConnectionReceiver")
+  sentConnections          Connection[]          @relation("ConnectionRequester")
+  donations                DonationTransaction[]
+  eventEditLogs            EditLog[]
+  eventApplieds            EventApplied[]
+  receivedEventInvitations EventInvitation[]     @relation("EventInvitationInvitee")
+  sentEventInvitations     EventInvitation[]     @relation("EventInvitationInviter")
+  eventsCreated            Event[]               @relation("EventCreator")
+  eventsLastEdited         Event[]               @relation("EventLastEditor")
+  families                 Family[]              @relation("FamilyCreator")
+  familyInvitations        FamilyInvitation[]    @relation("FamilyInvitedBy")
+  familyJoinRequests       FamilyJoinRequest[]   @relation("FamilyJoinRequest")
+  familyMembers            FamilyMember[]
+  homeEvents               HomeEvent[]           @relation("HomeEventCreator")
+  notifications            Notification[]        @relation("NotificationRecipient")
+  sentNotifications        Notification[]        @relation("NotificationSender")
+  feedbacks                UserFeedback[]
+  settings                 UserSettings?
+  userSkills               UserSkill[]
+  owner                    User?                 @relation("OwnerCreatedUsers", fields: [createdByOwner], references: [id])
+  createdUsers             User[]                @relation("OwnerCreatedUsers")
 
   @@index([createdByOwner])
   @@index([fcmToken])
@@ -56,10 +57,10 @@ model Connection {
   requesterId String
   receiverId  String
   status      ConnectionStatus @default(PENDING)
-  requester   User             @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  receiver    User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  receiver    User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  requester   User             @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, receiverId])
   @@index([requesterId])

@@ -6,8 +6,8 @@ model Category {
   isDeleted     Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  subcategories Subcategory[]
   programs      Program[]
+  subcategories Subcategory[]
 
   @@map("categories")
 }
@@ -21,8 +21,8 @@ model Subcategory {
   isDeleted   Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   programs    Program[]
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
   @@map("subcategories")
@@ -38,9 +38,9 @@ model Program {
   isDeleted     Boolean      @default(false)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
   events        Event[]
+  category      Category?    @relation(fields: [categoryId], references: [id])
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
   userSkills    UserSkill[]
 
   @@index([categoryId])

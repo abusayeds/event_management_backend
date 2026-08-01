@@ -11,7 +11,13 @@ export async function enqueueRepeatEventJob(eventId: string, runAt: Date): Promi
       jobId: `repeat-event-${eventId}-${runAt.getTime()}`,
     }
   );
-  logger.info(
-    `repeat-event job enqueued jobId=${job.id} eventId=${eventId} runAt=${runAt.toISOString()} delayMs=${delay}`
-  );
+  if (job) {
+    logger.info(
+      `repeat-event job enqueued jobId=${job.id} eventId=${eventId} runAt=${runAt.toISOString()} delayMs=${delay}`
+    );
+  } else {
+    logger.warn(
+      `repeat-event job skipped (Redis unavailable) eventId=${eventId} runAt=${runAt.toISOString()}`
+    );
+  }
 }

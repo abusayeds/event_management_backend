@@ -1,0 +1,27 @@
+model HomeEvent {
+  id             String          @id @default(uuid())
+  title          String
+  location       String
+  startsAt       DateTime
+  endsAt         DateTime
+  repeatFunction HomeEventRepeat @default(Never)
+  url            String?
+  note           String?
+  createdById    String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  member         String?
+  createdBy      User            @relation("HomeEventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById])
+  @@index([startsAt])
+  @@map("home_events")
+}
+
+enum HomeEventRepeat {
+  Never
+  Daily
+  Weekly
+  Monthly
+  Yearly
+}

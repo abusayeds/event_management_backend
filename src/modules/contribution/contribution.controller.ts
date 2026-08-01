@@ -10,7 +10,11 @@ import { ContributionService } from './contribution.service';
 const getContributions = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const filters = pick(req.query, [...CONTRIBUTION_LIST_QUERY_KEYS]);
   const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  const result = await ContributionService.getContributions(filters, options);
+  // Scope the contribution list to the authenticated user
+  const result = await ContributionService.getContributions(
+    { ...filters, userId: req.user!.userId },
+    options
+  );
 
   apiResponse(res, {
     success: true,

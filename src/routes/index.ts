@@ -18,6 +18,7 @@ import { UserSettingsRoutes } from '../modules/userSettings/userSettings.routes'
 import { EventApplicationRoutes } from '../modules/eventApplication/eventApplication.routes';
 import { FeedbackRoutes } from '../modules/feedback/feedback.routes';
 import { WelcomeRoutes } from '../modules/welcome/welcome.routes';
+import { HomeEventRoutes } from '../modules/homecreateEvent/cretehomeevent.routes';
 
 const router: Router = Router();
 
@@ -63,5 +64,6 @@ router.use('/family-members', FamilyMemberRoutes);
 router.use('/notifications', NotificationRoutes);
 router.use('/feedbacks', FeedbackRoutes);
 router.use('/welcome', WelcomeRoutes);
+router.use('/home-events', HomeEventRoutes);
 
 export default router;

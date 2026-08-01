@@ -20,6 +20,7 @@ import {
   normalizeCategoryGroupSlug,
   type CategoryGroupSlug,
 } from '../event/event.helpers';
+import { EVENT_CONTRIBUTION_SCORE } from '../event/event.interface';
 import { publishedEventBaseWhere } from '../event/event.utils';
 import { contributionMetaLabel, decimalToNumber, formatHistoryLabel } from './contribution.helpers';
 import type {
@@ -124,6 +125,11 @@ const buildTimeRangeWhere = (timeRange?: ContributionTimeRange): Prisma.EventWhe
 
 const buildContributionWhere = (filters?: IContributionListFilters): Prisma.EventWhereInput => {
   let where: Prisma.EventWhereInput = { ...publishedEventBaseWhere };
+
+  // Scope to the authenticated user's created events
+  if (filters?.userId) {
+    where = { AND: [where, { creatorId: filters.userId }] };
+  }
 
   const scheduleAnd: Prisma.EventScheduleWhereInput[] = [];
 
@@ -264,6 +270,21 @@ const getContributions = async (
     database.event.count({ where }),
   ]);
 
+  // Compute contribution score from the user's full history (unaffected by list filters):
+  // created events × CREATE points + edit log entries × UPDATE points
+  let contributionScore = 0;
+  if (filters?.userId) {
+    const [createdCount, editedCount] = await Promise.all([
+      database.event.count({
+        where: { creatorId: filters.userId, isDeleted: false },
+      }),
+      database.editLog.count({ where: { editorId: filters.userId } }),
+    ]);
+    contributionScore =
+      createdCount * EVENT_CONTRIBUTION_SCORE.CREATE +
+      editedCount * EVENT_CONTRIBUTION_SCORE.UPDATE;
+  }
+
   const withCategory = await attachCategoryGroups(rows);
   const data = withCategory.map(row => toCard(row as ContributionRow));
   const pageResult = createPaginationResult(data, total, pagination);
@@ -273,6 +294,7 @@ const getContributions = async (
     meta: {
       ...pageResult.meta,
       label: contributionMetaLabel(filters?.timeRange),
+      contributionScore,
     },
   };
 };

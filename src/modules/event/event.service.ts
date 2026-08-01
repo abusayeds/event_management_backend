@@ -94,6 +94,8 @@ const createEvent = async (
     if (error instanceof ApiError) {
       throw error;
     }
+    // Log the real underlying error so it is visible in server logs
+    logger.error('createEvent repository error:', error);
     throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create event.');
   }
 };

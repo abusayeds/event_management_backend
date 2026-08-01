@@ -13,6 +13,7 @@ export const CONTRIBUTION_TIME_RANGES = [
 export type ContributionTimeRange = (typeof CONTRIBUTION_TIME_RANGES)[number];
 
 export interface IContributionListFilters {
+  userId?: string;
   search?: string;
   programId?: string;
   program?: string;
@@ -53,6 +54,7 @@ export interface IContributionListMeta {
   hasNext: boolean;
   hasPrev: boolean;
   label: string;
+  contributionScore: number;
 }
 
 export interface IContributionFilterOption {

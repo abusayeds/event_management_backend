@@ -1,6 +1,8 @@
 import path from 'path';
 import config from '../../config';
+import { isRedisReady } from '../../config/redis';
 import emailQueue from '../../jobs/queues/email.queue';
+import sendEmail from '../email/email.sender';
 
 const APP_NAME = 'Daiwabui';
 const BRAND_COLOR = '#4C7E95';
@@ -325,6 +327,27 @@ const generateHighlightBox = (html: string) => `
   <div class="highlight-box">${html}</div>
 `;
 
+/**
+ * Dispatch an email either through the BullMQ queue (when Redis is available)
+ * or directly via the SMTP transporter (when Redis is disabled / unavailable).
+ */
+const dispatchEmail = async (
+  payload: { to: string; subject: string; html: string; attachments?: unknown[] },
+  priority: number
+): Promise<void> => {
+  if (config.redis.enabled && isRedisReady()) {
+    await emailQueue.add('sendEmail', payload, { priority });
+  } else {
+    await sendEmail({
+      ...payload,
+      to: [payload.to],
+      attachments: payload.attachments as
+        | Array<{ filename: string; path: string; cid?: string }>
+        | undefined,
+    });
+  }
+};
+
 const sendWelcomeEmail = async (to: string, name: string): Promise<void> => {
   const subject = `Welcome to ${APP_NAME}!`;
   const content = `
@@ -349,12 +372,9 @@ const sendWelcomeEmail = async (to: string, name: string): Promise<void> => {
     preheader: `Welcome ${name}! Start exploring public event sessions on ${APP_NAME}.`,
   });
 
-  await emailQueue.add(
-    'sendEmail',
-    { to, subject, html, attachments: getLogoAttachment() },
-    { priority: 5 }
-  );
+  await dispatchEmail({ to, subject, html, attachments: getLogoAttachment() }, 5);
 };
+
 const sendVerificationEmail = async (to: string, otp: string): Promise<void> => {
   const subject = `${APP_NAME} Email Verification - Your OTP Code`;
   const content = `
@@ -369,12 +389,7 @@ const sendVerificationEmail = async (to: string, otp: string): Promise<void> => 
     preheader: `Your verification code: ${otp}`,
   });
 
-  // High priority for OTP emails
-  await emailQueue.add(
-    'sendEmail',
-    { to, subject, html, attachments: getLogoAttachment() },
-    { priority: 1 }
-  );
+  await dispatchEmail({ to, subject, html, attachments: getLogoAttachment() }, 1);
 };
 
 const sendResetPasswordEmail = async (to: string, otp: string): Promise<void> => {
@@ -391,12 +406,7 @@ const sendResetPasswordEmail = async (to: string, otp: string): Promise<void> =>
     preheader: `Your password reset code: ${otp}`,
   });
 
-  // High priority for password reset emails
-  await emailQueue.add(
-    'sendEmail',
-    { to, subject, html, attachments: getLogoAttachment() },
-    { priority: 1 }
-  );
+  await dispatchEmail({ to, subject, html, attachments: getLogoAttachment() }, 1);
 };
 
 export const emailTemplates = {

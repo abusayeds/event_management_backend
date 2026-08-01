@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { StatusCodes } from 'http-status-codes';
-import ApiError from '../utils/apiError';
 
 // Types
 export interface RateLimitConfig {
@@ -30,11 +29,15 @@ export const createRateLimiter = (config: RateLimitConfig) => {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: config.keyGenerator,
-    handler: (req: Request, res: Response) => {
-      throw new ApiError(
-        StatusCodes.TOO_MANY_REQUESTS,
-        config.message || 'Too many requests, please try again later.'
-      );
+    handler: (req: Request, res: Response, _next: NextFunction) => {
+      // Send response directly rather than throwing
+      // (express-rate-limit handler isn't wired to the Express error handler)
+      res.status(StatusCodes.TOO_MANY_REQUESTS).json({
+        success: false,
+        statusCode: StatusCodes.TOO_MANY_REQUESTS,
+        message: config.message || 'Too many requests, please try again later.',
+        timestamp: new Date().toISOString(),
+      });
     },
   });
 };

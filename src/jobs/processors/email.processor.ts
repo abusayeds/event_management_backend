@@ -3,6 +3,11 @@ import sendEmail from '../../modules/email/email.sender';
 
 export const processEmail = async (job: Job) => {
   const { to, subject, html, attachments } = job.data;
-  await sendEmail({ to, subject, html, attachments });
+  await sendEmail({
+    to: Array.isArray(to) ? to : [to],
+    subject,
+    html,
+    attachments,
+  });
   return true;
 };

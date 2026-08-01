@@ -172,8 +172,10 @@ const getUserById = async (id: string) => {
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  // Step:3 Return user (raw public fields for auth/admin consumers)
-  return user;
+  // Step:3 Compute contribution counts (created events + edit actions)
+  const { totalContribution } = await UserRepository.getContributionCounts(id);
+  // Step:4 Return user with totalContribution replacing raw contributionScore
+  return { ...user, contributionScore: totalContribution };
 };
 
 const getMyProfile = async (userId: string) => {
@@ -183,8 +185,11 @@ const getMyProfile = async (userId: string) => {
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  // Step:3 Return edit-account shaped profile
-  return shapeUserProfile(user as unknown as Record<string, unknown>);
+  // Step:3 Compute contribution counts (created events + edit actions)
+  const { totalContribution } = await UserRepository.getContributionCounts(userId);
+  // Step:4 Return shaped profile with totalContribution replacing raw contributionScore
+  const shaped = shapeUserProfile(user as unknown as Record<string, unknown>);
+  return { ...shaped, contributionScore: totalContribution };
 };
 
 const updateMyProfile = async (
@@ -254,7 +259,9 @@ const updateMyProfile = async (
   }
 
   const refreshed = await UserRepository.getUserByIdPublic(userId);
-  return shapeUserProfile(refreshed as unknown as Record<string, unknown>);
+  const shaped = shapeUserProfile(refreshed as unknown as Record<string, unknown>);
+  const { totalContribution } = await UserRepository.getContributionCounts(userId);
+  return { ...shaped, contributionScore: totalContribution };
 };
 
 // Update User
@@ -353,7 +360,9 @@ const updateUser = async (
   }
 
   const refreshed = await UserRepository.getUserByIdPublic(id);
-  return shapeUserProfile(refreshed as unknown as Record<string, unknown>);
+  const shapedRefreshed = shapeUserProfile(refreshed as unknown as Record<string, unknown>);
+  const { totalContribution: tc } = await UserRepository.getContributionCounts(id);
+  return { ...shapedRefreshed, contributionScore: tc };
 };
 
 const updateUserStatus = async (id: string, status: UserStatus, actorId: string) => {

@@ -4,13 +4,13 @@ model Family {
   description        String?
   imageUrl           String?
   createdBy          String
-  creator            User                @relation("FamilyCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   isDeleted          Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
-  familyMembers      FamilyMember[]
+  creator            User                @relation("FamilyCreator", fields: [createdBy], references: [id])
   familyInvitations  FamilyInvitation[]
   familyJoinRequests FamilyJoinRequest[]
+  familyMembers      FamilyMember[]
 
   @@index([createdBy])
   @@map("families")
@@ -22,10 +22,10 @@ model FamilyMember {
   userId       String
   role         FamilyRole          @default(MEMBER)
   relationShip FamilyRelationShip?
-  family       Family              @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
+  family       Family              @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([familyId, userId])
   @@index([userId])
@@ -37,11 +37,11 @@ model FamilyInvitation {
   familyId        String
   invitedByUserId String
   invitedEmail    String
-  family          Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  invitedByUser   User             @relation("FamilyInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
   status          InvitationStatus @default(PENDING)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+  family          Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  invitedByUser   User             @relation("FamilyInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
 
   @@unique([familyId, invitedEmail])
   @@index([invitedByUserId])
@@ -52,11 +52,11 @@ model FamilyJoinRequest {
   id        String           @id @default(uuid())
   familyId  String
   userId    String
-  family    Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  user      User             @relation("FamilyJoinRequest", fields: [userId], references: [id], onDelete: Cascade)
   status    InvitationStatus @default(PENDING)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+  family    Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user      User             @relation("FamilyJoinRequest", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([familyId, userId])
   @@index([userId])

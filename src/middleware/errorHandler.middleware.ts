@@ -43,7 +43,11 @@ const globalErrorHandler: ErrorRequestHandler = (
   // Handle Prisma errors
   else if (error.name === 'PrismaClientKnownRequestError') {
     statusCode = StatusCodes.BAD_REQUEST;
-    message = 'Database operation failed';
+    const prismaError = error as { code?: string; meta?: unknown };
+    message = `Database operation failed (code: ${prismaError.code ?? 'unknown'})`;
+    if (statusCode >= 500) {
+      logger.error('Prisma known error', { code: prismaError.code, meta: prismaError.meta });
+    }
   } else if (error.name === 'PrismaClientUnknownRequestError') {
     statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
     message = 'Database error occurred';
@@ -60,7 +64,16 @@ const globalErrorHandler: ErrorRequestHandler = (
   }
 
   if (statusCode >= 500) {
-    logger.error('Unhandled server error', { error, url: req.originalUrl, method: req.method });
+    logger.error('Unhandled server error', {
+      error: {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        ...(error && typeof error === 'object' ? error : {}),
+      },
+      url: req.originalUrl,
+      method: req.method,
+    });
   }
 
   // Send error response
