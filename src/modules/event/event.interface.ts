@@ -8,6 +8,7 @@ import {
   RoundCondition,
   SessionBucketType,
 } from '../../../prisma/generated/enums';
+import type { ScheduleCompetitionLevel } from './event.constants';
 
 export const EVENT_CONTRIBUTION_SCORE = {
   CREATE: 3,
@@ -41,7 +42,7 @@ export interface IEventGroupInput {
 }
 
 export interface IEventScheduleInput {
-  competitionLevel: CompetitionLevel;
+  competitionLevel: ScheduleCompetitionLevel;
   eventType: EventType;
   registrationDate: Date | string;
   deadline: Date | string;
@@ -49,6 +50,13 @@ export interface IEventScheduleInput {
   hasFinalDeadline?: boolean;
   finalDeadline?: Date | string | null;
   lateFee?: string | number;
+}
+
+export interface IEventPreviousRecordInput {
+  /** Previous event id — required and must exist */
+  id: string;
+  /** What the user achieved in that previous event (e.g. "1 Prize", "Gold") */
+  recordName: string;
 }
 
 export interface ICreateEventPayload {
@@ -74,10 +82,12 @@ export interface ICreateEventPayload {
   isUserAgreementAccepted?: boolean;
   groups?: IEventGroupInput[];
   schedule?: IEventScheduleInput;
+  /** Previous events the user participated in, with achievement record name */
+  previousEvents?: IEventPreviousRecordInput[];
 }
 
 export interface IUpdateCurrentSchedulePayload {
-  competitionLevel?: CompetitionLevel;
+  competitionLevel?: ScheduleCompetitionLevel;
   eventType?: EventType;
   registrationDate?: Date | string;
   deadline?: Date | string;
@@ -110,6 +120,8 @@ export interface IUpdateEventPayload {
   sessionLevel?: string | null;
   schedule?: IUpdateCurrentSchedulePayload;
   groups?: IEventGroupInput[];
+  /** Replace previous-event records when provided (full list). Empty array clears. */
+  previousEvents?: IEventPreviousRecordInput[];
 }
 
 export interface IEventFilters {
