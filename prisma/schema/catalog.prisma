@@ -15,7 +15,7 @@ model Category {
 model Subcategory {
   id          String    @id @default(uuid())
   categoryId  String
-  name        String    @unique
+  name        String
   imageUrl    String?
   description String?
   isDeleted   Boolean   @default(false)
@@ -24,6 +24,7 @@ model Subcategory {
   programs    Program[]
   category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
+  @@unique([categoryId, name])
   @@index([categoryId])
   @@map("subcategories")
 }

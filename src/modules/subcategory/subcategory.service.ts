@@ -19,11 +19,15 @@ const createSubcategory = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Category not found.');
   }
 
-  // Step:2 Normalize and check duplicate subcategory name
+  // Step:2 Normalize and check duplicate subcategory name within the same category
   const normalizedName = payload.name.trim();
-  const existing = await SubcategoryRepository.getSubcategoryByName(normalizedName);
+  const existing = await SubcategoryRepository.getSubcategoryByName(
+    normalizedName,
+    undefined,
+    payload.categoryId
+  );
   if (existing) {
-    throw new ApiError(StatusCodes.CONFLICT, 'Subcategory name already exists.');
+    throw new ApiError(StatusCodes.CONFLICT, 'Subcategory name already exists in this category.');
   }
 
   let uploadedImageUrl: string | undefined;
@@ -87,13 +91,21 @@ const updateSubcategory = async (
     }
   }
 
-  // Step:3 Check name uniqueness if updating name
+  // Step:3 Check name uniqueness within category if updating name
   if (payload.name) {
     const normalizedName = payload.name.trim();
-    if (normalizedName !== existing.name) {
-      const duplicate = await SubcategoryRepository.getSubcategoryByName(normalizedName, id);
+    const categoryIdForCheck = payload.categoryId || existing.categoryId;
+    if (normalizedName !== existing.name || categoryIdForCheck !== existing.categoryId) {
+      const duplicate = await SubcategoryRepository.getSubcategoryByName(
+        normalizedName,
+        id,
+        categoryIdForCheck
+      );
       if (duplicate) {
-        throw new ApiError(StatusCodes.CONFLICT, 'Subcategory name already exists.');
+        throw new ApiError(
+          StatusCodes.CONFLICT,
+          'Subcategory name already exists in this category.'
+        );
       }
     }
     payload.name = normalizedName;

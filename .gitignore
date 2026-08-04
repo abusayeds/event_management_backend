@@ -110,3 +110,5 @@ prisma/generated/
 .DS_Store
 Thumbs.db
 .env 
+temp-reference-data/
+

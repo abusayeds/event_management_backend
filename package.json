@@ -17,6 +17,7 @@
     "start": "tsx src/server.ts",
     "start:prod": "CI=1 npm run prisma:generate && tsx src/server.ts",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:catalog": "tsx src/scripts/seedReferenceCatalog.ts",
     "purge:non-core": "tsx src/scripts/purge-non-core-data.ts",
     "prisma:generate": "node scripts/prisma-generate.js",
     "prisma:migrate": "prisma migrate dev",
@@ -86,6 +87,7 @@
     "uuid": "^13.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

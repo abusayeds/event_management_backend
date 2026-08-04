@@ -56,7 +56,7 @@ const getSubcategoryById = async (id: string) => {
 };
 
 // Get subcategory by name
-const getSubcategoryByName = async (name: string, excludeId?: string) => {
+const getSubcategoryByName = async (name: string, excludeId?: string, categoryId?: string) => {
   return database.subcategory.findFirst({
     where: {
       name: {
@@ -64,6 +64,7 @@ const getSubcategoryByName = async (name: string, excludeId?: string) => {
         mode: 'insensitive',
       },
       isDeleted: false,
+      ...(categoryId ? { categoryId } : {}),
       ...(excludeId ? { id: { not: excludeId } } : {}),
     },
     select: subcategoryFullSelect,
