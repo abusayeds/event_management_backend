@@ -42,6 +42,7 @@ enum FamilyRelationShip {
   Other
 }
 
+/// Round types only (EventRound.roundType). Schedule uses string competitionLevel (e.g. Local-Easy).
 enum CompetitionLevel {
   Preliminary
   SemiFinal
