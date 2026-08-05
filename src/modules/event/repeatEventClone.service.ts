@@ -3,6 +3,7 @@ import { database } from '../../config/database';
 import { EventCreationMode, RepeatFrequency } from '../../../prisma/generated/enums';
 import { EventRepository } from './event.repository';
 import type { ICreateEventPayload, IEventGroupInput } from './event.interface';
+import type { ScheduleCompetitionLevel } from './event.constants';
 import { addRepeatInterval, computeRepeatingEventNaming } from './event.utils';
 import { enqueueRepeatEventJob } from '../../jobs/repeatEvent.schedule';
 
@@ -143,7 +144,7 @@ const buildClonePayload = (
     isUserAgreementAccepted: source.isUserAgreementAccepted,
     groups: mapGroupsWithShift(source, anchorDate),
     schedule: {
-      competitionLevel: source.schedule.competitionLevel,
+      competitionLevel: source.schedule.competitionLevel as ScheduleCompetitionLevel,
       eventType: source.schedule.eventType,
       registrationDate: anchorDate,
       deadline: new Date(anchorDate.getTime() + scheduleDurationMs),

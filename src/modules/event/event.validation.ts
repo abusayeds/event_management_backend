@@ -8,6 +8,7 @@ import {
   RoundCondition,
   SessionBucketType,
 } from '../../../prisma/generated/enums';
+import { SCHEDULE_COMPETITION_LEVELS } from './event.constants';
 import { normalizeCategoryGroupSlug } from './event.helpers';
 
 const nonNegativeNumber = z.coerce.number().finite().nonnegative();
@@ -39,6 +40,7 @@ const parseKnownJsonFields = (input: Record<string, unknown>): Record<string, un
   out.repeatConfig = tryParseJsonString(out.repeatConfig);
   out.schedule = tryParseJsonString(out.schedule);
   out.groups = tryParseJsonString(out.groups);
+  out.previousEvents = tryParseJsonString(out.previousEvents);
   out.currentEventSession = tryParseJsonString(out.currentEventSession);
   return out;
 };
@@ -127,6 +129,10 @@ const repeatConfigValidationSchema = z
   .optional()
   .nullable();
 
+const scheduleCompetitionLevelSchema = z.enum(SCHEDULE_COMPETITION_LEVELS, {
+  message: `competitionLevel must be one of: ${SCHEDULE_COMPETITION_LEVELS.join(', ')}`,
+});
+
 const eventRoundValidationSchema = z.object({
   roundType: z.nativeEnum(CompetitionLevel),
   deadline: z.coerce.date(),
@@ -146,7 +152,7 @@ const eventGroupValidationSchema = z.object({
 });
 
 const eventScheduleValidationSchema = z.object({
-  competitionLevel: z.nativeEnum(CompetitionLevel),
+  competitionLevel: scheduleCompetitionLevelSchema,
   eventType: z.nativeEnum(EventType),
   registrationDate: z.coerce.date(),
   deadline: z.coerce.date(),
@@ -157,6 +163,19 @@ const eventScheduleValidationSchema = z.object({
 });
 
 // ── POST /events (body) ─────────────────────────────────────────────────────
+
+const eventPreviousRecordValidationSchema = z.object({
+  id: z
+    .string()
+    .trim()
+    .min(1, 'Previous event id is required')
+    .uuid('Previous event id must be a valid UUID'),
+  recordName: z
+    .string()
+    .trim()
+    .min(1, 'recordName is required')
+    .max(200, 'recordName must be at most 200 characters'),
+});
 
 const createEventBodyValidationSchema = z.object({
   eventName: z.string().trim().min(1).max(200),
@@ -179,6 +198,24 @@ const createEventBodyValidationSchema = z.object({
   groups: z.array(eventGroupValidationSchema).optional(),
   isSharedToCommunity: z.coerce.boolean().optional(),
   isUserAgreementAccepted: z.coerce.boolean().optional(),
+  previousEvents: z
+    .array(eventPreviousRecordValidationSchema)
+    .max(50, 'Maximum 50 previous events allowed')
+    .optional()
+    .superRefine((items, ctx) => {
+      if (!items?.length) return;
+      const seen = new Set<string>();
+      items.forEach((item, index) => {
+        if (seen.has(item.id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Duplicate previous event id at index ${index}`,
+            path: [index, 'id'],
+          });
+        }
+        seen.add(item.id);
+      });
+    }),
 });
 
 const createEventValidationSchema = z.object({
@@ -297,8 +334,27 @@ const updateEventBodyValidationSchema = z.object({
   sessionLevel: z.string().trim().min(1).max(120).optional(),
   // EventSchedule patch (same shape as create `schedule`, partial)
   schedule: eventSchedulePatchValidationSchema.optional(),
-  // Event.groups
+  // Event.groups — full replace when provided
   groups: z.array(eventGroupValidationSchema).optional(),
+  // Previous events — full replace when provided (same shape as create)
+  previousEvents: z
+    .array(eventPreviousRecordValidationSchema)
+    .max(50, 'Maximum 50 previous events allowed')
+    .optional()
+    .superRefine((items, ctx) => {
+      if (!items?.length) return;
+      const seen = new Set<string>();
+      items.forEach((item, index) => {
+        if (seen.has(item.id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Duplicate previous event id at index ${index}`,
+            path: [index, 'id'],
+          });
+        }
+        seen.add(item.id);
+      });
+    }),
   // Community
   isSharedToCommunity: z.coerce.boolean().optional(),
   isUserAgreementAccepted: z.coerce.boolean().optional(),
