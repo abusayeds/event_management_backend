@@ -49,6 +49,8 @@ model Event {
   groups                  EventGroup[]
   invitations             EventInvitation[]
   results                 EventResult[]
+  previousRecords         EventPreviousRecord[] @relation("EventOwnHistory")
+  referencedAsPrevious    EventPreviousRecord[] @relation("EventReferencedAsPrevious")
   schedule                EventSchedule?
   creator                 User              @relation("EventCreator", fields: [creatorId], references: [id])
   lastEditor              User?             @relation("EventLastEditor", fields: [lastEditorId], references: [id])
@@ -73,7 +75,8 @@ model Event {
 model EventSchedule {
   id               String           @id @default(uuid())
   eventId          String           @unique
-  competitionLevel CompetitionLevel
+  /// Schedule difficulty/tier only. Allowed: Local|Regional|State|National|International × Easy|Medium|Difficult (e.g. Local-Easy). Not used for rounds.
+  competitionLevel String
   eventType        EventType
   registrationDate DateTime
   deadline         DateTime
@@ -145,6 +148,22 @@ model EventResult {
 
   @@unique([eventId, placement])
   @@map("event_results")
+}
+
+/// Own-history links: when creating an event, user can attach previous events + what they achieved.
+model EventPreviousRecord {
+  id              String   @id @default(uuid())
+  eventId         String
+  previousEventId String
+  recordName      String
+  createdAt       DateTime @default(now())
+  event           Event    @relation("EventOwnHistory", fields: [eventId], references: [id], onDelete: Cascade)
+  previousEvent   Event    @relation("EventReferencedAsPrevious", fields: [previousEventId], references: [id], onDelete: Restrict)
+
+  @@unique([eventId, previousEventId])
+  @@index([eventId])
+  @@index([previousEventId])
+  @@map("event_previous_records")
 }
 
 model EditLog {
