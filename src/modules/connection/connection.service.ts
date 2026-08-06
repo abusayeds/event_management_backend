@@ -3,7 +3,6 @@ import { ConnectionStatus } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
 import { ConnectionRepository } from './connection.repository';
-
 /**
  * Creates a new connection request or re-opens a previously rejected/canceled one.
  * It handles various states, preventing duplicate requests and ensuring users exist.
