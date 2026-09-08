@@ -265,7 +265,17 @@ async function main() {
 
     // Step 1.4: Ensure default profile picture exists on S3 (idempotent)
     logger.info(colors.cyan('🖼️  [1.4/5] Ensuring default profile picture...'));
-    await seedDefaultProfilePicture();
+    try {
+      await seedDefaultProfilePicture();
+      logger.info(colors.green('   ✅ Default profile picture ready'));
+    } catch (error) {
+      logger.warn(
+        colors.yellow(
+          '   ⚠️  Default profile picture seed skipped (S3 unavailable). App will continue.'
+        )
+      );
+      logger.warn(error);
+    }
 
     // Step 1.5: Seed default users on startup (idempotent)
     logger.info(colors.cyan('👥 [1.5/5] Seeding default users...'));
