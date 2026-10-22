@@ -22,12 +22,18 @@ export const seedDefaultProfilePicture = async () => {
       category: 'default-profile',
       uploadedAt: new Date().toISOString(),
     });
-    logger.info('Default profile picture uploaded to S3.');
+    logger.info('Default profile picture stored using the configured image storage.');
   }
 
   const defaultUrl = getDefaultProfilePictureUrl();
   const updated = await database.user.updateMany({
-    where: { profilePicture: LEGACY_DEFAULT_PROFILE_PICTURE_URL },
+    where: {
+      OR: [
+        { profilePicture: LEGACY_DEFAULT_PROFILE_PICTURE_URL },
+        { profilePicture: { endsWith: `/${DEFAULT_PROFILE_PICTURE_KEY}` } },
+      ],
+      NOT: { profilePicture: defaultUrl },
+    },
     data: { profilePicture: defaultUrl },
   });
 

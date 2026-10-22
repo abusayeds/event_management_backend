@@ -6,22 +6,21 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
-const prismaBin = path.join(
-  __dirname,
-  '..',
-  'node_modules',
-  '.bin',
-  process.platform === 'win32' ? 'prisma.cmd' : 'prisma'
+// Resolve Prisma's JS entrypoint and run it with node directly. Going through
+// the .bin shim would need `shell: true` on Windows, which breaks on paths
+// containing spaces.
+const prismaCli = path.join(
+  path.dirname(require.resolve('prisma/package.json')),
+  require('prisma/package.json').bin.prisma
 );
 
-const result = spawnSync(prismaBin, ['generate'], {
+const result = spawnSync(process.execPath, [prismaCli, 'generate'], {
   env: {
     ...process.env,
     CI: '1',
     FORCE_COLOR: '0',
   },
   stdio: ['ignore', 'inherit', 'inherit'],
-  shell: process.platform === 'win32',
 });
 
 if (result.error) {

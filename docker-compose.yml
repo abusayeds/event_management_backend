@@ -6,12 +6,12 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '7788:7788'
+      - '2001:2001'
     env_file:
       - .env
     environment:
       NODE_ENV: production
-      PORT: '7788'
+      PORT: '2001'
       # Use Docker network hostnames for DB + Redis inside compose
       DATABASE_URL: postgresql://postgres:password@postgres:5432/dawabuyi_db
       REDIS_HOST: redis
@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
 
   postgres:
     image: postgres:15-alpine

@@ -2,11 +2,16 @@ import { StatusCodes } from 'http-status-codes';
 import { FamilyRole } from '../../../prisma/generated/enums';
 import { PaginationOptions } from '../../interfaces';
 import ApiError from '../../utils/apiError';
+import { deleteFileFromS3, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import { UserRepository } from '../user/user.repository';
 import { ICreateFamilyPayload, IFamilyFilters } from './family.interface';
 import { FamilyRepository } from './family.repository';
 
-const createFamily = async (userId: string, payload: Partial<ICreateFamilyPayload>) => {
+const createFamily = async (
+  userId: string,
+  payload: Partial<ICreateFamilyPayload>,
+  file?: Express.Multer.File
+) => {
   // Step:1 Check user exists
   const user = await UserRepository.getUserById(userId);
   if (!user) {
@@ -31,9 +36,11 @@ const createFamily = async (userId: string, payload: Partial<ICreateFamilyPayloa
   }
 
   // Step:5 Create family body with creator as owner
+  const uploaded = file ? await uploadSingleFileToS3(file, 'families') : undefined;
   const familyBody = {
     name: payload.name || 'My Family',
     description: payload.description,
+    imageUrl: uploaded?.url || payload.imageUrl,
     createdBy: userId,
     familyMembers: {
       userId: userId,
@@ -42,7 +49,13 @@ const createFamily = async (userId: string, payload: Partial<ICreateFamilyPayloa
   };
 
   // Step:6 Create family in database
-  const result = await FamilyRepository.createFamily(familyBody);
+  let result;
+  try {
+    result = await FamilyRepository.createFamily(familyBody);
+  } catch (error) {
+    if (uploaded) await deleteFileFromS3(uploaded.url);
+    throw error;
+  }
   // Step:7 Return created family
   return result;
 };
@@ -69,7 +82,11 @@ const getFamily = async (familyId: string) => {
   return result;
 };
 
-const updateFamily = async (familyId: string, payload: Partial<ICreateFamilyPayload>) => {
+const updateFamily = async (
+  familyId: string,
+  payload: Partial<ICreateFamilyPayload>,
+  file?: Express.Multer.File
+) => {
   // Step:1 Check if family exists
   const existingFamily = await FamilyRepository.getFamily(familyId);
   if (!existingFamily) {
@@ -86,7 +103,17 @@ const updateFamily = async (familyId: string, payload: Partial<ICreateFamilyPayl
     }
   }
   // Step:3 Update family in database
-  const result = await FamilyRepository.updateFamily(familyId, payload);
+  const uploaded = file ? await uploadSingleFileToS3(file, 'families') : undefined;
+  let result;
+  try {
+    result = await FamilyRepository.updateFamily(familyId, {
+      ...payload,
+      ...(uploaded ? { imageUrl: uploaded.url } : {}),
+    });
+  } catch (error) {
+    if (uploaded) await deleteFileFromS3(uploaded.url);
+    throw error;
+  }
   // Step:4 Return updated family
   return result;
 };

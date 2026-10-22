@@ -217,7 +217,16 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/routes/*.ts', './src/modules/**/*.routes.ts', './src/modules/**/*.controller.ts'],
+  // Scanned from the compiled output when running a production build (the
+  // container ships dist/ without src/), from the TS sources otherwise. tsc
+  // keeps comments, so the JSDoc blocks survive compilation.
+  apis: __filename.endsWith('.js')
+    ? [
+        './dist/src/routes/*.js',
+        './dist/src/modules/**/*.routes.js',
+        './dist/src/modules/**/*.controller.js',
+      ]
+    : ['./src/routes/*.ts', './src/modules/**/*.routes.ts', './src/modules/**/*.controller.ts'],
 };
 
 export const swaggerSpec = swaggerJsdoc(swaggerOptions);

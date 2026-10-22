@@ -90,7 +90,7 @@ module.exports = {
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
-        PORT: 8082,
+        PORT: 2001,
       },
       error_file: './logs/err.log',
       out_file: './logs/out.log',
@@ -123,7 +123,7 @@ server {
     server_name api.dawabuyi.com;
 
     location / {
-        proxy_pass http://localhost:8082;
+        proxy_pass http://localhost:2001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -136,7 +136,7 @@ server {
 
     # WebSocket support
     location /socket.io/ {
-        proxy_pass http://localhost:8082;
+        proxy_pass http://localhost:2001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -201,7 +201,7 @@ nano scripts/health-check.sh
 
 ```bash
 #!/bin/bash
-response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/health)
+response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:2001/health)
 if [ $response != "200" ]; then
     echo "Health check failed. Restarting application..."
     pm2 restart dawabuyi-backend
@@ -255,7 +255,7 @@ crontab -e
 sudo ufw enable
 sudo ufw allow ssh
 sudo ufw allow 'Nginx Full'
-sudo ufw allow from 127.0.0.1 to any port 8082
+sudo ufw allow from 127.0.0.1 to any port 2001
 ```
 
 2. **Application Security**
@@ -284,7 +284,7 @@ RUN pnpm install --prod
 COPY . .
 RUN npm run build
 
-EXPOSE 8082
+EXPOSE 2001
 
 CMD ["npm", "start"]
 ```
@@ -298,7 +298,7 @@ services:
   app:
     build: .
     ports:
-      - '8082:8082'
+      - '2001:2001'
     environment:
       - NODE_ENV=production
     depends_on:

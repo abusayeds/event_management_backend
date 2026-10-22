@@ -4,6 +4,7 @@ import { UserGender, UserRole } from '../../prisma/generated/enums';
 import { database } from '../config/database';
 import logger from '../config/logger';
 import { createUniqueAccountId } from '../modules/user/user.helpers';
+import { getDefaultProfilePictureUrl } from '../utils/s3Upload';
 
 type SeedUser = {
   firstName: string;
@@ -258,6 +259,7 @@ const createSeedUserIfMissing = async (seedUser: SeedUser, createdByOwner?: stri
       firstName: seedUser.firstName,
       lastName: seedUser.lastName,
       displayName: seedUser.displayName,
+      profilePicture: getDefaultProfilePictureUrl(),
       username,
       email: seedUser.email,
       password: hashedPassword,

@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 
 dotenv.config({ quiet: true });
 
-const port = Number(process.env.PORT || 8054);
+const port = Number(process.env.PORT || 2001);
 
 if (!Number.isInteger(port) || port <= 0) {
   console.warn(`[predev] Invalid PORT value: ${process.env.PORT}`);

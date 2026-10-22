@@ -111,4 +111,5 @@ prisma/generated/
 Thumbs.db
 .env 
 temp-reference-data/
+uploads/
 

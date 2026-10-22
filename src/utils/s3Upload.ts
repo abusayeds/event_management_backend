@@ -12,8 +12,17 @@ import config from '../config';
 import awsConfig from '../config/aws';
 import logger from '../config/logger';
 import ApiError from './apiError';
+import { promises as fs } from 'fs';
+import {
+  deleteLocalFile,
+  localKeyFromUrl,
+  localPath,
+  localStoredPath,
+  writeLocalFile,
+} from './localStorage';
 
 export interface UploadResult {
+  /** Relative file path for local storage; absolute object URL for AWS. */
   url: string;
   key: string;
   size: number;
@@ -104,12 +113,15 @@ const buildS3Url = (key: string): string => {
     return `${awsConfig.s3.endpoint.replace(/\/$/, '')}/${bucketName}/${key}`;
   }
 
-  return `https://${bucketName}.s3.${awsConfig.region}.amazonaws.com/${key}`;
+  return `https://${bucketName}.s3.${config.aws.region || awsConfig.region}.amazonaws.com/${key}`;
 };
 
 export const DEFAULT_PROFILE_PICTURE_KEY = 'profiles/images/default-user.svg';
 
-export const getDefaultProfilePictureUrl = (): string => buildS3Url(DEFAULT_PROFILE_PICTURE_KEY);
+export const getDefaultProfilePictureUrl = (): string =>
+  config.storage.useAws
+    ? buildS3Url(DEFAULT_PROFILE_PICTURE_KEY)
+    : localStoredPath(DEFAULT_PROFILE_PICTURE_KEY);
 
 export const uploadBufferWithKey = async (
   buffer: Buffer,
@@ -135,6 +147,7 @@ const uploadBufferToS3 = async (
   contentType: string,
   metadata?: Record<string, string>
 ): Promise<string> => {
+  if (!config.storage.useAws) return writeLocalFile(buffer, key);
   const s3 = createS3Client();
 
   await s3.send(
@@ -180,10 +193,10 @@ export const uploadSingleFileToS3 = async (
       extension,
     };
   } catch (error) {
-    logger.error('Error uploading to S3', { error });
+    logger.error('Error uploading image', { error });
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
-      `Failed to upload image to S3: ${error instanceof Error ? error.message : 'Unknown error.'}`
+      `Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error.'}`
     );
   }
 };
@@ -198,6 +211,10 @@ export const uploadMultipleFilesToS3 = async (
 
 export const checkFileExists = async (key: string): Promise<boolean> => {
   try {
+    if (!config.storage.useAws) {
+      await fs.access(localPath(key));
+      return true;
+    }
     const s3 = createS3Client();
     await s3.send(
       new HeadObjectCommand({
@@ -213,6 +230,14 @@ export const checkFileExists = async (key: string): Promise<boolean> => {
 
 export const deleteFileFromS3 = async (fileUrl: string): Promise<void> => {
   try {
+    if (
+      new URL(fileUrl, config.backend.baseUrl).pathname.endsWith(`/${DEFAULT_PROFILE_PICTURE_KEY}`)
+    )
+      return;
+    const localKey = localKeyFromUrl(fileUrl);
+    if (localKey) return await deleteLocalFile(localKey);
+    // Switching to local storage must not require AWS access to replace old images.
+    if (!config.storage.useAws) return;
     const url = new URL(fileUrl);
     const key = decodeURIComponent(url.pathname.slice(1));
 
@@ -234,6 +259,8 @@ export const deleteFileFromS3 = async (fileUrl: string): Promise<void> => {
 
 export const deleteImageFromS3 = async (key: string) => {
   try {
+    if (key === DEFAULT_PROFILE_PICTURE_KEY) return;
+    if (!config.storage.useAws) return await deleteLocalFile(key);
     const s3 = createS3Client();
     await s3.send(
       new DeleteObjectCommand({
@@ -258,6 +285,12 @@ export const generatePresignedUrl = async (
   mimeType: string,
   folder = 'profiles'
 ) => {
+  if (!config.storage.useAws) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Local storage uses multipart upload. Upload profilePicture to PATCH /api/v1/users/update-me.'
+    );
+  }
   const extension = getFileExtension(fileName);
 
   if (!IMAGE_EXTENSIONS.includes(extension)) {

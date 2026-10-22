@@ -10,8 +10,10 @@ import logger from './config/logger';
 import { closeRedis, connectRedis } from './config/redis';
 import { initializeWorkers, shutdownWorkers } from './jobs';
 import { seedDefaultProfilePicture } from './scripts/seedDefaultProfilePicture';
+import { seedReferenceCatalog } from './scripts/seedReferenceCatalog';
 import { seedDefaultUsers } from './scripts/userSeeder';
 import { initializeSocket } from './socket';
+import { repairCategoryImages } from './utils/repairCategoryImages';
 
 type TrackedSocket = {
   setKeepAlive: (enable?: boolean, initialDelay?: number) => void;
@@ -262,6 +264,8 @@ async function main() {
     // Step 1: Connect to Database
     logger.info(colors.cyan('📦 [1/5] Connecting to Database...'));
     await connectDB();
+    // Replace legacy category S3 references with stored local paths before serving the API.
+    await repairCategoryImages();
 
     // Step 1.4: Ensure default profile picture exists on S3 (idempotent)
     logger.info(colors.cyan('🖼️  [1.4/5] Ensuring default profile picture...'));
@@ -280,6 +284,17 @@ async function main() {
     // Step 1.5: Seed default users on startup (idempotent)
     logger.info(colors.cyan('👥 [1.5/5] Seeding default users...'));
     await seedDefaultUsers();
+
+    // Step 1.6: Seed the reference catalog on startup (idempotent)
+    logger.info(colors.cyan('📚 [1.6/5] Seeding reference catalog...'));
+    try {
+      await seedReferenceCatalog();
+      logger.info(colors.green('   ✅ Reference catalog ready'));
+    } catch (error) {
+      // A missing workbook or image folder must not stop the API from serving.
+      logger.warn(colors.yellow('   ⚠️  Reference catalog seed skipped. App will continue.'));
+      logger.warn(error);
+    }
 
     // Step 2: Connect to Redis
     logger.info(colors.cyan('📦 [2/5] Connecting to Redis...'));

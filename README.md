@@ -144,5 +144,5 @@ npm run test
 
 ## API Docs
 
-- Swagger UI: `http://localhost:8082/api-docs`
-- OpenAPI JSON: `http://localhost:8082/api-docs.json`
+- Swagger UI: `http://localhost:2001/api-docs`
+- OpenAPI JSON: `http://localhost:2001/api-docs.json`

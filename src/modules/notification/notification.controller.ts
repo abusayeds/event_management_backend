@@ -8,10 +8,13 @@ import { NotificationService } from './notification.service';
 
 const createNotification = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const senderId = req.user?.userId;
-  const result = await NotificationService.createNotification({
-    ...req.body,
-    senderId,
-  });
+  const result = await NotificationService.createNotification(
+    {
+      ...req.body,
+      senderId,
+    },
+    req.file
+  );
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,

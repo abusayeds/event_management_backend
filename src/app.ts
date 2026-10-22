@@ -7,12 +7,23 @@ import globalErrorHandler from './middleware/errorHandler.middleware';
 import notFoundHandler from './middleware/notFound.middleware';
 import requestLogger from './middleware/requestLogger.middleware';
 import router from './routes';
+import { uploadRoot } from './utils/localStorage';
 
 const app: Application = express();
 
 // ── Security ──────────────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(corsMiddleware);
+app.use(
+  '/uploads',
+  express.static(uploadRoot, {
+    dotfiles: 'deny',
+    setHeaders: res => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    },
+  })
+);
 
 // ── Request parsing ───────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));

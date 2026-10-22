@@ -32,15 +32,11 @@ const getFamily = z.object({
 
 // Update family with optional fields validation
 const updateFamily = z.object({
-  body: z
-    .object({
-      name: z.string().trim().min(1, 'Family name cannot be empty').max(100).optional(),
-      description: z.string().trim().max(500).optional(),
-      imageUrl: z.string().url('Invalid image URL').optional(),
-    })
-    .refine((value: Record<string, unknown>) => Object.keys(value).length > 0, {
-      message: 'At least one field is required to update family',
-    }),
+  body: z.object({
+    name: z.string().trim().min(1, 'Family name cannot be empty').max(100).optional(),
+    description: z.string().trim().max(500).optional(),
+    imageUrl: z.string().url('Invalid image URL').optional(),
+  }),
   params: idParamSchema,
 });
 

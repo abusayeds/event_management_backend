@@ -1,6 +1,10 @@
 generator client {
   provider = "prisma-client"
   output   = "../generated"
+  // This package is CommonJS ("type": "commonjs"). Without these the generator
+  // emits ESM using `import.meta.url`, which breaks once tsc compiles it to CJS.
+  runtime      = "nodejs"
+  moduleFormat = "cjs"
 }
 
 datasource db {

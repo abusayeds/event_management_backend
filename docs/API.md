@@ -317,7 +317,7 @@ npm start
 
 ```bash
 docker build -t dawabuyi-backend .
-docker run -p 8082:8082 dawabuyi-backend
+docker run -p 2001:2001 dawabuyi-backend
 ```
 
 ## Contributing

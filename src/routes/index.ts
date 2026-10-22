@@ -19,6 +19,7 @@ import { EventApplicationRoutes } from '../modules/eventApplication/eventApplica
 import { FeedbackRoutes } from '../modules/feedback/feedback.routes';
 import { WelcomeRoutes } from '../modules/welcome/welcome.routes';
 import { HomeEventRoutes } from '../modules/homecreateEvent/cretehomeevent.routes';
+import { MediaRoutes } from '../modules/media/media.routes';
 
 const router: Router = Router();
 
@@ -46,6 +47,7 @@ router.get('/endpoints', (req, res) => {
 
 // API routes
 router.use('/auth', AuthRoutes);
+router.use('/media', MediaRoutes);
 router.use('/categories', CategoryRoutes);
 router.use('/connections', ConnectionRoutes);
 router.use('/contributions', ContributionRoutes);

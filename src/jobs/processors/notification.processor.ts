@@ -5,6 +5,7 @@ import { getSocketIO } from '../../socket';
 import { ROOMS } from '../../socket/constants';
 import { SOCKET_EVENTS } from '../../socket/socket.events';
 import { sendFcmPush } from '../../utils/fcm';
+import { serializeImageUrls } from '../../utils/imageUrls';
 import { NotificationJobPayload } from '../queues/notification.queue';
 
 export const processNotification = async (job: { data: NotificationJobPayload }) => {
@@ -21,7 +22,7 @@ export const processNotification = async (job: { data: NotificationJobPayload })
   try {
     const io = getSocketIO();
     const room = `${ROOMS.USER_PREFIX}${notification.recipientId}`;
-    io.to(room).emit(SOCKET_EVENTS.NOTIFICATION, notification);
+    io.to(room).emit(SOCKET_EVENTS.NOTIFICATION, serializeImageUrls(notification));
     const unreadCount = await database.notification.count({
       where: { recipientId: notification.recipientId, isRead: false },
     });

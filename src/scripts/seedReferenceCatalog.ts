@@ -1,13 +1,23 @@
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
 import colors from 'colors';
 import XLSX from 'xlsx';
+import config from '../config';
 import { closeDB, connectDB, database } from '../config/database';
 import logger from '../config/logger';
+import { writeLocalFile } from '../utils/localStorage';
+import {
+  buildReferenceImageCatalog,
+  normalizeReferenceName,
+  ReferenceImage,
+  referenceImageKey,
+} from '../utils/referenceImageCatalog';
 import { uploadBufferWithKey } from '../utils/s3Upload';
 
 type CategoryNode = {
+  /** Subcategory name -> program names, in workbook order. */
   subcategories: Record<string, string[]>;
+  /** Programs that sit directly under the category (Art, Food & Drink). */
   directPrograms: string[];
 };
 
@@ -15,10 +25,12 @@ type CatalogTree = Record<string, CategoryNode>;
 
 const REFERENCE_ROOT = path.resolve(process.cwd(), 'temp-reference-data', 'Reference Data');
 const EXCEL_PATH = path.join(REFERENCE_ROOT, 'Reference Data.xlsx');
-const IMAGE_DIR_16_9 = path.join(REFERENCE_ROOT, 'Program', '16-9');
-const IMAGE_DIR_5_4 = path.join(REFERENCE_ROOT, 'Program', '5-4');
 
-const REFERENCE_CATEGORY_NAMES = ['Musical', 'Sport', 'Art', 'Food & Drink'];
+/**
+ * The workbook's first data row is `All | | | Default`, a UI filter marker rather
+ * than a real category, so it never becomes a Category row.
+ */
+const SKIPPED_FIRST_LEVEL = new Set(['All', 'First Level']);
 
 const mimeFromExt = (ext: string): string => {
   switch (ext.toLowerCase()) {
@@ -29,33 +41,13 @@ const mimeFromExt = (ext: string): string => {
       return 'image/png';
     case '.webp':
       return 'image/webp';
-    case '.gif':
-      return 'image/gif';
     default:
       return 'application/octet-stream';
   }
 };
 
-const findProgramImagePath = (programName: string): string | null => {
-  const candidates = [IMAGE_DIR_16_9, IMAGE_DIR_5_4];
-  const extensions = ['.jpg', '.jpeg', '.png', '.webp', '.JPG', '.JPEG', '.PNG'];
-
-  for (const dir of candidates) {
-    for (const ext of extensions) {
-      const full = path.join(dir, `${programName}${ext}`);
-      if (fs.existsSync(full)) {
-        return full;
-      }
-    }
-  }
-  return null;
-};
-
-const parseProgramSheet = (): CatalogTree => {
-  if (!fs.existsSync(EXCEL_PATH)) {
-    throw new Error(`Excel not found: ${EXCEL_PATH}`);
-  }
-
+/** Read the Program sheet into category > subcategory > program exactly as authored. */
+export const parseReferenceCatalog = (): CatalogTree => {
   const workbook = XLSX.readFile(EXCEL_PATH);
   const sheet = workbook.Sheets.Program;
   if (!sheet) {
@@ -68,256 +60,392 @@ const parseProgramSheet = (): CatalogTree => {
   });
 
   const tree: CatalogTree = {};
-  let category: string | null = null;
-  let subcategory: string | null = null;
-
-  const ensureCategory = (name: string) => {
-    if (!tree[name]) {
-      tree[name] = { subcategories: {}, directPrograms: [] };
-    }
-  };
+  let category = '';
+  let subcategory = '';
 
   for (const row of rows.slice(1)) {
     const first = row[0] != null ? String(row[0]).trim() : '';
     const second = row[1] != null ? String(row[1]).trim() : '';
-    const third = row[2] != null ? String(row[2]).trim() : '';
+    const program = row[2] != null ? String(row[2]).trim() : '';
 
-    if (first === 'All' || first === 'First Level') {
+    if (SKIPPED_FIRST_LEVEL.has(first)) {
       continue;
     }
 
     if (first) {
       category = first;
-      // New category row resets subcategory unless provided on the same row.
-      subcategory = second || null;
-      ensureCategory(category);
-    } else if (second) {
+      // A new category starts a fresh subcategory scope; Art and Food & Drink
+      // leave the second column empty and keep their programs at category level.
+      subcategory = '';
+      if (!tree[category]) {
+        tree[category] = { subcategories: {}, directPrograms: [] };
+      }
+    }
+
+    if (second) {
       subcategory = second;
     }
 
-    if (!category || !third) {
+    if (!category || !program) {
       continue;
     }
 
-    ensureCategory(category);
+    const node = tree[category];
 
     if (subcategory) {
-      if (!tree[category].subcategories[subcategory]) {
-        tree[category].subcategories[subcategory] = [];
+      if (!node.subcategories[subcategory]) {
+        node.subcategories[subcategory] = [];
       }
-      if (!tree[category].subcategories[subcategory].includes(third)) {
-        tree[category].subcategories[subcategory].push(third);
+      if (!node.subcategories[subcategory].includes(program)) {
+        node.subcategories[subcategory].push(program);
       }
-    } else if (!tree[category].directPrograms.includes(third)) {
-      // No subcategory → attach program directly under category.
-      tree[category].directPrograms.push(third);
+    } else if (!node.directPrograms.includes(program)) {
+      node.directPrograms.push(program);
     }
   }
 
   return tree;
 };
 
-const uploadProgramImage = async (programName: string): Promise<string | null> => {
-  const imagePath = findProgramImagePath(programName);
-  if (!imagePath) {
-    logger.warn(`No image found for program: ${programName}`);
-    return null;
-  }
-
-  const buffer = fs.readFileSync(imagePath);
-  const ext = path.extname(imagePath).toLowerCase() || '.jpg';
-  const safeName = programName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-  const key = `programs/images/${safeName}${ext}`;
-
+/**
+ * Stores each reference photo once under its stable key and hands back the value
+ * to persist — an S3 URL when AWS is on, otherwise the local `/uploads/...` path.
+ */
+const createImageResolver = async () => {
+  let catalog: ReferenceImage[];
   try {
-    return await uploadBufferWithKey(buffer, key, mimeFromExt(ext), {
-      originalName: path.basename(imagePath),
-      programName,
-      source: 'reference-data-seed',
-    });
+    catalog = await buildReferenceImageCatalog();
   } catch (error) {
-    logger.error(`S3 upload failed for ${programName}`, { error });
-    return null;
-  }
-};
-
-/** Remove old prefixed subcategory names like "Musical / Wind" before re-seed. */
-const cleanupOldPrefixedSubcategories = async () => {
-  const oldSubs = await database.subcategory.findMany({
-    where: {
-      OR: REFERENCE_CATEGORY_NAMES.map(categoryName => ({
-        name: { startsWith: `${categoryName} / ` },
-      })),
-    },
-    select: { id: true, name: true },
-  });
-
-  if (oldSubs.length === 0) {
-    return;
+    logger.warn(
+      colors.yellow('Reference photos are unavailable; seeding catalog without images.'),
+      {
+        error,
+      }
+    );
+    return () => Promise.resolve<string | null>(null);
   }
 
-  const ids = oldSubs.map(s => s.id);
-  await database.program.updateMany({
-    where: { subcategoryId: { in: ids } },
-    data: { subcategoryId: null },
-  });
-  await database.subcategory.deleteMany({
-    where: { id: { in: ids } },
-  });
+  const byEntity = new Map<string, ReferenceImage>();
+  for (const image of catalog) {
+    byEntity.set(
+      `${image.model}:${normalizeReferenceName(image.categoryName)}:${normalizeReferenceName(image.name)}`,
+      image
+    );
+  }
 
-  logger.info(colors.yellow(`Removed ${oldSubs.length} old prefixed subcategories.`));
+  const stored = new Map<string, string | null>();
+
+  return async (
+    model: ReferenceImage['model'],
+    categoryName: string,
+    name: string
+  ): Promise<string | null> => {
+    const image = byEntity.get(
+      `${model}:${normalizeReferenceName(categoryName)}:${normalizeReferenceName(name)}`
+    );
+    if (!image) {
+      logger.warn(`No reference photo for ${model} "${name}" (${categoryName}).`);
+      return null;
+    }
+
+    const key = referenceImageKey(image);
+    const cached = stored.get(key);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    let value: string | null = null;
+    try {
+      const buffer = await fs.readFile(image.filePath);
+      value = config.storage.useAws
+        ? await uploadBufferWithKey(buffer, key, mimeFromExt(path.extname(image.filePath)), {
+            originalName: path.basename(image.filePath),
+            source: 'reference-data-seed',
+          })
+        : await writeLocalFile(buffer, key);
+    } catch (error) {
+      logger.error(`Failed to store reference photo for ${model} "${name}".`, { error });
+    }
+
+    stored.set(key, value);
+    return value;
+  };
 };
 
-const upsertProgram = async (params: {
-  programName: string;
-  categoryId: string;
-  subcategoryId: string | null;
-  description: string;
-  reuseExistingImage?: boolean;
-}): Promise<'created' | 'updated'> => {
-  const existing = await database.program.findFirst({
-    where: { name: params.programName },
-  });
+type Counters = {
+  categoriesCreated: number;
+  subcategoriesCreated: number;
+  programsCreated: number;
+  programsUpdated: number;
+  imagesBackfilled: number;
+  softDeleted: number;
+};
 
-  let imageUrl: string | null | undefined;
-  if (existing?.imageUrl) {
-    imageUrl = undefined; // keep existing S3 URL
+const upsertProgram = async (
+  params: {
+    name: string;
+    categoryId: string;
+    subcategoryId: string | null;
+    description: string;
+    imageUrl: string | null;
+  },
+  counters: Counters
+) => {
+  const existing = await database.program.findFirst({ where: { name: params.name } });
+
+  // An admin-supplied photo outranks the reference one; only fill a blank.
+  const backfillImage = !existing?.imageUrl && params.imageUrl ? params.imageUrl : null;
+
+  if (existing) {
+    if (backfillImage) {
+      counters.imagesBackfilled += 1;
+    }
+
+    const unchanged =
+      !existing.isDeleted &&
+      existing.categoryId === params.categoryId &&
+      existing.subcategoryId === params.subcategoryId &&
+      !backfillImage;
+
+    if (unchanged) {
+      return;
+    }
+
+    counters.programsUpdated += 1;
   } else {
-    imageUrl = await uploadProgramImage(params.programName);
+    counters.programsCreated += 1;
   }
 
-  if (!existing) {
-    await database.program.create({
-      data: {
-        name: params.programName,
-        categoryId: params.categoryId,
-        subcategoryId: params.subcategoryId,
-        imageUrl: imageUrl ?? undefined,
-        description: params.description,
-      },
-    });
-    return 'created';
-  }
-
-  await database.program.update({
-    where: { id: existing.id },
-    data: {
-      isDeleted: false,
+  // `upsert` on the unique name keeps a second seed (dev watch restart, extra
+  // server replica) from colliding with this one mid-run.
+  await database.program.upsert({
+    where: { name: params.name },
+    create: {
+      name: params.name,
       categoryId: params.categoryId,
       subcategoryId: params.subcategoryId,
       description: params.description,
-      ...(imageUrl ? { imageUrl } : {}),
+      imageUrl: params.imageUrl ?? undefined,
+    },
+    update: {
+      isDeleted: false,
+      categoryId: params.categoryId,
+      subcategoryId: params.subcategoryId,
+      ...(backfillImage ? { imageUrl: backfillImage } : {}),
     },
   });
-  return 'updated';
 };
 
-const seedReferenceCatalog = async () => {
-  await cleanupOldPrefixedSubcategories();
-
-  const tree = parseProgramSheet();
+/**
+ * Hides catalog rows the workbook does not define so the API serves exactly the
+ * reference tree. Soft delete keeps rows that events or user skills still point at.
+ */
+const softDeleteNonReference = async (tree: CatalogTree, counters: Counters) => {
   const categoryNames = Object.keys(tree);
-  let createdCategories = 0;
-  let createdSubcategories = 0;
-  let createdPrograms = 0;
-  let updatedPrograms = 0;
-  let directPrograms = 0;
+  const programNames = categoryNames.flatMap(name => [
+    ...Object.values(tree[name].subcategories).flat(),
+    ...tree[name].directPrograms,
+  ]);
 
-  logger.info(
-    colors.cyan(`Seeding reference catalog: ${categoryNames.length} categories from Excel...`)
+  const categories = await database.category.updateMany({
+    where: { name: { notIn: categoryNames }, isDeleted: false },
+    data: { isDeleted: true },
+  });
+
+  const programs = await database.program.updateMany({
+    where: { name: { notIn: programNames }, isDeleted: false },
+    data: { isDeleted: true },
+  });
+
+  // Subcategories are unique per category, so each category is filtered on its own.
+  const referenceCategories = await database.category.findMany({
+    where: { name: { in: categoryNames } },
+    select: { id: true, name: true },
+  });
+  const keptSubcategoryIds: string[] = [];
+  for (const category of referenceCategories) {
+    const names = Object.keys(tree[category.name].subcategories);
+    const kept = await database.subcategory.findMany({
+      where: { categoryId: category.id, name: { in: names } },
+      select: { id: true },
+    });
+    keptSubcategoryIds.push(...kept.map(item => item.id));
+  }
+
+  const subcategories = await database.subcategory.updateMany({
+    where: { id: { notIn: keptSubcategoryIds }, isDeleted: false },
+    data: { isDeleted: true },
+  });
+
+  counters.softDeleted = categories.count + subcategories.count + programs.count;
+
+  if (counters.softDeleted > 0) {
+    logger.info(
+      colors.yellow(
+        `Hid non-reference catalog rows — categories: ${categories.count}, ` +
+          `subcategories: ${subcategories.count}, programs: ${programs.count}.`
+      )
+    );
+  }
+};
+
+/**
+ * True when the live catalog already matches the workbook, so a server restart
+ * skips the workbook parse and image writes entirely.
+ */
+const isAlreadySeeded = async (tree: CatalogTree): Promise<boolean> => {
+  const categoryNames = Object.keys(tree);
+  const subcategoryCount = categoryNames.reduce(
+    (total, name) => total + Object.keys(tree[name].subcategories).length,
+    0
   );
+  const programNames = categoryNames.flatMap(name => [
+    ...Object.values(tree[name].subcategories).flat(),
+    ...tree[name].directPrograms,
+  ]);
+
+  const [activeCategories, activeSubcategories, activePrograms, blankImages] = await Promise.all([
+    database.category.count({ where: { isDeleted: false } }),
+    database.subcategory.count({ where: { isDeleted: false } }),
+    database.program.count({ where: { isDeleted: false } }),
+    database.program.count({ where: { isDeleted: false, imageUrl: null } }),
+  ]);
+
+  if (
+    activeCategories !== categoryNames.length ||
+    activeSubcategories !== subcategoryCount ||
+    activePrograms !== programNames.length ||
+    blankImages > 0
+  ) {
+    return false;
+  }
+
+  // Counts can line up while the names differ, so confirm the reference names are the live ones.
+  const [matchingCategories, matchingPrograms] = await Promise.all([
+    database.category.count({ where: { isDeleted: false, name: { in: categoryNames } } }),
+    database.program.count({ where: { isDeleted: false, name: { in: programNames } } }),
+  ]);
+
+  return matchingCategories === categoryNames.length && matchingPrograms === programNames.length;
+};
+
+export const seedReferenceCatalog = async (): Promise<void> => {
+  const tree = parseReferenceCatalog();
+
+  if (await isAlreadySeeded(tree)) {
+    logger.info(colors.gray('Reference catalog already matches the workbook; nothing to seed.'));
+    return;
+  }
+
+  const counters: Counters = {
+    categoriesCreated: 0,
+    subcategoriesCreated: 0,
+    programsCreated: 0,
+    programsUpdated: 0,
+    imagesBackfilled: 0,
+    softDeleted: 0,
+  };
+
+  const resolveImage = await createImageResolver();
+  const categoryNames = Object.keys(tree);
+
+  logger.info(colors.cyan(`Seeding reference catalog: ${categoryNames.length} categories...`));
 
   for (const categoryName of categoryNames) {
-    let category = await database.category.findFirst({
+    const node = tree[categoryName];
+    const categoryImage = await resolveImage('category', categoryName, categoryName);
+
+    const existingCategory = await database.category.findFirst({ where: { name: categoryName } });
+    const backfillCategoryImage =
+      !existingCategory?.imageUrl && categoryImage ? categoryImage : null;
+
+    if (!existingCategory) {
+      counters.categoriesCreated += 1;
+      logger.info(colors.green(`Category created: ${categoryName}`));
+    } else if (backfillCategoryImage) {
+      counters.imagesBackfilled += 1;
+    }
+
+    const category = await database.category.upsert({
       where: { name: categoryName },
+      create: {
+        name: categoryName,
+        description: `Reference category: ${categoryName}`,
+        imageUrl: categoryImage ?? undefined,
+      },
+      update: {
+        isDeleted: false,
+        ...(backfillCategoryImage ? { imageUrl: backfillCategoryImage } : {}),
+      },
     });
 
-    if (!category) {
-      category = await database.category.create({
-        data: {
-          name: categoryName,
-          description: `Reference category: ${categoryName}`,
-        },
-      });
-      createdCategories += 1;
-      logger.info(colors.green(`Category created: ${categoryName}`));
-    } else if (category.isDeleted) {
-      category = await database.category.update({
-        where: { id: category.id },
-        data: { isDeleted: false },
-      });
-    }
+    for (const [subcategoryName, programs] of Object.entries(node.subcategories)) {
+      const subcategoryImage = await resolveImage('subcategory', categoryName, subcategoryName);
 
-    // Programs with subcategory → name is just "Wind", "Indoor", etc.
-    for (const [subName, programs] of Object.entries(tree[categoryName].subcategories)) {
-      let subcategory = await database.subcategory.findFirst({
-        where: {
-          categoryId: category.id,
-          name: subName,
-        },
+      const existingSubcategory = await database.subcategory.findFirst({
+        where: { categoryId: category.id, name: subcategoryName },
       });
+      const backfillSubcategoryImage =
+        !existingSubcategory?.imageUrl && subcategoryImage ? subcategoryImage : null;
 
-      if (!subcategory) {
-        subcategory = await database.subcategory.create({
-          data: {
-            name: subName,
-            categoryId: category.id,
-            description: `${subName} under ${categoryName}`,
-          },
-        });
-        createdSubcategories += 1;
-        logger.info(colors.green(`Subcategory created: ${subName} (${categoryName})`));
-      } else if (subcategory.isDeleted) {
-        subcategory = await database.subcategory.update({
-          where: { id: subcategory.id },
-          data: { isDeleted: false, categoryId: category.id },
-        });
+      if (!existingSubcategory) {
+        counters.subcategoriesCreated += 1;
+        logger.info(colors.green(`Subcategory created: ${categoryName} > ${subcategoryName}`));
+      } else if (backfillSubcategoryImage) {
+        counters.imagesBackfilled += 1;
       }
+
+      const subcategory = await database.subcategory.upsert({
+        where: { categoryId_name: { categoryId: category.id, name: subcategoryName } },
+        create: {
+          name: subcategoryName,
+          categoryId: category.id,
+          description: `${subcategoryName} under ${categoryName}`,
+          imageUrl: subcategoryImage ?? undefined,
+        },
+        update: {
+          isDeleted: false,
+          ...(backfillSubcategoryImage ? { imageUrl: backfillSubcategoryImage } : {}),
+        },
+      });
 
       for (const programName of programs) {
-        const result = await upsertProgram({
-          programName,
-          categoryId: category.id,
-          subcategoryId: subcategory.id,
-          description: `${programName} (${categoryName} > ${subName})`,
-        });
-        if (result === 'created') {
-          createdPrograms += 1;
-          logger.info(colors.green(`Program created: ${programName}`));
-        } else {
-          updatedPrograms += 1;
-        }
+        await upsertProgram(
+          {
+            name: programName,
+            categoryId: category.id,
+            subcategoryId: subcategory.id,
+            description: `${programName} (${categoryName} > ${subcategoryName})`,
+            imageUrl: await resolveImage('program', categoryName, programName),
+          },
+          counters
+        );
       }
     }
 
-    // No subcategory → program sits directly under category.
-    for (const programName of tree[categoryName].directPrograms) {
-      const result = await upsertProgram({
-        programName,
-        categoryId: category.id,
-        subcategoryId: null,
-        description: `${programName} (${categoryName})`,
-      });
-      directPrograms += 1;
-      if (result === 'created') {
-        createdPrograms += 1;
-        logger.info(colors.green(`Direct program created: ${programName}`));
-      } else {
-        updatedPrograms += 1;
-      }
+    for (const programName of node.directPrograms) {
+      await upsertProgram(
+        {
+          name: programName,
+          categoryId: category.id,
+          subcategoryId: null,
+          description: `${programName} (${categoryName})`,
+          imageUrl: await resolveImage('program', categoryName, programName),
+        },
+        counters
+      );
     }
   }
 
+  await softDeleteNonReference(tree, counters);
+
   logger.info(colors.cyan('──────── Reference catalog seed summary ────────'));
-  logger.info(`Categories created : ${createdCategories}`);
-  logger.info(`Subcategories created : ${createdSubcategories}`);
-  logger.info(`Programs created : ${createdPrograms}`);
-  logger.info(`Programs updated : ${updatedPrograms}`);
-  logger.info(`Direct programs (no subcategory) : ${directPrograms}`);
+  logger.info(`Categories created    : ${counters.categoriesCreated}`);
+  logger.info(`Subcategories created : ${counters.subcategoriesCreated}`);
+  logger.info(`Programs created      : ${counters.programsCreated}`);
+  logger.info(`Programs updated      : ${counters.programsUpdated}`);
+  logger.info(`Images backfilled     : ${counters.imagesBackfilled}`);
+  logger.info(`Non-reference hidden  : ${counters.softDeleted}`);
 };
 
 const run = async () => {
@@ -334,4 +462,7 @@ const run = async () => {
   }
 };
 
-void run();
+// Keeps `tsx src/scripts/seedReferenceCatalog.ts` working without running on import.
+if (require.main === module) {
+  void run();
+}

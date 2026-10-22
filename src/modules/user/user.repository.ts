@@ -1,5 +1,6 @@
 import { UserStatus } from '../../../prisma/generated/enums';
 import { database } from '../../config/database';
+import { getDefaultProfilePictureUrl } from '../../utils/s3Upload';
 import {
   createPaginationQuery,
   createPaginationResult,
@@ -79,6 +80,7 @@ const createUser = async (userData: ICreateUserPayload) => {
   return database.user.create({
     data: {
       ...rest,
+      profilePicture: getDefaultProfilePictureUrl(),
       accountId,
       username,
       birthDate: new Date(birthDate),

@@ -6,6 +6,7 @@ import { getSocketIO } from '../../socket';
 import { ROOMS } from '../../socket/constants';
 import { SOCKET_EVENTS } from '../../socket/socket.events';
 import ApiError from '../../utils/apiError';
+import { deleteFileFromS3, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import notificationQueue from '../../jobs/queues/notification.queue';
 import { ICreateNotificationPayload, INotificationFilters } from './notification.interface';
 import { NotificationRepository } from './notification.repository';
@@ -23,8 +24,21 @@ const emitUnreadCount = async (userId: string) => {
   return unreadCount;
 };
 
-const createNotification = async (payload: ICreateNotificationPayload) => {
-  const created = await NotificationRepository.createNotification(payload);
+const createNotification = async (
+  payload: ICreateNotificationPayload,
+  file?: Express.Multer.File
+) => {
+  const uploaded = file ? await uploadSingleFileToS3(file, 'notifications') : undefined;
+  let created;
+  try {
+    created = await NotificationRepository.createNotification({
+      ...payload,
+      ...(uploaded ? { image: uploaded.url } : {}),
+    });
+  } catch (error) {
+    if (uploaded) await deleteFileFromS3(uploaded.url);
+    throw error;
+  }
   await notificationQueue.add(
     'dispatch-notification',
     { notificationId: created.id },

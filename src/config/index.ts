@@ -37,7 +37,11 @@ if (process.env.NODE_ENV === 'development') {
 const config = {
   // Environment
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '8082', 10),
+  port: parseInt(process.env.PORT || '2001', 10),
+  storage: {
+    useAws: process.env.USE_AWS === 'true',
+    uploadDir: process.env.UPLOAD_DIR || 'uploads',
+  },
   // Database
   database: {
     url: process.env.DATABASE_URL!,
@@ -77,7 +81,9 @@ const config = {
   // Backend
   backend: {
     ip: process.env.BACKEND_IP || '0.0.0.0',
-    baseUrl: `http://${process.env.BACKEND_IP || 'localhost'}:${process.env.PORT || '8082'}`,
+    baseUrl: (
+      process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || '2001'}`
+    ).replace(/\/$/, ''),
   },
   // CORS — allow all origins (see app.ts / socket config)
   cors: {

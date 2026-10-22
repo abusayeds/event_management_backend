@@ -2,13 +2,14 @@ import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { AuthenticatedRequest } from '../../interfaces';
 import apiResponse from '../../utils/apiResponse';
+import ApiError from '../../utils/apiError';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
 import { FamilyService } from './family.services';
 
 const createFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { userId } = req.user!;
-  const result = await FamilyService.createFamily(userId, req.body);
+  const result = await FamilyService.createFamily(userId, req.body, req.file);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
@@ -41,7 +42,9 @@ const getFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) 
 });
 const updateFamily = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const familyId = req.params.id as string;
-  const result = await FamilyService.updateFamily(familyId, req.body);
+  if (!req.file && !Object.keys(req.body).length)
+    throw new ApiError(400, 'At least one field or image is required.');
+  const result = await FamilyService.updateFamily(familyId, req.body, req.file);
   apiResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,

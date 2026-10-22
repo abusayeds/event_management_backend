@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { UserRole } from '../../../prisma/generated/enums';
 import { auth } from '../../middleware/auth.middleware';
+import { upload } from '../../middleware/upload.middleware';
 import validateRequest from '../../middleware/validate.middleware';
 import { NotificationController } from './notification.controller';
 import { NotificationValidation } from './notification.validation';
@@ -10,6 +11,7 @@ const router = Router();
 router.post(
   '/',
   auth(UserRole.ADMIN),
+  upload.single('image'),
   validateRequest(NotificationValidation.createNotification),
   NotificationController.createNotification
 );

@@ -9,6 +9,7 @@ const createFamily = async (payload: ICreateFamilyPayload) => {
     data: {
       name: payload.name,
       description: payload.description,
+      imageUrl: payload.imageUrl,
       createdBy: payload.createdBy,
       familyMembers: {
         create: {
@@ -108,6 +109,7 @@ const updateFamily = async (familyId: string, payload: Partial<ICreateFamilyPayl
     data: {
       name: payload.name,
       description: payload.description,
+      imageUrl: payload.imageUrl,
     },
   });
   return family;

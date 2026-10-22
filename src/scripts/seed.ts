@@ -2,6 +2,7 @@ import colors from 'colors';
 import { closeDB, connectDB } from '../config/database';
 import logger from '../config/logger';
 import { seedDefaultProfilePicture } from './seedDefaultProfilePicture';
+import { seedReferenceCatalog } from './seedReferenceCatalog';
 import { seedDefaultUsers } from './userSeeder';
 
 const runSeed = async () => {
@@ -10,6 +11,7 @@ const runSeed = async () => {
     await connectDB();
     await seedDefaultProfilePicture();
     await seedDefaultUsers();
+    await seedReferenceCatalog();
     logger.info(colors.green('Seed process completed successfully.'));
     process.exit(0);
   } catch (error) {

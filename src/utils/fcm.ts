@@ -1,6 +1,7 @@
 import { App, cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import config from '../config';
+import { publicImageUrl } from './imageUrls';
 
 interface FcmPayload {
   token: string;
@@ -59,7 +60,7 @@ export const sendFcmPush = async (payload: FcmPayload): Promise<FcmResult> => {
       notification: {
         title: payload.title,
         body: payload.body,
-        ...(payload.image ? { imageUrl: payload.image } : {}),
+        ...(payload.image ? { imageUrl: publicImageUrl(payload.image) } : {}),
       },
       data: payload.data ?? {},
       android: {
