@@ -7,12 +7,15 @@ ENV CI=1
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
+# npm runs the `prepare` lifecycle script after `npm ci`, so scripts/ must exist first.
+COPY scripts ./scripts
 RUN npm ci
 
 # Production-only dependency tree, copied into the runner as-is.
 FROM base AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
+COPY scripts ./scripts
 RUN npm ci --omit=dev
 
 FROM base AS builder
