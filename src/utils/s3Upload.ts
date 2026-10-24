@@ -116,6 +116,9 @@ const buildS3Url = (key: string): string => {
   return `https://${bucketName}.s3.${config.aws.region || awsConfig.region}.amazonaws.com/${key}`;
 };
 
+/** Public URL for a key already in the bucket, without touching the object. */
+export const publicObjectUrl = (key: string): string => buildS3Url(key);
+
 export const DEFAULT_PROFILE_PICTURE_KEY = 'profiles/images/default-user.svg';
 
 export const getDefaultProfilePictureUrl = (): string =>

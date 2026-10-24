@@ -1,14 +1,26 @@
-import { promises as fs } from 'fs';
 import path from 'path';
 import * as XLSX from 'xlsx';
 import crypto from 'crypto';
+import {
+  listProgramPhotos,
+  localReferenceRoot,
+  readReferenceAsset,
+  REFERENCE_WORKBOOK,
+  referenceObjectKey,
+  ReferenceSource,
+  resolveReferenceSource,
+} from './referenceAssetStore';
 
 export type ReferenceImage = {
   model: 'category' | 'subcategory' | 'program';
   name: string;
   categoryName: string;
   programName: string;
+  /** Absolute path on disk for a local bundle; the S3 object key for the mirror. */
   filePath: string;
+  /** Path inside the bundle, e.g. `Program/16-9/Chess.jpg`. */
+  relPath: string;
+  source: ReferenceSource;
 };
 
 export const normalizeReferenceName = (name: string): string =>
@@ -33,18 +45,19 @@ export const referenceImageKey = (item: ReferenceImage): string => {
   return `${folder}/images/reference-${slug}-${hash}${path.extname(item.filePath).toLowerCase()}`;
 };
 
-export const buildReferenceImageCatalog = async (): Promise<ReferenceImage[]> => {
-  const root = path.resolve('temp-reference-data/Reference Data');
-  const workbook = XLSX.readFile(path.join(root, 'Reference Data.xlsx'));
+export const buildReferenceImageCatalog = async (
+  preferredSource?: ReferenceSource
+): Promise<ReferenceImage[]> => {
+  const source = preferredSource ?? (await resolveReferenceSource());
+  if (!source) throw new Error('Reference bundle is available neither on disk nor on S3.');
+
+  const workbook = XLSX.read(await readReferenceAsset(REFERENCE_WORKBOOK, source));
   if (!workbook.Sheets.Program) throw new Error('Reference workbook has no Program sheet.');
   const files = new Map<string, string>();
-  for (const ratio of ['16-9', '5-4']) {
-    const dir = path.join(root, 'Program', ratio);
-    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
-      if (!entry.isFile() || !/\.(jpe?g|png|webp)$/i.test(entry.name)) continue;
-      const name = normalizeReferenceName(path.parse(entry.name).name);
-      if (!files.has(name)) files.set(name, path.join(dir, entry.name));
-    }
+  // 16-9 comes first, so it wins whenever both ratios carry the same program.
+  for (const relPath of (await listProgramPhotos(source)).sort()) {
+    const name = normalizeReferenceName(path.parse(relPath).name);
+    if (!files.has(name)) files.set(name, relPath);
   }
   const images = new Map<string, ReferenceImage>();
   let category = '';
@@ -63,12 +76,22 @@ export const buildReferenceImageCatalog = async (): Promise<ReferenceImage[]> =>
     const program = String(row[2]).trim();
     // The workbook's Football/Rugby entry is represented by Football.jpg.
     const candidates = program === 'Football/Rugby' ? [program, 'Football'] : [program];
-    const filePath = candidates.map(name => files.get(normalizeReferenceName(name))).find(Boolean);
-    if (!filePath) throw new Error(`No original reference image for ${program}`);
+    const relPath = candidates.map(name => files.get(normalizeReferenceName(name))).find(Boolean);
+    if (!relPath) throw new Error(`No original reference image for ${program}`);
+    const filePath =
+      source === 'local' ? path.join(localReferenceRoot, relPath) : referenceObjectKey(relPath);
     const add = (model: ReferenceImage['model'], name: string) => {
       const key = `${model}:${normalizeReferenceName(category)}:${normalizeReferenceName(name)}`;
       if (!images.has(key))
-        images.set(key, { model, name, categoryName: category, programName: program, filePath });
+        images.set(key, {
+          model,
+          name,
+          categoryName: category,
+          programName: program,
+          filePath,
+          relPath,
+          source,
+        });
     };
     add('category', category);
     if (subcategory) add('subcategory', subcategory);

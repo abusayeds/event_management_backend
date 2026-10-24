@@ -37,7 +37,8 @@
     "logs:tail": "tail -f logs/app.log",
     "logs:error": "tail -f logs/error.log",
     "logs:security": "tail -f logs/security.log",
-    "prepare": "node scripts/prepare.js"
+    "prepare": "node scripts/prepare.js",
+    "images:migrate-s3": "tsx src/scripts/migrateImagesToS3.ts"
   },
   "keywords": [
     "backend",

@@ -9,6 +9,7 @@ import { verifyEmailConnection } from './config/email';
 import logger from './config/logger';
 import { closeRedis, connectRedis } from './config/redis';
 import { initializeWorkers, shutdownWorkers } from './jobs';
+import { migrateImagesToS3 } from './scripts/migrateImagesToS3';
 import { seedDefaultProfilePicture } from './scripts/seedDefaultProfilePicture';
 import { seedReferenceCatalog } from './scripts/seedReferenceCatalog';
 import { seedDefaultUsers } from './scripts/userSeeder';
@@ -293,6 +294,17 @@ async function main() {
     } catch (error) {
       // A missing workbook or image folder must not stop the API from serving.
       logger.warn(colors.yellow('   ⚠️  Reference catalog seed skipped. App will continue.'));
+      logger.warn(error);
+    }
+
+    // Step 1.7: Move any image still on local disk into S3 (idempotent, no-op when USE_AWS is off)
+    logger.info(colors.cyan('☁️  [1.7/5] Checking image storage...'));
+    try {
+      await migrateImagesToS3();
+      logger.info(colors.green('   ✅ Image storage ready'));
+    } catch (error) {
+      // Images that stay local are still served from /uploads, so this never blocks boot.
+      logger.warn(colors.yellow('   ⚠️  Image migration skipped. App will continue.'));
       logger.warn(error);
     }
 

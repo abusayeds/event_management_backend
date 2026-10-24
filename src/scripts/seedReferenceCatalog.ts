@@ -1,4 +1,3 @@
-import { promises as fs } from 'fs';
 import path from 'path';
 import colors from 'colors';
 import XLSX from 'xlsx';
@@ -6,6 +5,14 @@ import config from '../config';
 import { closeDB, connectDB, database } from '../config/database';
 import logger from '../config/logger';
 import { writeLocalFile } from '../utils/localStorage';
+import {
+  mimeFromExt,
+  readReferenceAsset,
+  REFERENCE_WORKBOOK,
+  ReferenceSource,
+  resolveReferenceSource,
+  syncReferenceBundleToS3,
+} from '../utils/referenceAssetStore';
 import {
   buildReferenceImageCatalog,
   normalizeReferenceName,
@@ -23,32 +30,15 @@ type CategoryNode = {
 
 type CatalogTree = Record<string, CategoryNode>;
 
-const REFERENCE_ROOT = path.resolve(process.cwd(), 'temp-reference-data', 'Reference Data');
-const EXCEL_PATH = path.join(REFERENCE_ROOT, 'Reference Data.xlsx');
-
 /**
  * The workbook's first data row is `All | | | Default`, a UI filter marker rather
  * than a real category, so it never becomes a Category row.
  */
 const SKIPPED_FIRST_LEVEL = new Set(['All', 'First Level']);
 
-const mimeFromExt = (ext: string): string => {
-  switch (ext.toLowerCase()) {
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.png':
-      return 'image/png';
-    case '.webp':
-      return 'image/webp';
-    default:
-      return 'application/octet-stream';
-  }
-};
-
 /** Read the Program sheet into category > subcategory > program exactly as authored. */
-export const parseReferenceCatalog = (): CatalogTree => {
-  const workbook = XLSX.readFile(EXCEL_PATH);
+export const parseReferenceCatalog = async (source: ReferenceSource): Promise<CatalogTree> => {
+  const workbook = XLSX.read(await readReferenceAsset(REFERENCE_WORKBOOK, source));
   const sheet = workbook.Sheets.Program;
   if (!sheet) {
     throw new Error('Sheet "Program" not found in Reference Data.xlsx');
@@ -111,10 +101,10 @@ export const parseReferenceCatalog = (): CatalogTree => {
  * Stores each reference photo once under its stable key and hands back the value
  * to persist — an S3 URL when AWS is on, otherwise the local `/uploads/...` path.
  */
-const createImageResolver = async () => {
+const createImageResolver = async (source: ReferenceSource) => {
   let catalog: ReferenceImage[];
   try {
-    catalog = await buildReferenceImageCatalog();
+    catalog = await buildReferenceImageCatalog(source);
   } catch (error) {
     logger.warn(
       colors.yellow('Reference photos are unavailable; seeding catalog without images.'),
@@ -156,10 +146,10 @@ const createImageResolver = async () => {
 
     let value: string | null = null;
     try {
-      const buffer = await fs.readFile(image.filePath);
+      const buffer = await readReferenceAsset(image.relPath, image.source);
       value = config.storage.useAws
-        ? await uploadBufferWithKey(buffer, key, mimeFromExt(path.extname(image.filePath)), {
-            originalName: path.basename(image.filePath),
+        ? await uploadBufferWithKey(buffer, key, mimeFromExt(path.extname(image.relPath)), {
+            originalName: path.basename(image.relPath),
             source: 'reference-data-seed',
           })
         : await writeLocalFile(buffer, key);
@@ -330,12 +320,28 @@ const isAlreadySeeded = async (tree: CatalogTree): Promise<boolean> => {
 };
 
 export const seedReferenceCatalog = async (): Promise<void> => {
-  const tree = parseReferenceCatalog();
+  // Mirror the bundle first so this instance — and every later deploy, which has no
+  // `temp-reference-data/` on disk — can seed straight from the bucket.
+  await syncReferenceBundleToS3();
+
+  const source = await resolveReferenceSource();
+  if (!source) {
+    logger.warn(
+      colors.yellow('Reference bundle found neither on disk nor on S3; skipping catalog seed.')
+    );
+
+    return;
+  }
+
+  const tree = await parseReferenceCatalog(source);
 
   if (await isAlreadySeeded(tree)) {
     logger.info(colors.gray('Reference catalog already matches the workbook; nothing to seed.'));
+
     return;
   }
+
+  logger.info(colors.cyan(`Reference bundle source: ${source}.`));
 
   const counters: Counters = {
     categoriesCreated: 0,
@@ -346,7 +352,7 @@ export const seedReferenceCatalog = async (): Promise<void> => {
     softDeleted: 0,
   };
 
-  const resolveImage = await createImageResolver();
+  const resolveImage = await createImageResolver(source);
   const categoryNames = Object.keys(tree);
 
   logger.info(colors.cyan(`Seeding reference catalog: ${categoryNames.length} categories...`));

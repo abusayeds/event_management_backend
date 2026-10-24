@@ -1,6 +1,7 @@
 import colors from 'colors';
 import { closeDB, connectDB } from '../config/database';
 import logger from '../config/logger';
+import { migrateImagesToS3 } from './migrateImagesToS3';
 import { seedDefaultProfilePicture } from './seedDefaultProfilePicture';
 import { seedReferenceCatalog } from './seedReferenceCatalog';
 import { seedDefaultUsers } from './userSeeder';
@@ -12,6 +13,7 @@ const runSeed = async () => {
     await seedDefaultProfilePicture();
     await seedDefaultUsers();
     await seedReferenceCatalog();
+    await migrateImagesToS3();
     logger.info(colors.green('Seed process completed successfully.'));
     process.exit(0);
   } catch (error) {
