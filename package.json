@@ -17,6 +17,7 @@
     "start": "tsx src/server.ts",
     "start:prod": "node dist/src/server.js",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:demo": "tsx src/scripts/seedDemoAppData.ts",
     "seed:catalog": "tsx src/scripts/seedReferenceCatalog.ts",
     "images:migrate-local": "tsx src/scripts/migrateImagesToLocal.ts",
     "images:prepare-local": "tsx src/scripts/prepareLocalImages.ts",

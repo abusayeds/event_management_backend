@@ -12,9 +12,11 @@ import { initializeWorkers, shutdownWorkers } from './jobs';
 import { migrateImagesToS3 } from './scripts/migrateImagesToS3';
 import { seedDefaultProfilePicture } from './scripts/seedDefaultProfilePicture';
 import { seedReferenceCatalog } from './scripts/seedReferenceCatalog';
+import { seedDemoAppData } from './scripts/seedDemoAppData';
 import { seedDefaultUsers } from './scripts/userSeeder';
 import { initializeSocket } from './socket';
 import { repairCategoryImages } from './utils/repairCategoryImages';
+// TEMP demo seed: after production QA, delete seedDemoAppData.ts and remove its import/call below.
 
 type TrackedSocket = {
   setKeepAlive: (enable?: boolean, initialDelay?: number) => void;
@@ -297,6 +299,16 @@ async function main() {
       logger.warn(error);
     }
 
+    // Step 1.65: TEMP demo QA data (idempotent). After prod has data: delete seedDemoAppData.ts + this block.
+    logger.info(colors.cyan('🧪 [1.65/5] Seeding demo app data...'));
+    try {
+      await seedDemoAppData();
+      logger.info(colors.green('   ✅ Demo app data ready'));
+    } catch (error) {
+      logger.warn(colors.yellow('   ⚠️  Demo app data seed skipped. App will continue.'));
+      logger.warn(error);
+    }
+
     // Step 1.7: Move any image still on local disk into S3 (idempotent, no-op when USE_AWS is off)
     logger.info(colors.cyan('☁️  [1.7/5] Checking image storage...'));
     try {
@@ -323,11 +335,20 @@ async function main() {
       logger.warn(colors.yellow('   ⚠️  Redis unavailable — background jobs and cache disabled'));
     }
 
-    // Step 3: Verify Email Service (optional)
+    // Step 3: Verify Email Service (optional — never block API boot)
     if (config.email.username && config.email.password) {
       logger.info(colors.cyan('📧 [3/5] Verifying email service...'));
-      await verifyEmailConnection();
-      logger.info(colors.green('   ✅ Email service verified'));
+      try {
+        await verifyEmailConnection();
+        logger.info(colors.green('   ✅ Email service verified'));
+      } catch (error) {
+        logger.warn(
+          colors.yellow(
+            '   ⚠️  Email service unavailable (SMTP auth failed). App will continue without email.'
+          )
+        );
+        logger.warn(error);
+      }
     }
 
     // Step 4: Start HTTP server (NOW ASYNC)
