@@ -9,7 +9,7 @@ import { FamilyValidation } from './family.validation';
 const router = Router();
 
 // Protect all routes with authentication
-router.use(auth(UserRole.USER));
+router.use(auth(UserRole.ADMIN, UserRole.USER));
 
 router
   .route('/')

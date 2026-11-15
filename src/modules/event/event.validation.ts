@@ -267,10 +267,7 @@ const getUpcomingEventsValidationSchema = feedListEventsQueryValidationSchema;
 const getHistoryEventsValidationSchema = feedListEventsQueryValidationSchema;
 
 const searchHomeScreenEventsValidationSchema = z.object({
-  query: z.object({
-    ...feedListQueryFields,
-    searchTerm: z.string().trim().min(1).max(200),
-  }),
+  query: z.object(feedListQueryFields),
 });
 
 const getEventsByFamilyRelationValidationSchema = z.object({

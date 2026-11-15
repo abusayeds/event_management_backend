@@ -9,35 +9,35 @@ const router = Router();
 
 router.post(
   '/',
-  auth(UserRole.USER),
+  auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(FamilyMemberValidation.addFamilyMember),
   FamilyMemberController.addFamilyMember
 );
 
 router.get(
   '/family/:familyId',
-  auth(UserRole.USER),
+  auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(FamilyMemberValidation.getFamilyMembersByFamilyId),
   FamilyMemberController.getFamilyMembersByFamilyId
 );
 
 router.delete(
   '/family/:familyId/user/:userId',
-  auth(UserRole.USER),
+  auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(FamilyMemberValidation.removeFamilyMember),
   FamilyMemberController.removeFamilyMember
 );
 
 router.patch(
   '/add-owner',
-  auth(UserRole.USER),
+  auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(FamilyMemberValidation.addFamilyOwner),
   FamilyMemberController.addFamilyOwner
 );
 
 router.patch(
   '/family/:familyId/owner-independent',
-  auth(UserRole.USER),
+  auth(UserRole.ADMIN, UserRole.USER),
   validateRequest(FamilyMemberValidation.updateOwnerIndependentStatus),
   FamilyMemberController.updateOwnerIndependentStatus
 );

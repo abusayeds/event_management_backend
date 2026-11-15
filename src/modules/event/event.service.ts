@@ -220,10 +220,24 @@ const getPersonalizedUpcomingEvents = async (
 
 const searchHomeScreenEvents = async (filters: IFeedListFilters, options: PaginationOptions) => {
   const trimmed = (filters.searchTerm ?? '').trim();
-  if (!trimmed.length) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Search term is required.');
+  const hasOtherFilters = Boolean(
+    filters.programId?.trim() ||
+      filters.type ||
+      filters.location?.trim() ||
+      filters.categoryGroup?.trim() ||
+      filters.priceMin?.trim() ||
+      filters.priceMax?.trim()
+  );
+  if (!trimmed.length && !hasOtherFilters) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Search term or at least one filter is required.'
+    );
   }
-  return EventRepository.searchHomeScreenEvents({ ...filters, searchTerm: trimmed }, options);
+  return EventRepository.searchHomeScreenEvents(
+    { ...filters, searchTerm: trimmed.length ? trimmed : undefined },
+    options
+  );
 };
 
 const getEventsByFamilyRelation = async (
