@@ -130,7 +130,8 @@ const repeatConfigValidationSchema = z
   .nullable();
 
 const scheduleCompetitionLevelSchema = z.enum(SCHEDULE_COMPETITION_LEVELS, {
-  message: `competitionLevel must be one of: ${SCHEDULE_COMPETITION_LEVELS.join(', ')}`,
+  message:
+    'Please select a valid competition level (for example Local-Easy or National-Medium).',
 });
 
 const eventRoundValidationSchema = z.object({

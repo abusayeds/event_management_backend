@@ -33,6 +33,20 @@ export const eventApplicationSelect = {
       id: true,
       eventName: true,
       coverImage: true,
+      organizer: true,
+      location: true,
+      createdAt: true,
+      updatedAt: true,
+      schedule: {
+        select: {
+          competitionLevel: true,
+          eventType: true,
+          registrationDate: true,
+          deadline: true,
+          cost: true,
+          lateFee: true,
+        },
+      },
     },
   },
 } as const;
@@ -59,18 +73,22 @@ const getEventApplicationByUser = async (
     [pagination.sortBy]: pagination.sortOrder,
   } as Prisma.EventAppliedOrderByWithRelationInput;
 
-  const where: Prisma.EventAppliedWhereInput = {
-    userId,
+  const eventFilter: Prisma.EventWhereInput = {
+    isDeleted: false,
     deletedAt: null,
   };
   if (query.search?.trim()) {
-    where.event = {
-      eventName: {
-        contains: query.search.trim(),
-        mode: 'insensitive',
-      },
+    eventFilter.eventName = {
+      contains: query.search.trim(),
+      mode: 'insensitive',
     };
   }
+
+  const where: Prisma.EventAppliedWhereInput = {
+    userId,
+    deletedAt: null,
+    event: eventFilter,
+  };
 
   const [data, total] = await Promise.all([
     database.eventApplied.findMany({
