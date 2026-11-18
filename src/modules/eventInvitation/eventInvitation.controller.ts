@@ -25,7 +25,11 @@ const getShareConnections = asyncHandler(async (req: AuthenticatedRequest, res: 
 });
 
 const getShareLink = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const result = await EventInvitationService.getShareLink(req.params.eventId as string);
+  const { userId } = req.user!;
+  const result = await EventInvitationService.getShareLink(
+    req.params.eventId as string,
+    userId
+  );
 
   apiResponse(res, {
     success: true,

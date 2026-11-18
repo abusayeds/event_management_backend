@@ -12,11 +12,9 @@ import { initializeWorkers, shutdownWorkers } from './jobs';
 import { migrateImagesToS3 } from './scripts/migrateImagesToS3';
 import { seedDefaultProfilePicture } from './scripts/seedDefaultProfilePicture';
 import { seedReferenceCatalog } from './scripts/seedReferenceCatalog';
-import { seedDemoAppData } from './scripts/seedDemoAppData';
 import { seedDefaultUsers } from './scripts/userSeeder';
 import { initializeSocket } from './socket';
 import { repairCategoryImages } from './utils/repairCategoryImages';
-// TEMP demo seed: after production QA, delete seedDemoAppData.ts and remove its import/call below.
 
 type TrackedSocket = {
   setKeepAlive: (enable?: boolean, initialDelay?: number) => void;
@@ -296,16 +294,6 @@ async function main() {
     } catch (error) {
       // A missing workbook or image folder must not stop the API from serving.
       logger.warn(colors.yellow('   ⚠️  Reference catalog seed skipped. App will continue.'));
-      logger.warn(error);
-    }
-
-    // Step 1.65: TEMP demo QA data (idempotent). After prod has data: delete seedDemoAppData.ts + this block.
-    logger.info(colors.cyan('🧪 [1.65/5] Seeding demo app data...'));
-    try {
-      await seedDemoAppData();
-      logger.info(colors.green('   ✅ Demo app data ready'));
-    } catch (error) {
-      logger.warn(colors.yellow('   ⚠️  Demo app data seed skipped. App will continue.'));
       logger.warn(error);
     }
 

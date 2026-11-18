@@ -12,24 +12,29 @@ import { NotificationService } from '../notification/notification.service';
 import { ISendEventInvitationsPayload } from './eventInvitation.interface';
 import { EventInvitationRepository } from './eventInvitation.repository';
 
-const assertEventShareable = async (eventId: string) => {
+const assertEventShareable = async (eventId: string, actorId?: string) => {
   const event = await EventInvitationRepository.getEventById(eventId);
   if (!event) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found.');
   }
-  if (event.isDisabled || !event.isActive || !event.isPublished) {
+  if (event.isDisabled) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'This event cannot be shared right now.');
+  }
+  // Creator can always invite; others need an active published event.
+  const isCreator = actorId != null && event.creatorId === actorId;
+  if (!isCreator && (!event.isActive || !event.isPublished)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'This event cannot be shared right now.');
   }
   return event;
 };
 
 const getShareConnections = async (userId: string, eventId: string, options: PaginationOptions) => {
-  await assertEventShareable(eventId);
+  await assertEventShareable(eventId, userId);
   return EventInvitationRepository.getShareableConnections(userId, eventId, options);
 };
 
-const getShareLink = async (eventId: string) => {
-  const event = await assertEventShareable(eventId);
+const getShareLink = async (eventId: string, actorId?: string) => {
+  const event = await assertEventShareable(eventId, actorId);
   const frontendBase = (process.env.FRONTEND_URL || 'http://localhost:3000')
     .split(',')[0]
     .trim()
@@ -48,7 +53,7 @@ const sendInvitations = async (
   eventId: string,
   payload: ISendEventInvitationsPayload
 ) => {
-  const event = await assertEventShareable(eventId);
+  const event = await assertEventShareable(eventId, userId);
   const uniqueInviteeIds = [...new Set(payload.inviteeIds)];
 
   if (uniqueInviteeIds.includes(userId)) {
