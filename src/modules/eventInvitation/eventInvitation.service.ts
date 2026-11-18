@@ -87,8 +87,8 @@ const sendInvitations = async (
         title: 'Event invitation',
         message: payload.message?.trim() || `You have been invited to "${event.eventName}".`,
         image: event.coverImage,
-        linkId: invitation.id,
-        linkType: 'event-invitation',
+        linkId: event.id,
+        linkType: 'event',
         data: {
           eventId: event.id,
           invitationId: invitation.id,

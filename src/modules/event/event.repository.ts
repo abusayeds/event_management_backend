@@ -588,6 +588,7 @@ const eventDetailSelect = {
   programId: true,
   organizer: true,
   location: true,
+  creatorId: true,
   eventPortal: true,
   registrationPortal: true,
   description: true,
@@ -1128,6 +1129,49 @@ const getPublishedEventsByCreatorIds = async (
   return createPaginationResult(enriched, total, pagination);
 };
 
+/** Events created by the current user (includes unpublished drafts; excludes soft-deleted). */
+const getMyCreatedEvents = async (
+  creatorId: string,
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+): Promise<PaginationResult<unknown>> => {
+  const pagination = parsePaginationOptions(options);
+  const { skip, take, orderBy } = createPaginationQuery(pagination);
+  const sessionAnd: Prisma.EventScheduleWhereInput[] = [];
+  const priceWhere = priceRangeOnSchedule(filters?.priceMin, filters?.priceMax);
+  if (priceWhere) {
+    sessionAnd.push(priceWhere);
+  }
+  if (filters?.type) {
+    sessionAnd.push({ eventType: filters.type });
+  }
+
+  let where: Prisma.EventWhereInput = {
+    deletedAt: null,
+    isDeleted: false,
+    creatorId,
+  };
+  if (sessionAnd.length) {
+    where = { AND: [where, { schedule: { is: { AND: sessionAnd } } }] };
+  }
+  where = applyFeedListProgramLocationCategoryWhere(where, filters);
+  where = applyFeedSearchTerm(where, filters?.searchTerm);
+
+  const [data, total] = await Promise.all([
+    database.event.findMany({
+      where,
+      select: eventListSelect,
+      skip,
+      take,
+      orderBy,
+    }),
+    database.event.count({ where }),
+  ]);
+
+  const enriched = await attachActiveSchedules(data);
+  return createPaginationResult(enriched, total, pagination);
+};
+
 const setEventDisabledById = async (eventId: string, isDisabled: boolean, adminUserId: string) => {
   const existing = await database.event.findFirst({
     where: { id: eventId, deletedAt: null, isDeleted: false },
@@ -1323,6 +1367,7 @@ export const EventRepository = {
   getHistoryEvents,
   searchHomeScreenEvents,
   getPublishedEventsByCreatorIds,
+  getMyCreatedEvents,
   // Paginated list & single reads
   getEvents,
   getEventById,

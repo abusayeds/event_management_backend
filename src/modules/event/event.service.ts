@@ -252,6 +252,14 @@ const getEventsByFamilyRelation = async (
   );
   return EventRepository.getPublishedEventsByCreatorIds(creatorIds, filters, options);
 };
+
+const getMyCreatedEvents = async (
+  creatorId: string,
+  filters: IFeedListFilters | undefined,
+  options: PaginationOptions
+) => {
+  return EventRepository.getMyCreatedEvents(creatorId, filters, options);
+};
 const getEventById = async (id: string, role: UserRole) => {
   const event =
     role === UserRole.ADMIN
@@ -574,6 +582,7 @@ export const EventService = {
   getHistoryEvents,
   searchHomeScreenEvents,
   getEventsByFamilyRelation,
+  getMyCreatedEvents,
   getEventById,
   getEventEditLogById,
   getEventEditLogsByEventId,

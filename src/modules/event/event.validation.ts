@@ -266,6 +266,7 @@ const feedListEventsQueryValidationSchema = z.object({
 const getTodayEventsValidationSchema = feedListEventsQueryValidationSchema;
 const getUpcomingEventsValidationSchema = feedListEventsQueryValidationSchema;
 const getHistoryEventsValidationSchema = feedListEventsQueryValidationSchema;
+const getMyCreatedEventsValidationSchema = feedListEventsQueryValidationSchema;
 
 const searchHomeScreenEventsValidationSchema = z.object({
   query: z.object(feedListQueryFields),
@@ -380,6 +381,7 @@ export const EventValidation = {
   getTodayEventsValidationSchema,
   getUpcomingEventsValidationSchema,
   getHistoryEventsValidationSchema,
+  getMyCreatedEventsValidationSchema,
   searchHomeScreenEventsValidationSchema,
   getEventsByFamilyRelationValidationSchema,
   getEventByIdValidationSchema,

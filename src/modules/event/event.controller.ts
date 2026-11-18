@@ -107,6 +107,22 @@ const searchHomeScreenEvents = asyncHandler(async (req: AuthenticatedRequest, re
   });
 });
 
+// GET /events/feed/mine — events created by the authenticated user
+const getMyCreatedEvents = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.userId;
+  const filters = pickFeedListFilters(req);
+  const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+  const result = await EventService.getMyCreatedEvents(userId, filters, options);
+
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Your created events fetched successfully.',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 // GET /events/feed/by-family-relation
 const getEventsByFamilyRelation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
@@ -265,6 +281,7 @@ export const EventController = {
   getHistoryEvents,
   searchHomeScreenEvents,
   getEventsByFamilyRelation,
+  getMyCreatedEvents,
   getEventById,
   getEventEditLogById,
   getEventEditLogsByEventId,

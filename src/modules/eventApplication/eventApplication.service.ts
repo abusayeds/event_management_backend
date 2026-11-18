@@ -39,6 +39,10 @@ const createEventApplication = async (userId: string, payload: ICreateEventAppli
         message: `A user applied to your event "${event.eventName}".`,
         linkId: event.id,
         linkType: 'event',
+        data: {
+          eventId: event.id,
+          applicationId: created.id,
+        },
       });
     }
 

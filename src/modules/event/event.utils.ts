@@ -225,6 +225,7 @@ export const eventListSelect = {
   programId: true,
   organizer: true,
   location: true,
+  creatorId: true,
   isPublished: true,
   isActive: true,
   isVerified: true,
@@ -236,6 +237,15 @@ export const eventListSelect = {
   updatedAt: true,
   sessionId: true,
   program: { select: { id: true, name: true, imageUrl: true } },
+  creator: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      profilePicture: true,
+    },
+  },
 } as const;
 
 export const publishedEventBaseWhere = {

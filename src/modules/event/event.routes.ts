@@ -45,6 +45,13 @@ router.get(
   EventController.getEventsByFamilyRelation
 );
 
+router.get(
+  '/feed/mine',
+  asUser,
+  validateRequest(EventValidation.getMyCreatedEventsValidationSchema),
+  EventController.getMyCreatedEvents
+);
+
 // -----------------------------------------------------------------------------
 // Admin: per-event lists & toggles
 // -----------------------------------------------------------------------------
