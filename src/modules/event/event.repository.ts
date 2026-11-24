@@ -133,7 +133,7 @@ const attachFeedCategoryGroups = async <T extends { id: string }>(
   });
   const byEvent = new Map<
     string,
-    Array<{ criteria: GroupCriteria; condition: RoundCondition; value: number }>
+    Array<{ criteria: GroupCriteria; condition: RoundCondition; value: number | null }>
   >();
   for (const r of ageRows) {
     const arr = byEvent.get(r.eventId) ?? [];
@@ -172,6 +172,7 @@ const eventAuditSnapshotSelect = {
       criteria: true,
       condition: true,
       value: true,
+      valueLabel: true,
       rounds: {
         select: {
           id: true,
@@ -270,6 +271,7 @@ const groupsDetailSelect = {
   criteria: true,
   condition: true,
   value: true,
+  valueLabel: true,
   rounds: {
     select: {
       id: true,
@@ -702,6 +704,7 @@ const getEventEditLogById = async (eventId: string, editLogId: string) => {
           firstName: true,
           lastName: true,
           username: true,
+          profilePicture: true,
           contributionScore: true,
         },
       },
@@ -757,6 +760,7 @@ const getEventEditLogsByEventId = async (
             firstName: true,
             lastName: true,
             username: true,
+            profilePicture: true,
             contributionScore: true,
           },
         },

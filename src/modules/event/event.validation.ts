@@ -144,13 +144,27 @@ const eventRoundValidationSchema = z.object({
   description: z.string().max(2000).optional().nullable(),
 });
 
-const eventGroupValidationSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  criteria: z.nativeEnum(GroupCriteria),
-  condition: z.nativeEnum(RoundCondition),
-  value: z.coerce.number().int(),
-  rounds: z.array(eventRoundValidationSchema).optional(),
-});
+const eventGroupValidationSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    criteria: z.nativeEnum(GroupCriteria),
+    condition: z.nativeEnum(RoundCondition),
+    /// Numeric bound for Age / Score groups.
+    value: z.coerce.number().int().nullable().optional(),
+    /// Preset band label for UTR / Level / Class groups.
+    valueLabel: z.string().trim().min(1).max(120).nullable().optional(),
+    rounds: z.array(eventRoundValidationSchema).optional(),
+  })
+  .refine(
+    group =>
+      group.criteria === GroupCriteria.Default ||
+      group.value != null ||
+      (group.valueLabel?.trim().length ?? 0) > 0,
+    {
+      message: 'Each group needs a value or a preset label.',
+      path: ['value'],
+    }
+  );
 
 const eventScheduleValidationSchema = z.object({
   competitionLevel: scheduleCompetitionLevelSchema,

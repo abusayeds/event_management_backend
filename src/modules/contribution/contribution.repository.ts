@@ -206,7 +206,7 @@ const attachCategoryGroups = async <T extends { id: string }>(
 
   const byEvent = new Map<
     string,
-    Array<{ criteria: GroupCriteria; condition: RoundCondition; value: number }>
+    Array<{ criteria: GroupCriteria; condition: RoundCondition; value: number | null }>
   >();
 
   for (const row of ageRows) {

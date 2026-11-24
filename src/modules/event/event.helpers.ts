@@ -307,9 +307,13 @@ export function bandRangeForSlug(slug: CategoryGroupSlug): { lo: number; hi: num
 
 export function ageRowToYearRange(row: {
   condition: RoundCondition;
-  value: number;
+  value: number | null;
 }): { lo: number; hi: number } | null {
   const v = row.value;
+  // Banded criteria (UTR / Level / Class) and Default groups carry no number.
+  if (v == null || !Number.isFinite(v)) {
+    return null;
+  }
   switch (row.condition) {
     case RoundCondition.GreaterAndEqual:
       return { lo: v, hi: AGE_CAP };
@@ -323,6 +327,8 @@ export function ageRowToYearRange(row: {
       return { lo: 0, hi: v };
     case RoundCondition.DownTo:
       return { lo: v, hi: AGE_CAP };
+    case RoundCondition.Equal:
+      return { lo: v, hi: v };
     default:
       return null;
   }
@@ -355,7 +361,7 @@ function overlapSize(a: { lo: number; hi: number }, b: { lo: number; hi: number 
 }
 
 export function inferCategoryGroupSlugFromAgeRows(
-  rows: Array<{ criteria: GroupCriteria; condition: RoundCondition; value: number }>
+  rows: Array<{ criteria: GroupCriteria; condition: RoundCondition; value: number | null }>
 ): CategoryGroupSlug | null {
   const ageRows = rows.filter(r => r.criteria === GroupCriteria.Age);
   if (!ageRows.length) {
@@ -394,6 +400,7 @@ export function buildAgeBandGroupWhere(lo: number, hi: number): Prisma.EventGrou
       { AND: [{ condition: RoundCondition.Lower }, { value: { gte: lo + 1 } }] },
       { AND: [{ condition: RoundCondition.UpTo }, { value: { gte: lo } }] },
       { AND: [{ condition: RoundCondition.DownTo }, { value: { lte: hi } }] },
+      { AND: [{ condition: RoundCondition.Equal }, { value: { gte: lo, lte: hi } }] },
     ],
   };
 }

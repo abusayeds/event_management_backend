@@ -55,12 +55,20 @@ enum EventType {
   Hybrid
 }
 
+/// What an event group is defined by. `Score` is kept for groups created
+/// before UTR / Level / Class existed.
 enum GroupCriteria {
+  Default
   Age
   Score
+  UTR
+  Level
+  Class
 }
 
 enum RoundCondition {
+  Default
+  Equal
   UpTo
   DownTo
   Greater

@@ -52,6 +52,10 @@ router.get(
   EventController.getMyCreatedEvents
 );
 
+// Criteria + condition choices for the "Define Group" step.
+// Must stay above '/:eventId' so it is not read as an event id.
+router.get('/group-options', asUser, EventController.getGroupOptions);
+
 // -----------------------------------------------------------------------------
 // Admin: per-event lists & toggles
 // -----------------------------------------------------------------------------
@@ -62,9 +66,11 @@ router.get(
   EventController.getEventEditLogById
 );
 
+// Shared community platform: the edit history is public to signed-in users so
+// every change to an event is transparent on its detail page.
 router.get(
   '/edit-logs/:eventId',
-  asAdmin,
+  asUser,
   validateRequest(EventValidation.getEventEditLogsByEventIdValidationSchema),
   EventController.getEventEditLogsByEventId
 );

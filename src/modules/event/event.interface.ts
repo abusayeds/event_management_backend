@@ -37,7 +37,10 @@ export interface IEventGroupInput {
   name: string;
   criteria: GroupCriteria;
   condition: RoundCondition;
-  value: number;
+  /** Numeric bound for Age / Score groups. */
+  value?: number | null;
+  /** Preset band label for UTR / Level / Class groups ("1.0-4.0", "Class A"). */
+  valueLabel?: string | null;
   rounds?: IEventRoundInput[];
 }
 

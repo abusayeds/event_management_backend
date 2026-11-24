@@ -20,7 +20,8 @@ export const eventGroupsToNestedCreate = (groups: IEventGroupInput[] | undefined
       name: g.name,
       criteria: g.criteria,
       condition: g.condition,
-      value: g.value,
+      value: g.value ?? null,
+      valueLabel: g.valueLabel?.trim() || null,
       rounds: g.rounds?.length
         ? {
             create: g.rounds.map(r => ({

@@ -7,6 +7,11 @@ import apiResponse from '../../utils/apiResponse';
 import asyncHandler from '../../utils/asyncHandler';
 import pick from '../../utils/pick';
 import {
+  GROUP_CONDITION_OPTIONS,
+  GROUP_CRITERIA_PRESETS,
+  LABEL_BASED_CRITERIA,
+} from './event.constants';
+import {
   EVENT_ADMIN_LIST_QUERY_KEYS,
   FEED_LIST_QUERY_KEYS,
   IFeedListFilters,
@@ -23,6 +28,26 @@ const createEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
     statusCode: StatusCodes.CREATED,
     message: 'Event created successfully.',
     data: result,
+  });
+});
+
+// GET /events/group-options — criteria + condition choices for the group step
+const getGroupOptions = asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
+  apiResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Group options fetched successfully.',
+    data: {
+      criteria: GROUP_CRITERIA_PRESETS.map(preset => ({
+        criteria: preset.criteria,
+        label: preset.label,
+        min: preset.min,
+        max: preset.max,
+        // Age presets resolve to a number; the rest are stored as labels.
+        isLabelBased: LABEL_BASED_CRITERIA.has(preset.criteria),
+      })),
+      conditions: GROUP_CONDITION_OPTIONS.map(option => ({ ...option })),
+    },
   });
 });
 
@@ -275,6 +300,7 @@ const deleteEvent = asyncHandler(async (req: AuthenticatedRequest, res: Response
 
 export const EventController = {
   createEvent,
+  getGroupOptions,
   getEvents,
   getUpcomingEvents,
   getTodayEvents,

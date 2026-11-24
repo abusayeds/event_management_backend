@@ -11,6 +11,7 @@ import { database } from '../../config/database';
 import { PaginationOptions } from '../../interfaces';
 import logger from '../../config/logger';
 import ApiError from '../../utils/apiError';
+import { dashboardAsset } from '../../utils/dashboardAssets';
 import { deleteFileFromS3, uploadSingleFileToS3 } from '../../utils/s3Upload';
 import { rewardUserContribution } from '../user/contributionReward';
 import {
@@ -27,6 +28,21 @@ import { EventRepository } from './event.repository';
 import { attachActiveSchedules, repeatConfigFields, resolveRepeatFrequency } from './event.utils';
 import { enqueueRepeatEventJob } from '../../jobs/repeatEvent.schedule';
 import { NotificationService } from '../notification/notification.service';
+
+/**
+ * Cover photo for events created without one: the app logo.
+ * Falls back to a relative path if the asset store is unavailable so event
+ * creation still succeeds.
+ */
+const getDefaultEventCoverUrl = async (): Promise<string> => {
+  try {
+    return await dashboardAsset('logo');
+  } catch (error) {
+    logger.warn('Default event cover unavailable, using local logo path.');
+    logger.warn(error);
+    return '/uploads/dashboard/images/logo.png';
+  }
+};
 
 // POST /events
 const createEvent = async (
@@ -64,12 +80,11 @@ const createEvent = async (
     uploadedCoverUrl = uploaded.url;
   }
 
-  const coverImage = uploadedCoverUrl ?? payload.coverImage?.trim();
+  // The cover photo is optional. When none is supplied the event falls back to
+  // the app logo so creating an event never fails on a missing image.
+  let coverImage = uploadedCoverUrl ?? payload.coverImage?.trim();
   if (!coverImage) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Provide a cover image file (field coverImage) or coverImage URL in the body / data JSON.'
-    );
+    coverImage = await getDefaultEventCoverUrl();
   }
 
   const fullPayload: ICreateEventPayload = { ...payload, coverImage };
@@ -517,9 +532,12 @@ const updateEvent = async (
       incomingRepeat: repeatConfig,
       sessionPatchRequested: hasSessionPatch,
     });
+    // Verification is a community action and must appear in the history so
+    // the event page can show who verified it.
     const extraChanged: string[] = [
       ...(hasGroupsUpdate ? ['groups'] : []),
       ...(hasPreviousEventsUpdate ? ['previousEvents'] : []),
+      ...(hasVerifyRequest && !auditBefore.isVerified ? ['isVerified'] : []),
     ];
     if (editLogPayload || extraChanged.length) {
       await EventRepository.createEditLog({
@@ -532,6 +550,9 @@ const updateEvent = async (
     }
 
     await rewardUserContribution(userId, EVENT_CONTRIBUTION_SCORE.UPDATE);
+    if (hasVerifyRequest && !auditBefore.isVerified) {
+      await rewardUserContribution(userId, EVENT_CONTRIBUTION_SCORE.VERIFY);
+    }
     const detail = await EventRepository.getEventDetailById(eventId);
     if (!detail) {
       throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Event updated but failed to load.');

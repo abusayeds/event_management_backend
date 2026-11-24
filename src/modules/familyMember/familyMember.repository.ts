@@ -92,6 +92,7 @@ const getFamilyMembersByFamilyId = async (
             id: true,
             firstName: true,
             lastName: true,
+            username: true,
             email: true,
             profilePicture: true,
           },

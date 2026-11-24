@@ -97,7 +97,12 @@ model EventGroup {
   name      String
   criteria  GroupCriteria
   condition RoundCondition
-  value     Int
+  /// Numeric bound. Set for Age (and legacy Score) groups; null for banded
+  /// criteria such as UTR, Level and Class, which use `valueLabel`.
+  value     Int?
+  /// Preset band label, e.g. "1.0-4.0", "Beginner", "Class A". Null for a
+  /// plain numeric Age group.
+  valueLabel String?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
